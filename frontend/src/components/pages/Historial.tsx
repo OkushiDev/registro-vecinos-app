@@ -8,6 +8,18 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 
+// Importaciones adicionales para búsqueda y filtrado
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import SearchIcon from "@mui/icons-material/Search";
+import Box from "@mui/material/Box";
+import Grid from "@mui/material";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id: "id" | "descripcion_accion" | "tipo_accion" | "fecha_accion" | "usuario";
@@ -99,7 +111,7 @@ const rows = [
   ),
 ];
 
-// Componente principal para mostrar el historial de acciones
+//// Componente principal para mostrar el historial de acciones
 export default function Historial() {
   // Con esto se manejara la paginación de la tabla (Pagina 1, Pagina 2, etc). Se define para iniciar en la pagina 0
   const [page, setPage] = React.useState(0);
@@ -126,8 +138,91 @@ export default function Historial() {
     }
     return value;
   };
+
+  // Estados para búsqueda y filtrado
+  const [searchTerm, setSearchTerm] = React.useState("");
+  // Estado para la columna por la cual se filtrará
+  const [filterColumn, setFilterColumn] = React.useState("all");
+
+  // Filtrar filas basado en el término de búsqueda y columna seleccionada
+  const filteredRows = React.useMemo(() => {
+    if (!searchTerm) return rows;
+
+    return rows.filter((row) => {
+      if (filterColumn === "all") {
+        return Object.values(row).some((value) =>
+          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      } else {
+        return row[filterColumn as keyof Data]
+          .toString()
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      }
+    });
+  }, [searchTerm, filterColumn]);
+
+  //Función para resetear página cuando se busca
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setPage(0); // Resetear a primera página al buscar
+  };
+
+  const handleFilterChange = (e: any) => {
+    setFilterColumn(e.target.value);
+    setPage(0); // Resetear a primera página al cambiar filtro
+  };
   return (
     <Paper sx={{ width: "100%", overflow: "hidden" }}>
+      {/* Barra de búsqueda con filtros */}
+      <Box sx={{ p: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Buscar en historial..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Buscar en</InputLabel>
+              <Select
+                value={filterColumn}
+                label="Buscar en"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="all">Todas las columnas</MenuItem>
+                <MenuItem value="descripcion_accion">Descripción</MenuItem>
+                <MenuItem value="tipo_accion">Tipo de Acción</MenuItem>
+                <MenuItem value="usuario">Usuario</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {searchTerm && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Mostrando {filteredRows.length} de {rows.length} registros
+            {filterColumn !== "all" &&
+              ` (filtrado por ${
+                columns.find((col) => col.id === filterColumn)?.label
+              })`}
+          </Typography>
+        </Box>
+      )}
+
       <TableContainer sx={{ maxHeight: 440 }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
@@ -144,7 +239,7 @@ export default function Historial() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows
+            {filteredRows
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row) => {
                 return (
@@ -160,7 +255,7 @@ export default function Historial() {
 
                       return (
                         <TableCell key={column.id} align={column.align}>
-                          {formatCellValue(column, value)}{" "}
+                          {value}{" "}
                         </TableCell>
                       );
                     })}
@@ -173,7 +268,7 @@ export default function Historial() {
       <TablePagination
         rowsPerPageOptions={[10, 25, 100]}
         component="div"
-        count={rows.length}
+        count={filteredRows.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

@@ -107,16 +107,16 @@ function createData(
 // Datos de ejemplo para los vecinos. Eventualmente, estos datos vendrán de una API o base de datos
 const rows = [
   createData(
-    "Juan Carlos",
-    "González",
-    "Pérez",
-    "12.345.678-9",
+    "Tomas Andres",
+    "Orellana",
+    "Fuentes",
+    "21.507.630-K",
     1001,
     "Av. Principal 123",
     new Date("2023-01-15"),
     new Date("2023-01-15"),
     "9 8765 4321",
-    "juan.gonzalez@email.com"
+    "tomas.orellana@email.com"
   ),
   createData(
     "María Elena",

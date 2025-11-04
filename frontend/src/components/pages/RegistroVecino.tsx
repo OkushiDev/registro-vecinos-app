@@ -1,7 +1,7 @@
-export default function GestionVecino() {
+export default function RegistroVecino() {
   return (
     <>
-      <div>Gestión del Vecino</div>
+      <div>Registro del Vecino</div>
     </>
   );
 }

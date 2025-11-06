@@ -9,13 +9,12 @@ from sqlalchemy.orm import Session
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
+db_dependency = Annotated[Session, Depends(get_db)]
+
 
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
-
-
-db_dependency = Annotated[Session, Depends(get_db)]
 
 
 @app.get("/lista-vecinos")

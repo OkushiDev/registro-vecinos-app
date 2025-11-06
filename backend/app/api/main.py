@@ -1,16 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Depends
+from pydantic import BaseModel
+from typing import List, Annotated
+import app.api.models as models
+from app.api.database import SessionLocal, engine, get_db
+from sqlalchemy.orm import Session
+
 
 app = FastAPI()
+models.Base.metadata.create_all(bind=engine)
+
+db_dependency = Annotated[Session, Depends(get_db)]
+
+
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
 
 
 @app.get("/lista-vecinos")
-async def lista_vecinos():
-    vecinos = [
-        {"nombre": "Juan", "edad": 30, "direccion": "Calle Falsa 123"},
-        {"nombre": "Ana", "edad": 25, "direccion": "Avenida Siempre Viva 742"},
-        {"nombre": "Luis", "edad": 40, "direccion": "Boulevard Central 456"},
-    ]
+async def lista_vecinos(db: db_dependency):
+    vecinos = db.query(models.Vecino).all()
     return {"vecinos": vecinos}

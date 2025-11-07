@@ -33,7 +33,7 @@ async def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/lista-vecinos")
+@app.get("/lista-vecinos/")
 async def lista_vecinos(db: db_dependency):
     vecinos = db.query(models.Vecino).all()
     return {"vecinos": vecinos}

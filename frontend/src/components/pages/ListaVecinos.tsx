@@ -7,6 +7,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
+import api from "../../api";
 
 // Importaciones adicionales para búsqueda y filtrado
 import TextField from "@mui/material/TextField";
@@ -19,6 +20,37 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
+
+
+
+
+
+const [items, setItems] = React.useState([]);
+const [formData, setFormData] = React.useState({
+  nombres: "",
+  apellido_paterno: "",
+  apellido_materno: "",
+  rut: "",
+  numero_socio: 0,
+  direccion: "",
+  fecha_registro: "",
+  fecha_ultima_edicion: "",
+  telefono: "",
+  correo: "",
+});
+
+const fetchItems = async () => {
+    const response = await api.get('/lista-vecinos/');
+    setItems(response.data)
+  };
+
+console.log(items);
+
+React.useEffect(() => {
+    fetchItems();
+  }, []);
+
+
 
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {

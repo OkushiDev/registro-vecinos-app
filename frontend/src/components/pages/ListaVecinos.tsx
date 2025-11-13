@@ -21,37 +21,6 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 
-
-
-
-
-const [items, setItems] = React.useState([]);
-const [formData, setFormData] = React.useState({
-  nombres: "",
-  apellido_paterno: "",
-  apellido_materno: "",
-  rut: "",
-  numero_socio: 0,
-  direccion: "",
-  fecha_registro: "",
-  fecha_ultima_edicion: "",
-  telefono: "",
-  correo: "",
-});
-
-const fetchItems = async () => {
-    const response = await api.get('/lista-vecinos/');
-    setItems(response.data)
-  };
-
-console.log(items);
-
-React.useEffect(() => {
-    fetchItems();
-  }, []);
-
-
-
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
@@ -136,154 +105,6 @@ function createData(
   };
 }
 
-// Datos de ejemplo para los vecinos. Eventualmente, estos datos vendrán de una API o base de datos
-const rows = [
-  createData(
-    "Tomas Andres",
-    "Orellana",
-    "Fuentes",
-    "21.507.630-K",
-    1001,
-    "Av. Principal 123",
-    new Date("2023-01-15"),
-    new Date("2023-01-15"),
-    "9 8765 4321",
-    "tomas.orellana@email.com"
-  ),
-  createData(
-    "María Elena",
-    "Rodríguez",
-    "Silva",
-    "98.765.432-1",
-    1002,
-    "Calle Secundaria 456",
-    new Date("2023-02-20"),
-    new Date("2023-03-10"),
-    "9 1234 5678",
-    "maria.rodriguez@email.com"
-  ),
-  createData(
-    "Pedro Antonio",
-    "Martínez",
-    "López",
-    "11.222.333-4",
-    1003,
-    "Pasaje Los Aromos 789",
-    new Date("2023-03-05"),
-    new Date("2023-03-05"),
-    "",
-    "pedro.martinez@email.com"
-  ),
-  createData(
-    "Ana Sofía",
-    "Fernández",
-    "García",
-    "55.666.777-8",
-    1004,
-    "Av. Las Flores 321",
-    new Date("2023-03-12"),
-    new Date("2023-04-01"),
-    "9 9876 5432",
-    ""
-  ),
-  createData(
-    "Luis Miguel",
-    "Vargas",
-    "Muñoz",
-    "33.444.555-6",
-    1005,
-    "Calle Los Pinos 654",
-    new Date("2023-04-08"),
-    new Date("2023-04-08"),
-    "9 5555 6666",
-    "luis.vargas@email.com"
-  ),
-  createData(
-    "Carmen Rosa",
-    "Jiménez",
-    "Torres",
-    "77.888.999-0",
-    1006,
-    "Av. Central 987",
-    new Date("2023-04-15"),
-    new Date("2023-05-02"),
-    "",
-    "carmen.jimenez@email.com"
-  ),
-  createData(
-    "Roberto Carlos",
-    "Herrera",
-    "Campos",
-    "22.333.444-5",
-    1007,
-    "Pasaje San Juan 147",
-    new Date("2023-05-01"),
-    new Date("2023-05-01"),
-    "9 7777 8888",
-    ""
-  ),
-  createData(
-    "Patricia Isabel",
-    "Morales",
-    "Vega",
-    "66.777.888-9",
-    1008,
-    "Calle Norte 258",
-    new Date("2023-05-10"),
-    new Date("2023-06-15"),
-    "9 3333 4444",
-    "patricia.morales@email.com"
-  ),
-  createData(
-    "Diego Alejandro",
-    "Castro",
-    "Rojas",
-    "44.555.666-7",
-    1009,
-    "Av. Sur 369",
-    new Date("2023-05-20"),
-    new Date("2023-05-20"),
-    "9 2222 3333",
-    "diego.castro@email.com"
-  ),
-  createData(
-    "Gabriela Antonia",
-    "Mendoza",
-    "Flores",
-    "88.999.000-1",
-    1010,
-    "Calle Oriente 741",
-    new Date("2023-06-01"),
-    new Date("2023-07-08"),
-    "",
-    ""
-  ),
-  createData(
-    "Andrés Felipe",
-    "Sánchez",
-    "Guerrero",
-    "00.111.222-3",
-    1011,
-    "Pasaje Poniente 852",
-    new Date("2023-06-15"),
-    new Date("2023-06-15"),
-    "9 6666 7777",
-    "andres.sanchez@email.com"
-  ),
-  createData(
-    "Valentina Esperanza",
-    "Ramírez",
-    "Contreras",
-    "99.000.111-2",
-    1012,
-    "Av. Libertad 963",
-    new Date("2023-07-01"),
-    new Date("2023-08-12"),
-    "9 4444 5555",
-    "valentina.ramirez@email.com"
-  ),
-];
-
 // Componente principal para mostrar la lista de vecinos
 export default function ListaVecinos() {
   // Con esto se manejara la paginación de la tabla (Pagina 1, Pagina 2, etc). Se define para iniciar en la pagina 0
@@ -302,6 +123,38 @@ export default function ListaVecinos() {
     setPage(0);
   };
 
+  const [items, setItems] = React.useState<Data[]>([]);
+  const [formData, setFormData] = React.useState({
+    id: 0,
+    nombres: "",
+    apellido_paterno: "",
+    apellido_materno: "",
+    rut: "",
+    numero_socio: 0,
+    direccion: "",
+    fecha_registro: "",
+    fecha_ultima_edicion: "",
+    telefono: "",
+    correo: "",
+  });
+
+  const fetchItems = async () => {
+    try {
+      console.log("Intentando conectar con API...");
+      const response = await api.get("/lista-vecinos/");
+      setItems(response.data.vecinos || []); //Extae el array de vecinos
+      console.log('Respuesta completa:', response);
+      console.log("datos recibidos:", response.data);
+    } catch (error) {
+      console.error("Error al obtener los datos:", error);
+      setItems([]); // Establece items como un array vacío en caso de error
+    }
+  };
+
+  React.useEffect(() => {
+    fetchItems();
+  }, []);
+
   // Estados para búsqueda y filtrado
   const [searchTerm, setSearchTerm] = React.useState("");
   // Estado para la columna por la cual se filtrará
@@ -309,21 +162,21 @@ export default function ListaVecinos() {
 
   // Filtrar filas basado en el término de búsqueda y columna seleccionada
   const filteredRows = React.useMemo(() => {
-    if (!searchTerm) return rows;
+    if (!searchTerm) return items;
 
-    return rows.filter((row) => {
+    return items.filter((item) => {
       if (filterColumn === "all") {
-        return Object.values(row).some((value) =>
+        return Object.values(item).some((value) =>
           value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         );
       } else {
-        return row[filterColumn as keyof Data]
+        return item[filterColumn as keyof Data]
           .toString()
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
       }
     });
-  }, [searchTerm, filterColumn]);
+  }, [searchTerm, filterColumn, items]);
 
   //Función para resetear página cuando se busca
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -383,7 +236,7 @@ export default function ListaVecinos() {
       {searchTerm && (
         <Box sx={{ mt: 1, px: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Mostrando {filteredRows.length} de {rows.length} registros
+            Mostrando {filteredRows.length} de {items.length} registros
             {filterColumn !== "all" &&
               ` (filtrado por ${
                 columns.find((col) => col.id === filterColumn)?.label

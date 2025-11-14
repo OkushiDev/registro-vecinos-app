@@ -43,3 +43,31 @@ async def lista_vecinos(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error en lista_vecinos: {e}")  # Debug
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agregar-vecino/")
+async def agregar_vecino(
+    nombres: str,
+    apellido_paterno: str,
+    apellido_materno: str,
+    rut: str,
+    numero_socio: int,
+    direccion: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        nuevo_vecino = models.Vecino(
+            nombres=nombres,
+            apellido_paterno=apellido_paterno,
+            apellido_materno=apellido_materno,
+            rut=rut,
+            numero_socio=numero_socio,
+            direccion=direccion,
+        )
+        db.add(nuevo_vecino)
+        db.commit()
+        db.refresh(nuevo_vecino)
+        return {"vecino": nuevo_vecino}
+    except Exception as e:
+        print(f"Error en agregar_vecino: {e}")  # Debug
+        raise HTTPException(status_code=500, detail=str(e))

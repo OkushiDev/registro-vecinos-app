@@ -21,6 +21,11 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 
+
+// Importaciones para el botón de registrar vecino
+import Button from "@mui/material/Button";
+import AddIcon from "@mui/icons-material/Add";
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
@@ -230,6 +235,22 @@ export default function ListaVecinos() {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} md={3}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                // Aquí puedes agregar la lógica para abrir el formulario de registro
+                console.log("Abrir formulario de registro");
+              }}
+              sx={{ height: '56px' }} // Mismo alto que los otros campos
+            >
+              Registrar Vecino
+            </Button>
+          </Grid>
+
         </Grid>
       </Box>
 

@@ -107,20 +107,7 @@ export default function ListaVecinos() {
   };
 
   const [items, setItems] = React.useState<Data[]>([]);
-  const [formData, setFormData] = React.useState({
-    id: 0,
-    nombres: "",
-    apellido_paterno: "",
-    apellido_materno: "",
-    rut: "",
-    numero_socio: 0,
-    direccion: "",
-    fecha_registro: "",
-    fecha_ultima_edicion: "",
-    telefono: "",
-    correo: "",
-  });
-
+  // Función para obtener los datos de la API
   const fetchItems = async () => {
     try {
       console.log("Intentando conectar con API...");

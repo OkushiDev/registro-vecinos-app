@@ -44,17 +44,17 @@ export default function App(): React.ReactElement {
           </>
         ) : (
           <>
-            <Route
+            {/* <Route
               path="/"
               element={<Navigate to="/vecino/antecedentes" replace />}
             />
             <Route
               path="/vecino/antecedentes"
-              element={<div>Mis Antecedentes</div>}
+              element={<AntecedenteVecino />}
             />
             <Route
               path="/vecino/subir-archivo"
-              element={<div>Subir Archivo</div>}
+              element={<SubirAntecedente />}
             />
             <Route
               path="/vecino/certificado"
@@ -63,7 +63,7 @@ export default function App(): React.ReactElement {
             <Route
               path="*"
               element={<Navigate to="/vecino/antecedentes" replace />}
-            />
+            /> */}
           </>
         )}
       </Routes>

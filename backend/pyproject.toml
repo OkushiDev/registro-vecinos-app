@@ -5,5 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi-cors>=0.0.6",
     "fastapi[standard]>=0.120.4",
+    "psycopg2-binary>=2.9.11",
+    "sqlalchemy>=2.0.44",
+]
+
+[dependency-groups]
+dev = [
+    "pyrefly>=0.40.0",
+    "ruff>=0.14.3",
 ]

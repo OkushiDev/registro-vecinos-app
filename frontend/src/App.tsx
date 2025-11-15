@@ -4,7 +4,6 @@ import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import Navbar, { type UserProfile } from "./components/Navbar";
 import Login from "./components/Login.tsx";
 import ListaVecinos from "./components/pages/ListaVecinos.tsx";
-import GestionVecino from "./components/pages/RegistroVecino.tsx";
 import Historial from "./components/pages/Historial.tsx";
 
 export default function App(): React.ReactElement {
@@ -38,7 +37,6 @@ export default function App(): React.ReactElement {
               element={<Navigate to="/presidente/vecinos" replace />}
             />
             <Route path="/presidente/vecinos" element={<ListaVecinos />} />
-            <Route path="/presidente/registrar" element={<GestionVecino />} />
             <Route path="/presidente/historial" element={<Historial />} />
             <Route path="*" element={<div>Ruta no encontrada</div>} />
           </>

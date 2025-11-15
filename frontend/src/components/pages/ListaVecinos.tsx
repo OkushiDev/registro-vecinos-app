@@ -7,7 +7,13 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
+
+// Importación de la API configurada
 import api from "../../api";
+
+// Importaciones para el modal y formulario de registro
+import Modal from '../Modal';
+import RegistroVecinoForm from '../FormularioRegistroForm';
 
 // Importaciones adicionales para búsqueda y filtrado
 import TextField from "@mui/material/TextField";
@@ -20,7 +26,6 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
-
 
 // Importaciones para el botón de registrar vecino
 import Button from "@mui/material/Button";
@@ -194,6 +199,25 @@ export default function ListaVecinos() {
     setPage(0); // Resetear a primera página al cambiar filtro
   };
 
+// Estado para manejar la apertura del modal de registro
+  const [modalOpen, setModalOpen] = React.useState(false);
+
+  // Función para abrir el modal
+  const handleOpenModal = () => {
+    setModalOpen(true);
+  };
+
+  // Función para cerrar el modal
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
+
+  // Función para manejar el éxito del registro
+  const handleRegistroSuccess = () => {
+    setModalOpen(false);
+    fetchItems(); // Recargar la lista de vecinos
+  };
+
   return (
     <Paper sx={{ width: "100%", overflow: "hidden" }}>
       {/* Barra de búsqueda con filtros */}
@@ -241,10 +265,7 @@ export default function ListaVecinos() {
               variant="contained"
               color="primary"
               startIcon={<AddIcon />}
-              onClick={() => {
-                // Aquí puedes agregar la lógica para abrir el formulario de registro
-                console.log("Abrir formulario de registro");
-              }}
+              onClick={handleOpenModal}
               sx={{ height: '56px' }} // Mismo alto que los otros campos
             >
               Registrar Vecino
@@ -320,6 +341,18 @@ export default function ListaVecinos() {
           `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
       />
+      {/* Modal para registro de vecino */}
+      <Modal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        title="Registrar Nuevo Vecino"
+        maxWidth="md"
+      >
+        <RegistroVecinoForm
+          onSuccess={handleRegistroSuccess}
+          onCancel={handleCloseModal}
+        />
+      </Modal>
     </Paper>
   );
 }

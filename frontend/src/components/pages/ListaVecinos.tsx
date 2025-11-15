@@ -88,33 +88,6 @@ interface Data {
   correo: string;
 }
 
-// Función para crear los datos de vecinos.
-function createData(
-  nombres: string,
-  apellido_paterno: string,
-  apellido_materno: string,
-  rut: string,
-  numero_socio: number,
-  direccion: string,
-  fecha_registro: Date,
-  fecha_ultima_edicion: Date,
-  telefono: string = "",
-  correo: string = ""
-): Data {
-  return {
-    nombres,
-    apellido_paterno,
-    apellido_materno,
-    rut,
-    numero_socio,
-    direccion,
-    fecha_registro: fecha_registro.toLocaleDateString("es-ES"),
-    fecha_ultima_edicion: fecha_ultima_edicion.toLocaleDateString("es-ES"),
-    telefono,
-    correo,
-  };
-}
-
 // Componente principal para mostrar la lista de vecinos
 export default function ListaVecinos() {
   // Con esto se manejara la paginación de la tabla (Pagina 1, Pagina 2, etc). Se define para iniciar en la pagina 0

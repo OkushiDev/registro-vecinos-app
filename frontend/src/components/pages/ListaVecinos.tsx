@@ -13,7 +13,7 @@ import api from "../../api";
 
 // Importaciones para el modal y formulario de registro
 import Modal from '../Modal';
-import RegistroVecinoForm from '../FormularioRegistroForm';
+import RegistroVecinoForm from '../RegistroVecinoForm';
 
 // Importaciones adicionales para búsqueda y filtrado
 import TextField from "@mui/material/TextField";

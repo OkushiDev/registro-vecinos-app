@@ -89,6 +89,7 @@ const columns: readonly Column[] = [
 
 // Definición de la interfaz para los datos de cada vecino.
 interface Data {
+  id: number;
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string;
@@ -96,9 +97,10 @@ interface Data {
   numero_socio: number;
   direccion: string;
   fecha_registro: string;
-  fecha_ultima_edicion: string;
+  fecha_edicion: string;
   telefono: string;
   correo: string;
+  estado: number;
 }
 
 // Componente principal para mostrar la lista de vecinos

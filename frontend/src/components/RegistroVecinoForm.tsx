@@ -39,17 +39,52 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({ onSuccess, onCa
     setLoading(true);
     setError(null);
 
+    // Validaciones básicas
+    if (!formData.nombres.trim() || !formData.apellido_paterno.trim() || !formData.rut.trim()) {
+      setError('Por favor completa todos los campos obligatorios');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.numero_socio || parseInt(formData.numero_socio) <= 0) {
+      setError('El número de socio debe ser mayor a 0');
+      setLoading(false);
+      return;
+    }
+
     try {
       const dataToSend = {
-        ...formData,
-        numero_socio: parseInt(formData.numero_socio) || 0
+        nombres: formData.nombres.trim(),
+        apellido_paterno: formData.apellido_paterno.trim(),
+        apellido_materno: formData.apellido_materno.trim(),
+        rut: formData.rut.trim(),
+        numero_socio: parseInt(formData.numero_socio),
+        direccion: formData.direccion.trim()
       };
 
-      await api.post('/agregar-vecino/', dataToSend);
+      console.log('Enviando datos:', dataToSend); // Para debug
+
+      const response = await api.post('/agregar-vecino/', dataToSend);
+      console.log('Respuesta exitosa:', response.data); // Para debug
+      
+      // Mostrar mensaje de éxito (opcional)
+      alert('Vecino registrado exitosamente');
+      
       onSuccess(); // Cierra el modal y actualiza la lista
     } catch (error: any) {
-      console.error('Error al registrar vecino:', error);
-      setError(error.response?.data?.detail || 'Error al registrar el vecino');
+      console.error('Error completo:', error); // Para debug
+      
+      let errorMessage = 'Error al registrar el vecino';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

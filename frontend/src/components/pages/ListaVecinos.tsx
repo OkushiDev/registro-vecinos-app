@@ -31,6 +31,13 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import AddIcon from "@mui/icons-material/Add";
 
+
+// Importaciones para los íconos de acciones (editar, activar/desactivar)
+import EditIcon from '@mui/icons-material/Edit';
+import IconButton from '@mui/material/IconButton';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
@@ -55,6 +62,7 @@ interface Column {
 
 // Definición de las columnas de la tabla de vecinos.
 const columns: readonly Column[] = [
+  { id: "id", label: "ID", minWidth: 50},   
   { id: "nombres", label: "Nombres", minWidth: 150 },
   { id: "apellido_paterno", label: "Apellido Paterno", minWidth: 120 },
   { id: "apellido_materno", label: "Apellido Materno", minWidth: 120 },
@@ -68,13 +76,15 @@ const columns: readonly Column[] = [
     align: "right",
   },
   {
-    id: "fecha_ultima_edicion",
+    id: "fecha_edicion",
     label: "Última Edición",
     minWidth: 120,
     align: "right",
   },
   { id: "telefono", label: "Teléfono", minWidth: 120 },
   { id: "correo", label: "Correo", minWidth: 200 },
+  { id: "acciones_editar", label: "Editar", minWidth: 80},
+  { id: "acciones_estado", label: "Estado", minWidth: 100 },
 ];
 
 // Definición de la interfaz para los datos de cada vecino.

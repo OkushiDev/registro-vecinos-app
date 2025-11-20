@@ -34,6 +34,7 @@ import AddIcon from "@mui/icons-material/Add";
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
+    | "id"
     | "nombres"
     | "apellido_paterno"
     | "apellido_materno"
@@ -41,9 +42,11 @@ interface Column {
     | "numero_socio"
     | "direccion"
     | "fecha_registro"
-    | "fecha_ultima_edicion"
+    | "fecha_edicion"
     | "telefono"
-    | "correo";
+    | "correo"
+    | "acciones_editar"
+    | "acciones_estado";
   label: string;
   minWidth?: number;
   align?: "right";

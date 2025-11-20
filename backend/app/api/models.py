@@ -13,9 +13,7 @@ class Vecino(Base):
     rut = Column(String, unique=True, index=True)
     numero_socio = Column(Integer, unique=True, index=True)
     direccion = Column(String)
-    fecha_registro = Column(
-        TIMESTAMP(timezone=True), default=text("now()"), onupdate=text("now()")
-    )
+    fecha_registro = Column(TIMESTAMP(timezone=True), default=text("now()"))
     fecha_edicion = Column(
         TIMESTAMP(timezone=True), default=text("now()"), onupdate=text("now()")
     )

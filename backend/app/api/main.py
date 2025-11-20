@@ -63,7 +63,7 @@ async def read_root():
 @app.get("/lista-vecinos/")
 async def lista_vecinos(db: Session = Depends(get_db)):
     try:
-        vecinos = db.query(models.Vecino).all()
+        vecinos = db.query(models.Vecino).order_by(models.Vecino.id).all()
         print(f"Vecinos encontrados: {len(vecinos)}")  # Debug
         return {"vecinos": vecinos}
     except Exception as e:

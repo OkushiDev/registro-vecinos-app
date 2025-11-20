@@ -12,8 +12,8 @@ import TablePagination from "@mui/material/TablePagination";
 import api from "../../api";
 
 // Importaciones para el modal y formulario de registro
-import Modal from '../Modal';
-import RegistroVecinoForm from '../RegistroVecinoForm';
+import Modal from "../Modal";
+import RegistroVecinoForm from "../RegistroVecinoForm";
 
 // Importaciones adicionales para búsqueda y filtrado
 import TextField from "@mui/material/TextField";
@@ -31,9 +31,19 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import AddIcon from "@mui/icons-material/Add";
 
+// Importaciones para los íconos de acciones (editar, activar/desactivar)
+import EditIcon from "@mui/icons-material/Edit";
+import IconButton from "@mui/material/IconButton";
+import ToggleOnIcon from "@mui/icons-material/ToggleOn";
+import ToggleOffIcon from "@mui/icons-material/ToggleOff";
+
+// Agregar esta importación al inicio del archivo
+import EditarVecinoForm from "../EditarVecinoForm";
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
+    | "id"
     | "nombres"
     | "apellido_paterno"
     | "apellido_materno"
@@ -41,9 +51,11 @@ interface Column {
     | "numero_socio"
     | "direccion"
     | "fecha_registro"
-    | "fecha_ultima_edicion"
+    | "fecha_edicion"
     | "telefono"
-    | "correo";
+    | "correo"
+    | "acciones_editar"
+    | "acciones_estado";
   label: string;
   minWidth?: number;
   align?: "right";
@@ -52,6 +64,7 @@ interface Column {
 
 // Definición de las columnas de la tabla de vecinos.
 const columns: readonly Column[] = [
+  { id: "id", label: "ID", minWidth: 50 },
   { id: "nombres", label: "Nombres", minWidth: 150 },
   { id: "apellido_paterno", label: "Apellido Paterno", minWidth: 120 },
   { id: "apellido_materno", label: "Apellido Materno", minWidth: 120 },
@@ -65,17 +78,20 @@ const columns: readonly Column[] = [
     align: "right",
   },
   {
-    id: "fecha_ultima_edicion",
+    id: "fecha_edicion",
     label: "Última Edición",
     minWidth: 120,
     align: "right",
   },
   { id: "telefono", label: "Teléfono", minWidth: 120 },
   { id: "correo", label: "Correo", minWidth: 200 },
+  { id: "acciones_editar", label: "Editar", minWidth: 80 },
+  { id: "acciones_estado", label: "Estado", minWidth: 100 },
 ];
 
 // Definición de la interfaz para los datos de cada vecino.
 interface Data {
+  id: number;
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string;
@@ -83,9 +99,10 @@ interface Data {
   numero_socio: number;
   direccion: string;
   fecha_registro: string;
-  fecha_ultima_edicion: string;
+  fecha_edicion: string;
   telefono: string;
   correo: string;
+  estado: number;
 }
 
 // Componente principal para mostrar la lista de vecinos
@@ -113,7 +130,7 @@ export default function ListaVecinos() {
       console.log("Intentando conectar con API...");
       const response = await api.get("/lista-vecinos/");
       setItems(response.data.vecinos || []); //Extae el array de vecinos
-      console.log('Respuesta completa:', response);
+      console.log("Respuesta completa:", response);
       console.log("datos recibidos:", response.data);
     } catch (error) {
       console.error("Error al obtener los datos:", error);
@@ -159,7 +176,7 @@ export default function ListaVecinos() {
     setPage(0); // Resetear a primera página al cambiar filtro
   };
 
-// Estado para manejar la apertura del modal de registro
+  // Estado para manejar la apertura del modal de registro
   const [modalOpen, setModalOpen] = React.useState(false);
 
   // Función para abrir el modal
@@ -176,6 +193,40 @@ export default function ListaVecinos() {
   const handleRegistroSuccess = () => {
     setModalOpen(false);
     fetchItems(); // Recargar la lista de vecinos
+  };
+
+  // Estados y funciones para manejar la edición de vecinos
+  const [editModalOpen, setEditModalOpen] = React.useState(false);
+  const [selectedVecinoId, setSelectedVecinoId] = React.useState<number | null>(
+    null
+  );
+
+  // Funciones para manejar la edición
+  const handleOpenEditModal = (vecinoId: number) => {
+    console.log("Abriendo modal de edición para vecino ID:", vecinoId);
+    setSelectedVecinoId(vecinoId);
+    setEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setSelectedVecinoId(null);
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    setSelectedVecinoId(null);
+    fetchItems(); // Recargar la lista de vecinos
+  };
+
+  // Función temporal para cambiar estado (solo visual por ahora)
+  const handleToggleEstado = (vecinoId: number, estadoActual: number) => {
+    console.log(
+      `Cambiando estado del vecino ${vecinoId} de ${estadoActual} a ${
+        estadoActual === 1 ? 0 : 1
+      }`
+    );
+    // Por ahora solo mostrar en consola, después implementarás la funcionalidad real
   };
 
   return (
@@ -208,14 +259,13 @@ export default function ListaVecinos() {
                 onChange={handleFilterChange}
               >
                 <MenuItem value="all">Todas las columnas</MenuItem>
+                <MenuItem value="id">ID</MenuItem>
                 <MenuItem value="nombres">Nombres</MenuItem>
                 <MenuItem value="apellido_paterno">Apellido Paterno</MenuItem>
                 <MenuItem value="apellido_materno">Apellido Materno</MenuItem>
                 <MenuItem value="rut">RUT</MenuItem>
                 <MenuItem value="numero_socio">N° Socio</MenuItem>
                 <MenuItem value="direccion">Dirección</MenuItem>
-                <MenuItem value="telefono">Teléfono</MenuItem>
-                <MenuItem value="correo">Correo</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -226,12 +276,11 @@ export default function ListaVecinos() {
               color="primary"
               startIcon={<AddIcon />}
               onClick={handleOpenModal}
-              sx={{ height: '56px' }} // Mismo alto que los otros campos
+              sx={{ height: "56px" }} // Mismo alto que los otros campos
             >
               Registrar Vecino
             </Button>
           </Grid>
-
         </Grid>
       </Box>
 
@@ -271,10 +320,64 @@ export default function ListaVecinos() {
                     hover
                     role="checkbox"
                     tabIndex={-1}
-                    key={`${row.rut}-${index}`}
+                    key={`${row.id}-${index}`} // ← Cambiar key para usar ID
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     {columns.map((column) => {
+                      // Columna de ID
+                      if (column.id === "id") {
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            <Typography variant="body2" fontWeight="bold">
+                              {row.id}
+                            </Typography>
+                          </TableCell>
+                        );
+                      }
+
+                      // Columna de botón Editar
+                      if (column.id === "acciones_editar") {
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleOpenEditModal(row.id)}
+                              size="small"
+                              title="Editar vecino"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </TableCell>
+                        );
+                      }
+
+                      // Columna de botón Estado (Habilitar/Deshabilitar)
+                      if (column.id === "acciones_estado") {
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            <IconButton
+                              color={row.estado === 1 ? "success" : "error"}
+                              onClick={() =>
+                                handleToggleEstado(row.id, row.estado)
+                              }
+                              size="small"
+                              title={
+                                row.estado === 1
+                                  ? "Deshabilitar vecino"
+                                  : "Habilitar vecino"
+                              }
+                            >
+                              {row.estado === 1 ? (
+                                <ToggleOnIcon />
+                              ) : (
+                                <ToggleOffIcon />
+                              )}
+                            </IconButton>
+                          </TableCell>
+                        );
+                      }
+
+                      // Para las demás columnas, mostrar el valor normal
                       const value = row[column.id];
                       return (
                         <TableCell key={column.id} align={column.align}>
@@ -312,6 +415,21 @@ export default function ListaVecinos() {
           onSuccess={handleRegistroSuccess}
           onCancel={handleCloseModal}
         />
+      </Modal>
+
+      <Modal
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        title="Editar Vecino"
+        maxWidth="md"
+      >
+        {selectedVecinoId && (
+          <EditarVecinoForm
+            vecinoId={selectedVecinoId}
+            onSuccess={handleEditSuccess}
+            onCancel={handleCloseEditModal}
+          />
+        )}
       </Modal>
     </Paper>
   );

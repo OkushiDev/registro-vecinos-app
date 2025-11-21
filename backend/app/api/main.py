@@ -159,7 +159,7 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         )
 
 
-# Atualizar un vecino
+# Actualizar un vecino
 @app.put("/editar-vecino/{vecino_id}")
 async def editar_vecino(
     vecino_id: int, vecino_actualizado: VecinoUpdate, db: Session = Depends(get_db)
@@ -259,6 +259,58 @@ async def editar_vecino(
         raise
     except Exception as e:
         print(f"Error en editar_vecino: {e}")  # Debug
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Error interno del servidor: {str(e)}"
+        )
+
+
+@app.patch("/cambiar-estado-vecino/{vecino_id}")
+async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
+    try:
+        # Buscar el vecino existente
+        vecino_existente = (
+            db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        )
+        if not vecino_existente:
+            raise HTTPException(status_code=404, detail="Vecino no encontrado")
+
+        # Cambiar el estado (alternar entre 1 y 0)
+        nuevo_estado = 0 if vecino_existente.estado == 1 else 1
+        estado_texto = "habilitado" if nuevo_estado == 1 else "deshabilitado"
+
+        print(
+            f"Cambiando estado del vecino {vecino_existente.nombres} a {estado_texto}"
+        )  # Debug
+
+        vecino_existente.estado = nuevo_estado
+        # La fecha_edicion se actualizará automáticamente
+
+        db.commit()
+        db.refresh(vecino_existente)
+
+        print(f"✅ Estado cambiado exitosamente a {estado_texto}")
+
+        return {
+            "message": f"Vecino {estado_texto} exitosamente",
+            "vecino": {
+                "id": vecino_existente.id,
+                "nombres": vecino_existente.nombres,
+                "apellido_paterno": vecino_existente.apellido_paterno,
+                "apellido_materno": vecino_existente.apellido_materno,
+                "rut": vecino_existente.rut,
+                "numero_socio": vecino_existente.numero_socio,
+                "direccion": vecino_existente.direccion,
+                "fecha_registro": str(vecino_existente.fecha_registro),
+                "fecha_edicion": str(vecino_existente.fecha_edicion),
+                "estado": vecino_existente.estado,
+            },
+            "nuevo_estado": nuevo_estado,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error en cambiar_estado_vecino: {e}")  # Debug
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error interno del servidor: {str(e)}"

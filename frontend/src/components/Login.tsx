@@ -39,9 +39,18 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
         return;
       }
 
-      // NO limpiar el guión - enviarlo tal cual
-      // El RUT en la base de datos tiene guión (ej: 14306046-2)
-      const cleanUsername = username.replace(/\./g, ""); // Solo quitar puntos
+      // Normalizar el RUT al formato "12345678-9"
+
+      let cleanUsername = username.replace(/\./g, ""); // Quitar puntos
+
+      // Si no tiene guión, agregarlo antes del último carácter
+      if (!cleanUsername.includes("-")) {
+        const rut = cleanUsername.slice(0, -1);
+        const dv = cleanUsername.slice(-1);
+        cleanUsername = `${rut}-${dv}`;
+      }
+
+      console.log("RUT normalizado:", cleanUsername);
 
       // Intentar hacer login
       const response = await authService.login({

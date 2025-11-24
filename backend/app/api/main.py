@@ -97,30 +97,32 @@ app.add_middleware(
 def generar_password_inicial(rut: str, apellido_paterno: str) -> str:
     """
     Genera contraseña inicial: apellido_paterno + primeros 4 dígitos del RUT
-    Ejemplo: Bolados1353
+    Ejemplo: RUT 14306046-2, Apellido Benavides -> Benavides1430
     """
-    # Limpiar el RUT y obtener solo los primeros 4 dígitos
+    # Limpiar el RUT (quitar puntos y guión)
     rut_limpio = rut.replace(".", "").replace("-", "")
+    # Tomar los primeros 4 dígitos
     primeros_4_digitos = rut_limpio[:4]
-
     return f"{apellido_paterno}{primeros_4_digitos}"
 
 
-# Función auxiliar para crear usuario automáticamente
 def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usuario:
     """
-    Crea un usuario automáticamente cuando se registra un vecino
+    Crea un usuario automáticamente para un vecino nuevo.
+    Username: RUT con formato 12345678-9 (sin puntos, con guión)
+    Password inicial: apellido_paterno + primeros 4 dígitos del RUT
     """
-    # Username es el RUT CON GUIÓN (formato: 12345678-9)
-    username = vecino.rut
+    # Username es el RUT en formato sin puntos pero con guión
+    username = vecino.rut.replace(".", "")  # Solo quitar puntos, mantener guión
 
-    # Contraseña: apellido_paterno + primeros 4 dígitos del RUT
+    # Generar password inicial
     password_inicial = generar_password_inicial(vecino.rut, vecino.apellido_paterno)
     hashed_password = get_password_hash(password_inicial)
 
-    # Determinar el rol (presidente solo para numero_socio 35)
+    # Determinar rol: presidente solo para número de socio 35
     rol = "presidente" if vecino.numero_socio == 35 else "vecino"
 
+    # Crear usuario
     nuevo_usuario = models.Usuario(
         username=username,
         hashed_password=hashed_password,
@@ -133,8 +135,10 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
     db.commit()
     db.refresh(nuevo_usuario)
 
-    print(f"✅ Usuario creado: {username} con rol: {rol}")
-    print(f"   Contraseña inicial: {password_inicial}")
+    print(f"Usuario creado automaticamente:")
+    print(f"  Username: {username}")
+    print(f"  Password inicial: {password_inicial}")
+    print(f"  Rol: {rol}")
 
     return nuevo_usuario
 

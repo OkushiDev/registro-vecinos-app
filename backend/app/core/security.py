@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+import bcrypt
 
 SECRET_KEY = "tu-clave-secreta-super-segura-cambiar-en-produccion"
 ALGORITHM = "HS256"
@@ -17,6 +18,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             print("Password o hash vacio")
             return False
 
+        # Truncar password a 72 bytes si es necesario
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > 72:
+            print(
+                f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72"
+            )
+            password_bytes = password_bytes[:72]
+            plain_password = password_bytes.decode("utf-8", errors="ignore")
+
+        # Convertir $2a$ a $2b$ si es necesario (compatibilidad PostgreSQL)
+        if hashed_password.startswith("$2a$"):
+            hashed_password = "$2b$" + hashed_password[4:]
+
         if not hashed_password.startswith("$2b$") and not hashed_password.startswith(
             "$2a$"
         ):
@@ -28,6 +42,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return result
     except Exception as e:
         print(f"Error al verificar contraseña: {e}")
+        import traceback
+
+        traceback.print_exc()
         return False
 
 
@@ -36,6 +53,16 @@ def get_password_hash(password: str) -> str:
     try:
         if not password:
             raise ValueError("La contraseña no puede estar vacia")
+
+        # Truncar password a 72 bytes si es necesario
+        password_bytes = password.encode("utf-8")
+        if len(password_bytes) > 72:
+            print(
+                f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72"
+            )
+            password_bytes = password_bytes[:72]
+            password = password_bytes.decode("utf-8", errors="ignore")
+
         return pwd_context.hash(password)
     except Exception as e:
         print(f"Error al hashear contraseña: {e}")

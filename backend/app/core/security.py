@@ -1,14 +1,11 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 import bcrypt
 
 SECRET_KEY = "tu-clave-secreta-super-segura-cambiar-en-produccion"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -18,32 +15,33 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             print("Password o hash vacio")
             return False
 
-        # Truncar password a 72 bytes si es necesario
-        password_bytes = plain_password.encode("utf-8")
+        # Convertir a bytes
+        password_bytes = plain_password.encode('utf-8')
+        
+        # Truncar a 72 bytes si es necesario
         if len(password_bytes) > 72:
-            print(
-                f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72"
-            )
+            print(f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72")
+
             password_bytes = password_bytes[:72]
-            plain_password = password_bytes.decode("utf-8", errors="ignore")
 
-        # Convertir $2a$ a $2b$ si es necesario (compatibilidad PostgreSQL)
-        if hashed_password.startswith("$2a$"):
-            hashed_password = "$2b$" + hashed_password[4:]
+        # Convertir hash a bytes
+        hash_bytes = hashed_password.encode('utf-8')
+        
+        # Convertir $2a$ a $2b$ para compatibilidad con PostgreSQL
+        if hash_bytes.startswith(b"$2a$"):
+            hash_bytes = b"$2b$" + hash_bytes[4:]
 
-        if not hashed_password.startswith("$2b$") and not hashed_password.startswith(
-            "$2a$"
-        ):
-            print(f"Hash invalido - no es bcrypt: {hashed_password[:20]}")
-            return False
-
-        result = pwd_context.verify(plain_password, hashed_password)
+        # Verificar con bcrypt directamente
+        result = bcrypt.checkpw(password_bytes, hash_bytes)
         print(f"Resultado de verificacion: {result}")
         return result
+        
+    except ValueError as e:
+        print(f"Error de validacion: {e}")
+        return False
     except Exception as e:
         print(f"Error al verificar contraseña: {e}")
         import traceback
-
         traceback.print_exc()
         return False
 
@@ -54,16 +52,21 @@ def get_password_hash(password: str) -> str:
         if not password:
             raise ValueError("La contraseña no puede estar vacia")
 
-        # Truncar password a 72 bytes si es necesario
-        password_bytes = password.encode("utf-8")
+        # Convertir a bytes
+        password_bytes = password.encode('utf-8')
+        
+        # Truncar a 72 bytes si es necesario
         if len(password_bytes) > 72:
-            print(
-                f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72"
-            )
+            print(f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72")
             password_bytes = password_bytes[:72]
-            password = password_bytes.decode("utf-8", errors="ignore")
 
-        return pwd_context.hash(password)
+        # Generar salt y hash con bcrypt directamente
+        salt = bcrypt.gensalt(rounds=10)
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        
+        # Retornar como string
+        return hashed.decode('utf-8')
+        
     except Exception as e:
         print(f"Error al hashear contraseña: {e}")
         raise

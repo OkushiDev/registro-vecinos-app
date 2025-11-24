@@ -1,33 +1,43 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 import app.api.models as models
 from app.api.database import SessionLocal, engine, get_db
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# Modelo Pydantic basado en tu modelo SQLAlchemy existente
 class VecinoCreate(BaseModel):
     nombres: str
     apellido_paterno: str
     apellido_materno: str
     rut: str
     numero_socio: int
-    direccion: str
+    # Nuevos campos de dirección
+    nombre_calle: Optional[str] = None
+    numero_casa: Optional[str] = None
+    relacion_propiedad: Optional[str] = None
+    # Nuevos campos de contacto
+    telefono: Optional[str] = None
+    email: Optional[str] = None
 
     class Config:
-        from_attributes = True  # Para compatibilidad con SQLAlchemy
+        from_attributes = True
 
 
-# Agregar modelo para actualización
 class VecinoUpdate(BaseModel):
     nombres: str
     apellido_paterno: str
     apellido_materno: str
     rut: str
     numero_socio: int
-    direccion: str
+    # Nuevos campos de dirección
+    nombre_calle: Optional[str] = None
+    numero_casa: Optional[str] = None
+    relacion_propiedad: Optional[str] = None
+    # Nuevos campos de contacto
+    telefono: Optional[str] = None
+    email: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -87,7 +97,11 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
             "apellido_materno": vecino.apellido_materno,
             "rut": vecino.rut,
             "numero_socio": vecino.numero_socio,
-            "direccion": vecino.direccion,
+            "nombre_calle": vecino.nombre_calle,
+            "numero_casa": vecino.numero_casa,
+            "relacion_propiedad": vecino.relacion_propiedad,
+            "telefono": vecino.telefono,
+            "email": vecino.email,
             "fecha_registro": str(vecino.fecha_registro),
             "fecha_edicion": str(vecino.fecha_edicion),
             "estado": vecino.estado,
@@ -126,7 +140,11 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
             apellido_materno=vecino.apellido_materno,
             rut=vecino.rut,
             numero_socio=vecino.numero_socio,
-            direccion=vecino.direccion,
+            nombre_calle=vecino.nombre_calle,
+            numero_casa=vecino.numero_casa,
+            relacion_propiedad=vecino.relacion_propiedad,
+            telefono=vecino.telefono,
+            email=vecino.email,
         )
         db.add(nuevo_vecino)
         db.commit()
@@ -142,7 +160,11 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
                 "apellido_materno": nuevo_vecino.apellido_materno,
                 "rut": nuevo_vecino.rut,
                 "numero_socio": nuevo_vecino.numero_socio,
-                "direccion": nuevo_vecino.direccion,
+                "nombre_calle": nuevo_vecino.nombre_calle,
+                "numero_casa": nuevo_vecino.numero_casa,
+                "relacion_propiedad": nuevo_vecino.relacion_propiedad,
+                "telefono": nuevo_vecino.telefono,
+                "email": nuevo_vecino.email,
                 "fecha_registro": str(nuevo_vecino.fecha_registro),
                 "fecha_edicion": str(nuevo_vecino.fecha_edicion),
                 "estado": nuevo_vecino.estado,
@@ -172,9 +194,9 @@ async def editar_vecino(
         if not vecino_existente:
             raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
-        print(f"Actualizando vecino: {vecino_existente.nombres}")  # Debug
-        print(f"Fecha registro original: {vecino_existente.fecha_registro}")  # Debug
-        print(f"Fecha edición anterior: {vecino_existente.fecha_edicion}")  # Debug
+        print(f"Actualizando vecino: {vecino_existente.nombres}")
+        print(f"Fecha registro original: {vecino_existente.fecha_registro}")
+        print(f"Fecha edición anterior: {vecino_existente.fecha_edicion}")
 
         # Verificar si el RUT ya existe en otro registro (excluir el actual)
         existing_rut = (
@@ -214,7 +236,11 @@ async def editar_vecino(
         vecino_existente.apellido_materno = vecino_actualizado.apellido_materno
         vecino_existente.rut = vecino_actualizado.rut
         vecino_existente.numero_socio = vecino_actualizado.numero_socio
-        vecino_existente.direccion = vecino_actualizado.direccion
+        vecino_existente.nombre_calle = vecino_actualizado.nombre_calle
+        vecino_existente.numero_casa = vecino_actualizado.numero_casa
+        vecino_existente.relacion_propiedad = vecino_actualizado.relacion_propiedad
+        vecino_existente.telefono = vecino_actualizado.telefono
+        vecino_existente.email = vecino_actualizado.email
 
         # IMPORTANTE: NO modificamos fecha_registro
         # La fecha_edicion se actualizará automáticamente por el onupdate=text("now()") en el modelo
@@ -245,7 +271,11 @@ async def editar_vecino(
                 "apellido_materno": vecino_existente.apellido_materno,
                 "rut": vecino_existente.rut,
                 "numero_socio": vecino_existente.numero_socio,
-                "direccion": vecino_existente.direccion,
+                "nombre_calle": vecino_existente.nombre_calle,
+                "numero_casa": vecino_existente.numero_casa,
+                "relacion_propiedad": vecino_existente.relacion_propiedad,
+                "telefono": vecino_existente.telefono,
+                "email": vecino_existente.email,
                 "fecha_registro": str(
                     vecino_existente.fecha_registro
                 ),  # Original conservada
@@ -300,7 +330,11 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
                 "apellido_materno": vecino_existente.apellido_materno,
                 "rut": vecino_existente.rut,
                 "numero_socio": vecino_existente.numero_socio,
-                "direccion": vecino_existente.direccion,
+                "nombre_calle": vecino_existente.nombre_calle,
+                "numero_casa": vecino_existente.numero_casa,
+                "relacion_propiedad": vecino_existente.relacion_propiedad,
+                "telefono": vecino_existente.telefono,
+                "email": vecino_existente.email,
                 "fecha_registro": str(vecino_existente.fecha_registro),
                 "fecha_edicion": str(vecino_existente.fecha_edicion),
                 "estado": vecino_existente.estado,

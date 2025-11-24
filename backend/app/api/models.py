@@ -41,8 +41,9 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    nombre_usuario = Column(String, unique=True, index=True)
+    pass_usuario = Column(String)
+    tipo_usuario = Column(String)  # presidente (admin), vecino
     vecino_id = Column(Integer, ForeignKey("vecinos.id"))
 
 

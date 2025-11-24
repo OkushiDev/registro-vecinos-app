@@ -15,6 +15,14 @@ CREATE TABLE vecinos (
     estado INTEGER DEFAULT 1
 );
 
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    vecino_id INTEGER REFERENCES vecinos(id),  
+    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
+    pass_usuario VARCHAR(255) NOT NULL,
+    tipo_usuario VARCHAR(50) NOT NULL
+);
+
 INSERT INTO vecinos (nombres, apellido_paterno, apellido_materno, rut, numero_socio, nombre_calle, numero_casa, relacion_propiedad, fecha_registro, fecha_edicion, telefono, email, estado) VALUES
 ('Marcela Julia', 'Bolados', ' ', '13532259-8', 1, 'Rio loco', '1628', 'Propietario', '2004-10-21', '2004-10-21', '987654321', 'marcela.bolados@gmail.com', 0),
 ('Juan Jose', 'Cornejo', 'O.', '13572049-6', 2, 'Rio loco', '1628', 'Arrendatario', '2004-10-21', '2004-10-21', '998765432', 'juan.cornejo@outlook.com', 0),
@@ -51,3 +59,40 @@ INSERT INTO vecinos (nombres, apellido_paterno, apellido_materno, rut, numero_so
 ('Matias', 'Flores', 'Campos', '14456789-1', 33, 'Miguel Angel', '2340', 'Propietario', '2004-10-21', '2004-10-21', '967890125', 'matias.campos@yahoo.com', 1),
 ('Antonella', 'Lagos', 'Rios', '13345678-k', 34, 'Leonardo da Vinci', '2467', 'Otro', '2004-10-21', '2004-10-21', '978901236', 'antonella.lagos@gmail.com', 1),
 ('Jose Luis', 'Benavides', 'Gonzalez', '14306046-2', 35, 'Leonardo da Vinci', '2603', 'Propietario', '2004-10-21', '2004-10-21', '991234567', 'jose.benavide@yahoo.com', 1);
+
+INSERT INTO usuarios (vecino_id, nombre_usuario, pass_usuario, tipo_usuario) VALUES
+(1, '13532259-8', 'Bolados1353', 'Vecino'),
+(2, '13572049-6', 'Cornejo1357', 'Vecino'),
+(3, '6017767-8', 'Tapia6017', 'Vecino'),
+(4, '5355693-0', 'Bolvaran5355', 'Vecino'),
+(5, '5885048-9', 'Donoso5885', 'Vecino'),
+(6, '13720991-8', 'Recaros1372', 'Vecino'),
+(7, '13500597-9', 'Caceres1350', 'Vecino'),
+(8, '13745623-1', 'Gonzalez1374', 'Vecino'),
+(9, '6356989-5', 'Loza6356', 'Vecino'),
+(10, '6806031-1', 'Camilo6806', 'Vecino'),
+(11, '12345678-9', 'Silva1234', 'Vecino'),
+(12, '11234567-8', 'Rojas1123', 'Vecino'),
+(13, '10123456-7', 'Fernandez1012', 'Vecino'),
+(14, '9012345-6', 'Munoz9012', 'Vecino'),
+(15, '8901234-5', 'Torres8901', 'Vecino'),
+(16, '7890123-4', 'Vargas7890', 'Vecino'),
+(17, '6789012-3', 'Herrera6789', 'Vecino'),
+(18, '5678901-2', 'Soto5678', 'Vecino'),
+(19, '4567890-1', 'Contreras4567', 'Vecino'),
+(20, '15678901-k', 'Parra1567', 'Vecino'),
+(21, '14567890-9', 'Espinoza1456', 'Vecino'),
+(22, '13456789-8', 'Nunez1345', 'Vecino'),
+(23, '12345679-7', 'Vega1234', 'Vecino'),
+(24, '11234568-6', 'Molina1123', 'Vecino'),
+(25, '10123457-5', 'Reyes1012', 'Vecino'),
+(26, '9012346-4', 'Ortiz9012', 'Vecino'),
+(27, '8901235-3', 'Jara8901', 'Vecino'),
+(28, '7890124-2', 'Bustamante7890', 'Vecino'),
+(29, '6789013-1', 'Acuna6789', 'Vecino'),
+(30, '5678902-0', 'Castillo5678', 'Vecino'),
+(31, '16789012-4', 'Guerrero1678', 'Vecino'),
+(32, '15567890-2', 'Mendoza1556', 'Vecino'),
+(33, '14456789-1', 'Flores1445', 'Vecino'),
+(34, '13345678-k', 'Lagos1334', 'Vecino'),
+(35, '14306046-2', 'Benavides1430', 'Presidente');

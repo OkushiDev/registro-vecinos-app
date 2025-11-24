@@ -130,7 +130,7 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
     db.commit()
     db.refresh(nuevo_usuario)
 
-    print(f"✅ Usuario creado: {username} con rol: {rol}")
+    print(f" Usuario creado: {username} con rol: {rol}")
     print(f"   Contraseña inicial: {password_inicial}")
 
     return nuevo_usuario

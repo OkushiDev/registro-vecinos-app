@@ -12,7 +12,13 @@ class Vecino(Base):
     apellido_materno = Column(String, index=True)
     rut = Column(String, unique=True, index=True)
     numero_socio = Column(Integer, unique=True, index=True)
-    direccion = Column(String)
+    nombre_calle = Column(String, nullable=True, index=True)
+    numero_casa = Column(String, nullable=True)  # St
+    relacion_propiedad = Column(
+        String, nullable=True
+    )  # propietario, arrendatario, etc.
+    telefono = Column(String, nullable=True)
+    email = Column(String, nullable=True, index=True)
     fecha_registro = Column(TIMESTAMP(timezone=True), default=text("now()"))
     fecha_edicion = Column(
         TIMESTAMP(timezone=True), default=text("now()"), onupdate=text("now()")

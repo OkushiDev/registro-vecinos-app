@@ -7,7 +7,12 @@ import {
   Typography,
   Box,
   Alert,
+  TextField,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import authService from "../services/authService";
 import type { UserProfile } from "./Navbar";
 
 interface LoginProps {
@@ -15,14 +20,59 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin }: LoginProps): React.ReactElement {
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleLogin = (userType: UserProfile) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError("");
-    // Simular verificación básica
-    setTimeout(() => {
-      onLogin(userType);
-    }, 500);
+    setLoading(true);
+
+    try {
+      // Validación básica
+      if (!username.trim() || !password.trim()) {
+        setError("Por favor ingrese RUT y contraseña");
+        setLoading(false);
+        return;
+      }
+
+      // Limpiar el RUT (eliminar puntos y guiones)
+      const cleanUsername = username.replace(/\./g, "").replace(/-/g, "");
+
+      // Intentar hacer login
+      const response = await authService.login({
+        username: cleanUsername,
+        password: password,
+      });
+
+      // Convertir el rol del backend al perfil del frontend
+      const userProfile: UserProfile =
+        response.rol === "presidente" ? "presidente" : "vecino";
+
+      // Notificar al componente padre
+      onLogin(userProfile);
+    } catch (err: any) {
+      console.error("Error de login:", err);
+
+      if (err.response?.status === 401) {
+        setError("RUT o contraseña incorrectos");
+      } else if (err.response?.status === 403) {
+        setError("Usuario deshabilitado. Contacte al administrador.");
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError("Error al conectar con el servidor. Intente nuevamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -37,6 +87,8 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
       >
         <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
           <Box
+            component="form"
+            onSubmit={handleSubmit}
             sx={{
               display: "flex",
               flexDirection: "column",
@@ -53,7 +105,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
               color="textSecondary"
               gutterBottom
             >
-              Selecciona tu perfil
+              Iniciar Sesión
             </Typography>
 
             {error && (
@@ -62,31 +114,57 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
               </Alert>
             )}
 
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              <Button
-                variant="contained"
-                size="large"
-                onClick={() => handleLogin("presidente")}
-                sx={{ py: 2 }}
-              >
-                Entrar como Presidente
-              </Button>
+            <TextField
+              fullWidth
+              label="RUT"
+              placeholder="12345678-9"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoFocus
+              disabled={loading}
+              helperText="Ingrese su RUT sin puntos, con guión (ej: 12345678-9)"
+            />
 
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={() => handleLogin("vecino")}
-                sx={{ py: 2 }}
-              >
-                Entrar como Vecino
-              </Button>
+            <TextField
+              fullWidth
+              label="Contraseña"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              disabled={loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              helperText="Contraseña inicial: Apellido + primeros 4 dígitos del RUT"
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              fullWidth
+              disabled={loading}
+              sx={{ py: 2, mt: 2 }}
+            >
+              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            </Button>
+
+            <Box sx={{ mt: 2, textAlign: "center", width: "100%" }}>
+              <Typography variant="caption" color="textSecondary">
+                ¿Olvidó su contraseña? Contacte al presidente de la junta
+              </Typography>
             </Box>
           </Box>
         </Paper>

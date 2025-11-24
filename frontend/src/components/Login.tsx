@@ -39,8 +39,9 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
         return;
       }
 
-      // Limpiar el RUT (eliminar puntos y guiones)
-      const cleanUsername = username.replace(/\./g, "").replace(/-/g, "");
+      // NO limpiar el guión - enviarlo tal cual
+      // El RUT en la base de datos tiene guión (ej: 14306046-2)
+      const cleanUsername = username.replace(/\./g, ""); // Solo quitar puntos
 
       // Intentar hacer login
       const response = await authService.login({
@@ -61,6 +62,8 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
         setError("RUT o contraseña incorrectos");
       } else if (err.response?.status === 403) {
         setError("Usuario deshabilitado. Contacte al administrador.");
+      } else if (err.response?.status === 503) {
+        setError("Error de conexión con la base de datos. Intente nuevamente.");
       } else if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else {

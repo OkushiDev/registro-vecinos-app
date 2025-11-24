@@ -184,6 +184,9 @@ async def login(
     Retorna un token JWT si las credenciales son válidas.
     """
     try:
+        print(f"\n--- Intento de login ---")
+        print(f"Username recibido: {form_data.username}")
+
         # Buscar usuario por username (RUT sin puntos ni guión)
         usuario = (
             db.query(models.Usuario)
@@ -192,21 +195,33 @@ async def login(
         )
 
         if not usuario:
+            print(f"Usuario no encontrado: {form_data.username}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        print(
+            f"Usuario encontrado - ID: {usuario.id}, Rol: {usuario.rol}, Estado: {usuario.estado}"
+        )
+        print(f"Hash almacenado (primeros 30 chars): {usuario.hashed_password[:30]}...")
+
         # Verificar si el usuario está activo
         if usuario.estado != 1:
+            print("Usuario deshabilitado")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Usuario deshabilitado. Contacte al administrador.",
             )
 
         # Verificar contraseña
-        if not verify_password(form_data.password, usuario.hashed_password):
+        print(f"Verificando contraseña...")
+        password_valida = verify_password(form_data.password, usuario.hashed_password)
+        print(f"Password valida: {password_valida}")
+
+        if not password_valida:
+            print("Contraseña incorrecta")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos",
@@ -244,6 +259,9 @@ async def login(
             f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}"
         )
 
+        print(f"Login exitoso para: {nombre_completo}")
+        print("--- Fin intento de login ---\n")
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -257,9 +275,12 @@ async def login(
         raise
     except Exception as e:
         print(f"Error en login: {e}")
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error al procesar la solicitud",
+            detail=f"Error al procesar la solicitud: {str(e)}",
         )
 
 

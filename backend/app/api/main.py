@@ -604,18 +604,22 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/siguiente-numero-socio/")
-async def obtener_siguiente_numero_socio(db: Session = Depends(get_db)):
+async def siguiente_numero_socio(db: Session = Depends(get_db)):
     try:
+        # Obtener el número de socio más alto
         max_numero = (
             db.query(models.Vecino.numero_socio)
             .order_by(models.Vecino.numero_socio.desc())
             .first()
         )
 
-        siguiente_numero = (max_numero[0] + 1) if max_numero and max_numero[0] else 1
+        if max_numero and max_numero[0]:
+            siguiente_numero = max_numero[0] + 1
+        else:
+            siguiente_numero = 1  # Si no hay vecinos, empezar desde 1
 
-        print(f"Siguiente número de socio: {siguiente_numero}")
+        print(f"Siguiente número de socio disponible: {siguiente_numero}")  # Debug
         return {"siguiente_numero_socio": siguiente_numero}
     except Exception as e:
-        print(f"Error en obtener_siguiente_numero_socio: {e}")
+        print(f"Error en siguiente_numero_socio: {e}")  # Debug
         raise HTTPException(status_code=500, detail=str(e))

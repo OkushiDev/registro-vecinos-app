@@ -96,11 +96,14 @@ app.add_middleware(
 # Función auxiliar para generar contraseña
 def generar_password_inicial(rut: str, apellido_paterno: str) -> str:
     """
-    Genera contraseña inicial: rut sin puntos ni guión + apellido_paterno
-    Ejemplo: 135322598Bolados
+    Genera contraseña inicial: apellido_paterno + primeros 4 dígitos del RUT
+    Ejemplo: Bolados1353
     """
+    # Limpiar el RUT y obtener solo los primeros 4 dígitos
     rut_limpio = rut.replace(".", "").replace("-", "")
-    return f"{rut_limpio}{apellido_paterno}"
+    primeros_4_digitos = rut_limpio[:4]
+
+    return f"{apellido_paterno}{primeros_4_digitos}"
 
 
 # Función auxiliar para crear usuario automáticamente
@@ -108,10 +111,10 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
     """
     Crea un usuario automáticamente cuando se registra un vecino
     """
-    # Username es el RUT (sin puntos ni guión)
-    username = vecino.rut.replace(".", "").replace("-", "")
+    # Username es el RUT CON GUIÓN (formato: 12345678-9)
+    username = vecino.rut
 
-    # Contraseña: rut + apellido_paterno
+    # Contraseña: apellido_paterno + primeros 4 dígitos del RUT
     password_inicial = generar_password_inicial(vecino.rut, vecino.apellido_paterno)
     hashed_password = get_password_hash(password_inicial)
 
@@ -130,7 +133,7 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
     db.commit()
     db.refresh(nuevo_usuario)
 
-    print(f" Usuario creado: {username} con rol: {rol}")
+    print(f"✅ Usuario creado: {username} con rol: {rol}")
     print(f"   Contraseña inicial: {password_inicial}")
 
     return nuevo_usuario

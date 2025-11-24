@@ -5,6 +5,7 @@ import Navbar, { type UserProfile } from "./components/Navbar";
 import Login from "./components/Login.tsx";
 import ListaVecinos from "./components/pages/ListaVecinos.tsx";
 import Historial from "./components/pages/Historial.tsx";
+import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
 
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -42,14 +43,15 @@ export default function App(): React.ReactElement {
           </>
         ) : (
           <>
-            {/* <Route
+            <Route
               path="/"
-              element={<Navigate to="/vecino/antecedentes" replace />}
+              element={<Navigate to="/vecino/antecedentes-vecino" replace />}
             />
             <Route
-              path="/vecino/antecedentes"
-              element={<AntecedenteVecino />}
+              path="/vecino/antecedentes-vecino"
+              element={<AntecedentesVecino />}
             />
+            {/*}
             <Route
               path="/vecino/subir-archivo"
               element={<SubirAntecedente />}

@@ -18,6 +18,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import FolderIcon from "@mui/icons-material/Folder";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import CertificateIcon from "@mui/icons-material/Assignment";
+import PersonIcon from "@mui/icons-material/Person";
 
 export type UserProfile = "presidente" | "vecino";
 
@@ -49,8 +50,8 @@ const presidentePages: NavItem[] = [
 const vecinoPages: NavItem[] = [
   {
     label: "Mis Antecedentes",
-    path: "/vecino/antecedentes",
-    icon: <FolderIcon />,
+    path: "/vecino/antecedentes-vecino",
+    icon: <PersonIcon />,
   },
   {
     label: "Subir Archivo",

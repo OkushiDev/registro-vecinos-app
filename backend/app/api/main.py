@@ -97,30 +97,32 @@ app.add_middleware(
 def generar_password_inicial(rut: str, apellido_paterno: str) -> str:
     """
     Genera contraseña inicial: apellido_paterno + primeros 4 dígitos del RUT
-    Ejemplo: Bolados1353
+    Ejemplo: RUT 14306046-2, Apellido Benavides -> Benavides1430
     """
-    # Limpiar el RUT y obtener solo los primeros 4 dígitos
+    # Limpiar el RUT (quitar puntos y guión)
     rut_limpio = rut.replace(".", "").replace("-", "")
+    # Tomar los primeros 4 dígitos
     primeros_4_digitos = rut_limpio[:4]
-
     return f"{apellido_paterno}{primeros_4_digitos}"
 
 
-# Función auxiliar para crear usuario automáticamente
 def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usuario:
     """
-    Crea un usuario automáticamente cuando se registra un vecino
+    Crea un usuario automáticamente para un vecino nuevo.
+    Username: RUT con formato 12345678-9 (sin puntos, con guión)
+    Password inicial: apellido_paterno + primeros 4 dígitos del RUT
     """
-    # Username es el RUT CON GUIÓN (formato: 12345678-9)
-    username = vecino.rut
+    # Username es el RUT en formato sin puntos pero con guión
+    username = vecino.rut.replace(".", "")  # Solo quitar puntos, mantener guión
 
-    # Contraseña: apellido_paterno + primeros 4 dígitos del RUT
+    # Generar password inicial
     password_inicial = generar_password_inicial(vecino.rut, vecino.apellido_paterno)
     hashed_password = get_password_hash(password_inicial)
 
-    # Determinar el rol (presidente solo para numero_socio 35)
+    # Determinar rol: presidente solo para número de socio 35
     rol = "presidente" if vecino.numero_socio == 35 else "vecino"
 
+    # Crear usuario
     nuevo_usuario = models.Usuario(
         username=username,
         hashed_password=hashed_password,
@@ -133,8 +135,10 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
     db.commit()
     db.refresh(nuevo_usuario)
 
-    print(f"✅ Usuario creado: {username} con rol: {rol}")
-    print(f"   Contraseña inicial: {password_inicial}")
+    print(f"Usuario creado automaticamente:")
+    print(f"  Username: {username}")
+    print(f"  Password inicial: {password_inicial}")
+    print(f"  Rol: {rol}")
 
     return nuevo_usuario
 
@@ -184,6 +188,9 @@ async def login(
     Retorna un token JWT si las credenciales son válidas.
     """
     try:
+        print(f"\n--- Intento de login ---")
+        print(f"Username recibido: {form_data.username}")
+
         # Buscar usuario por username (RUT sin puntos ni guión)
         usuario = (
             db.query(models.Usuario)
@@ -192,21 +199,33 @@ async def login(
         )
 
         if not usuario:
+            print(f"Usuario no encontrado: {form_data.username}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        print(
+            f"Usuario encontrado - ID: {usuario.id}, Rol: {usuario.rol}, Estado: {usuario.estado}"
+        )
+        print(f"Hash almacenado (primeros 30 chars): {usuario.hashed_password[:30]}...")
+
         # Verificar si el usuario está activo
         if usuario.estado != 1:
+            print("Usuario deshabilitado")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Usuario deshabilitado. Contacte al administrador.",
             )
 
         # Verificar contraseña
-        if not verify_password(form_data.password, usuario.hashed_password):
+        print(f"Verificando contraseña...")
+        password_valida = verify_password(form_data.password, usuario.hashed_password)
+        print(f"Password valida: {password_valida}")
+
+        if not password_valida:
+            print("Contraseña incorrecta")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos",
@@ -244,6 +263,9 @@ async def login(
             f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}"
         )
 
+        print(f"Login exitoso para: {nombre_completo}")
+        print("--- Fin intento de login ---\n")
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -257,9 +279,12 @@ async def login(
         raise
     except Exception as e:
         print(f"Error en login: {e}")
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error al procesar la solicitud",
+            detail=f"Error al procesar la solicitud: {str(e)}",
         )
 
 

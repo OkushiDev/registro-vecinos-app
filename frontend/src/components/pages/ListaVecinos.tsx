@@ -43,6 +43,16 @@ import EditarVecinoForm from "../EditarVecinoForm";
 // Agregar esta importación al inicio del archivo
 import ConfirmDialog from "../ConfirmDialog";
 
+// Importaciones para los checkboxes de filtrado
+import Checkbox from "@mui/material/Checkbox";
+import FormGroup from "@mui/material/FormGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { ForkRight } from "@mui/icons-material";
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
@@ -73,7 +83,7 @@ const columns: readonly Column[] = [
   { id: "nombres", label: "Nombres", minWidth: 150 },
   { id: "apellido_paterno", label: "Apellido Paterno", minWidth: 120 },
   { id: "apellido_materno", label: "Apellido Materno", minWidth: 120 },
-  { id: "rut", label: "RUT", minWidth: 100 },
+  { id: "rut", label: "RUT", minWidth: 120 },
   { id: "numero_socio", label: "N° Socio", minWidth: 80, align: "right" },
   { id: "nombre_calle", label: "Calle", minWidth: 150 },
   { id: "numero_casa", label: "N° Casa", minWidth: 80 },
@@ -113,6 +123,43 @@ interface Data {
   email: string;
   estado: number;
 }
+
+// Función para formatear RUT con puntos y guión
+const formatearRutConPuntos = (rut: string): string => {
+  if (!rut) return "-";
+
+  // Limpiar el RUT (quitar puntos y guiones)
+  const rutLimpio = rut.replace(/\./g, "").replace(/-/g, "").trim();
+
+  if (rutLimpio.length < 2) return rut;
+
+  // Separar número y dígito verificador
+  const cuerpo = rutLimpio.slice(0, -1);
+  const dv = rutLimpio.slice(-1);
+
+  // Formatear el cuerpo con puntos
+  const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  return `${cuerpoFormateado}-${dv}`;
+};
+
+// Listas para los filtros
+const CALLES = [
+  "Boticelli",
+  "Giovanni Bocaccio",
+  "Leonardo da Vinci",
+  "Lourdes",
+  "Miguel Angel",
+  "Rio Loco",
+  "Tizano",
+];
+
+const RELACIONES_PROPIEDAD = [
+  "Propietario",
+  "Arrendatario",
+  "Residente",
+  "Otro",
+];
 
 // Componente principal para mostrar la lista de vecinos
 export default function ListaVecinos() {
@@ -156,23 +203,90 @@ export default function ListaVecinos() {
   // Estado para la columna por la cual se filtrará
   const [filterColumn, setFilterColumn] = React.useState("all");
 
-  // Filtrar filas basado en el término de búsqueda y columna seleccionada
-  const filteredRows = React.useMemo(() => {
-    if (!searchTerm) return items;
+  // Estados para filtros por checkboxes
+  const [selectedCalles, setSelectedCalles] = React.useState<string[]>([]);
+  const [selectedRelaciones, setSelectedRelaciones] = React.useState<string[]>(
+    []
+  );
 
-    return items.filter((item) => {
-      if (filterColumn === "all") {
-        return Object.values(item).some((value) =>
-          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      } else {
-        return item[filterColumn as keyof Data]
-          .toString()
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-      }
-    });
-  }, [searchTerm, filterColumn, items]);
+  // Estado para filtro de estado (habilitado/deshabilitado/todos)
+  const [estadoFiltro, setEstadoFiltro] = React.useState<string>("todos");
+
+  // Función para manejar cambios en checkboxes de calles
+  const handleCalleChange = (calle: string) => {
+    setSelectedCalles((prev) =>
+      prev.includes(calle) ? prev.filter((c) => c !== calle) : [...prev, calle]
+    );
+    setPage(0);
+  };
+
+  // Función para manejar cambios en checkboxes de relaciones
+  const handleRelacionChange = (relacion: string) => {
+    setSelectedRelaciones((prev) =>
+      prev.includes(relacion)
+        ? prev.filter((r) => r !== relacion)
+        : [...prev, relacion]
+    );
+    setPage(0);
+  };
+
+  // Función para manejar cambios en el filtro de estado
+  const handleEstadoFiltroChange = (e: any) => {
+    setEstadoFiltro(e.target.value);
+    setPage(0);
+  };
+
+  // Filtrar filas basado en el término de búsqueda, columna seleccionada y checkboxes
+  const filteredRows = React.useMemo(() => {
+    let filtered = items;
+
+    // Filtrar por búsqueda de texto
+    if (searchTerm) {
+      filtered = filtered.filter((item) => {
+        if (filterColumn === "all") {
+          return Object.values(item).some((value) =>
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        } else {
+          return item[filterColumn as keyof Data]
+            .toString()
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        }
+      });
+    }
+
+    // Filtrar por calles seleccionadas
+    if (selectedCalles.length > 0) {
+      filtered = filtered.filter((item) =>
+        selectedCalles.includes(item.nombre_calle)
+      );
+    }
+
+    // Filtrar por relaciones seleccionadas
+    if (selectedRelaciones.length > 0) {
+      filtered = filtered.filter((item) =>
+        selectedRelaciones.includes(item.relacion_propiedad)
+      );
+    }
+
+    // Filtrar por estado
+    if (estadoFiltro === "habilitados") {
+      filtered = filtered.filter((item) => item.estado === 1);
+    } else if (estadoFiltro === "deshabilitados") {
+      filtered = filtered.filter((item) => item.estado === 0);
+    }
+    // Si es "todos", no se filtra por estado
+
+    return filtered;
+  }, [
+    searchTerm,
+    filterColumn,
+    items,
+    selectedCalles,
+    selectedRelaciones,
+    estadoFiltro,
+  ]);
 
   //Función para resetear página cuando se busca
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,11 +411,19 @@ export default function ListaVecinos() {
   };
 
   return (
-    <Paper sx={{ width: "100%", overflow: "hidden" }}>
+    <Paper
+      sx={{
+        width: "100%",
+        height: "calc(100vh - 100px)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Barra de búsqueda con filtros */}
       <Box sx={{ p: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={8}>
+        <Grid container spacing={2} alignItems="flex-start">
+          {/* Primera fila: Búsqueda, Filtro de columna y Botón Registrar */}
+          <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               variant="outlined"
@@ -317,7 +439,7 @@ export default function ListaVecinos() {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Buscar en</InputLabel>
               <Select
@@ -326,22 +448,118 @@ export default function ListaVecinos() {
                 onChange={handleFilterChange}
               >
                 <MenuItem value="all">Todas las columnas</MenuItem>
-                <MenuItem value="id">ID</MenuItem>
                 <MenuItem value="nombres">Nombres</MenuItem>
                 <MenuItem value="apellido_paterno">Apellido Paterno</MenuItem>
                 <MenuItem value="apellido_materno">Apellido Materno</MenuItem>
                 <MenuItem value="rut">RUT</MenuItem>
                 <MenuItem value="numero_socio">N° Socio</MenuItem>
-                <MenuItem value="nombre_calle">Calle</MenuItem>
                 <MenuItem value="numero_casa">N° Casa</MenuItem>
-                <MenuItem value="relacion_propiedad">
-                  Relación Propiedad
-                </MenuItem>
                 <MenuItem value="telefono">Teléfono</MenuItem>
                 <MenuItem value="email">Email</MenuItem>
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={estadoFiltro}
+                label="Estado"
+                onChange={handleEstadoFiltroChange}
+              >
+                <MenuItem value="todos">Todos</MenuItem>
+                <MenuItem value="habilitados">Habilitados</MenuItem>
+                <MenuItem value="deshabilitados">Deshabilitados</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Segunda fila: Filtros por checkboxes */}
+          <Grid item xs={12} md={6}>
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>
+                  Filtrar por Calle
+                  {selectedCalles.length > 0 && ` (${selectedCalles.length})`}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails
+                sx={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "white",
+                  boxShadow: 3,
+                  maxHeight: "300px",
+                  overflowY: "auto",
+                  zIndex: 1001,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderTop: "none",
+                }}
+              >
+                <FormGroup>
+                  {CALLES.map((calle) => (
+                    <FormControlLabel
+                      key={calle}
+                      control={
+                        <Checkbox
+                          checked={selectedCalles.includes(calle)}
+                          onChange={() => handleCalleChange(calle)}
+                        />
+                      }
+                      label={calle}
+                    />
+                  ))}
+                </FormGroup>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>
+                  Filtrar por Relación con Propiedad
+                  {selectedRelaciones.length > 0 &&
+                    ` (${selectedRelaciones.length})`}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails
+                sx={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "white",
+                  boxShadow: 3,
+                  maxHeight: "300px",
+                  overflowY: "auto",
+                  zIndex: 1000,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderTop: "none",
+                }}
+              >
+                <FormGroup>
+                  {RELACIONES_PROPIEDAD.map((relacion) => (
+                    <FormControlLabel
+                      key={relacion}
+                      control={
+                        <Checkbox
+                          checked={selectedRelaciones.includes(relacion)}
+                          onChange={() => handleRelacionChange(relacion)}
+                        />
+                      }
+                      label={relacion}
+                    />
+                  ))}
+                </FormGroup>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+
           <Grid item xs={12} md={3}>
             <Button
               fullWidth
@@ -349,27 +567,41 @@ export default function ListaVecinos() {
               color="primary"
               startIcon={<AddIcon />}
               onClick={handleOpenModal}
-              sx={{ height: "56px" }} // Mismo alto que los otros campos
+              sx={{ height: "56px" }}
             >
               Registrar Vecino
             </Button>
           </Grid>
         </Grid>
+
+        {(searchTerm ||
+          selectedCalles.length > 0 ||
+          selectedRelaciones.length > 0 ||
+          estadoFiltro !== "todos") && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Mostrando {filteredRows.length} de {items.length} registros
+              {filterColumn !== "all" &&
+                searchTerm &&
+                ` (búsqueda en ${
+                  columns.find((col) => col.id === filterColumn)?.label
+                })`}
+              {selectedCalles.length > 0 &&
+                ` • Calles: ${selectedCalles.join(", ")}`}
+              {selectedRelaciones.length > 0 &&
+                ` • Relaciones: ${selectedRelaciones.join(", ")}`}
+              {estadoFiltro !== "todos" &&
+                ` • Estado: ${
+                  estadoFiltro === "habilitados"
+                    ? "Habilitados"
+                    : "Deshabilitados"
+                }`}
+            </Typography>
+          </Box>
+        )}
       </Box>
 
-      {searchTerm && (
-        <Box sx={{ mt: 1, px: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Mostrando {filteredRows.length} de {items.length} registros
-            {filterColumn !== "all" &&
-              ` (filtrado por ${
-                columns.find((col) => col.id === filterColumn)?.label
-              })`}
-          </Typography>
-        </Box>
-      )}
-
-      <TableContainer sx={{ maxHeight: 440 }}>
+      <TableContainer sx={{ flex: 1 }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
@@ -393,7 +625,7 @@ export default function ListaVecinos() {
                     hover
                     role="checkbox"
                     tabIndex={-1}
-                    key={`${row.id}-${index}`} // ← Cambiar key para usar ID
+                    key={`${row.id}-${index}`}
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     {columns.map((column) => {
@@ -404,6 +636,15 @@ export default function ListaVecinos() {
                             <Typography variant="body2" fontWeight="bold">
                               {row.id}
                             </Typography>
+                          </TableCell>
+                        );
+                      }
+
+                      // Columna de RUT - formatear con puntos
+                      if (column.id === "rut") {
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            {formatearRutConPuntos(row.rut)}
                           </TableCell>
                         );
                       }
@@ -436,14 +677,14 @@ export default function ListaVecinos() {
                                   row.estado,
                                   row.nombres
                                 )
-                              } // ← Agregar el nombre aquí
+                              }
                               size="small"
                               title={
                                 row.estado === 1
                                   ? "Deshabilitar vecino"
                                   : "Habilitar vecino"
                               }
-                              disabled={loadingToggle} // ← Agregar disabled cuando está cargando
+                              disabled={loadingToggle}
                             >
                               {row.estado === 1 ? (
                                 <ToggleOnIcon />

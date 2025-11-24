@@ -52,11 +52,13 @@ interface Column {
     | "apellido_materno"
     | "rut"
     | "numero_socio"
-    | "direccion"
+    | "nombre_calle"
+    | "numero_casa"
+    | "relacion_propiedad"
     | "fecha_registro"
     | "fecha_edicion"
     | "telefono"
-    | "correo"
+    | "email"
     | "acciones_editar"
     | "acciones_estado";
   label: string;
@@ -73,7 +75,9 @@ const columns: readonly Column[] = [
   { id: "apellido_materno", label: "Apellido Materno", minWidth: 120 },
   { id: "rut", label: "RUT", minWidth: 100 },
   { id: "numero_socio", label: "N° Socio", minWidth: 80, align: "right" },
-  { id: "direccion", label: "Dirección", minWidth: 200 },
+  { id: "nombre_calle", label: "Calle", minWidth: 150 },
+  { id: "numero_casa", label: "N° Casa", minWidth: 80 },
+  { id: "relacion_propiedad", label: "Relación Propiedad", minWidth: 120 },
   {
     id: "fecha_registro",
     label: "Fecha Registro",
@@ -87,7 +91,7 @@ const columns: readonly Column[] = [
     align: "right",
   },
   { id: "telefono", label: "Teléfono", minWidth: 120 },
-  { id: "correo", label: "Correo", minWidth: 200 },
+  { id: "email", label: "Email", minWidth: 200 },
   { id: "acciones_editar", label: "Editar", minWidth: 80 },
   { id: "acciones_estado", label: "Estado", minWidth: 100 },
 ];
@@ -100,11 +104,13 @@ interface Data {
   apellido_materno: string;
   rut: string;
   numero_socio: number;
-  direccion: string;
+  nombre_calle: string;
+  numero_casa: string;
+  relacion_propiedad: string;
   fecha_registro: string;
   fecha_edicion: string;
   telefono: string;
-  correo: string;
+  email: string;
   estado: number;
 }
 
@@ -326,7 +332,13 @@ export default function ListaVecinos() {
                 <MenuItem value="apellido_materno">Apellido Materno</MenuItem>
                 <MenuItem value="rut">RUT</MenuItem>
                 <MenuItem value="numero_socio">N° Socio</MenuItem>
-                <MenuItem value="direccion">Dirección</MenuItem>
+                <MenuItem value="nombre_calle">Calle</MenuItem>
+                <MenuItem value="numero_casa">N° Casa</MenuItem>
+                <MenuItem value="relacion_propiedad">
+                  Relación Propiedad
+                </MenuItem>
+                <MenuItem value="telefono">Teléfono</MenuItem>
+                <MenuItem value="email">Email</MenuItem>
               </Select>
             </FormControl>
           </Grid>

@@ -1,10 +1,25 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
+from datetime import timedelta
 import app.api.models as models
 from app.api.database import SessionLocal, engine, get_db
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
+
+
+# Importar funciones de seguridad
+from app.core.security import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    decode_token,
+)
+
+# Configurar OAuth2
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 
 class VecinoCreate(BaseModel):
@@ -13,11 +28,9 @@ class VecinoCreate(BaseModel):
     apellido_materno: str
     rut: str
     numero_socio: int
-    # Nuevos campos de dirección
     nombre_calle: Optional[str] = None
     numero_casa: Optional[str] = None
     relacion_propiedad: Optional[str] = None
-    # Nuevos campos de contacto
     telefono: Optional[str] = None
     email: Optional[str] = None
 
@@ -31,11 +44,9 @@ class VecinoUpdate(BaseModel):
     apellido_materno: str
     rut: str
     numero_socio: int
-    # Nuevos campos de dirección
     nombre_calle: Optional[str] = None
     numero_casa: Optional[str] = None
     relacion_propiedad: Optional[str] = None
-    # Nuevos campos de contacto
     telefono: Optional[str] = None
     email: Optional[str] = None
 
@@ -43,11 +54,29 @@ class VecinoUpdate(BaseModel):
         from_attributes = True
 
 
+# Modelos para autenticación
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    rol: str
+    user_id: int
+    vecino_id: int
+    nombre_completo: str
+
+
+class TokenData(BaseModel):
+    user_id: Optional[int] = None
+    rol: Optional[str] = None
+
+
+class UserLogin(BaseModel):
+    usuario: str
+    password: str
+
+
 app = FastAPI()
-##Poblar la base de datos
 models.Base.metadata.create_all(bind=engine)
 
-## Definir el tipo de dato para la dependencia de la base de datos
 db_dependency = Annotated[Session, Depends(get_db)]
 
 # Configurar CORS
@@ -55,7 +84,6 @@ origins = [
     "http://localhost:3000",
     "http://localhost:5173",
 ]
-# Agregar el middleware de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -65,23 +93,252 @@ app.add_middleware(
 )
 
 
+# Función auxiliar para generar contraseña
+def generar_password_inicial(rut: str, apellido_paterno: str) -> str:
+    """
+    Genera contraseña inicial: rut sin puntos ni guión + apellido_paterno
+    Ejemplo: 135322598Bolados
+    """
+    rut_limpio = rut.replace(".", "").replace("-", "")
+    return f"{rut_limpio}{apellido_paterno}"
+
+
+# Función auxiliar para crear usuario automáticamente
+def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usuario:
+    """
+    Crea un usuario automáticamente cuando se registra un vecino
+    """
+    # Username es el RUT (sin puntos ni guión)
+    username = vecino.rut.replace(".", "").replace("-", "")
+
+    # Contraseña: rut + apellido_paterno
+    password_inicial = generar_password_inicial(vecino.rut, vecino.apellido_paterno)
+    hashed_password = get_password_hash(password_inicial)
+
+    # Determinar el rol (presidente solo para numero_socio 35)
+    rol = "presidente" if vecino.numero_socio == 35 else "vecino"
+
+    nuevo_usuario = models.Usuario(
+        username=username,
+        hashed_password=hashed_password,
+        vecino_id=vecino.id,
+        rol=rol,
+        estado=vecino.estado,
+    )
+
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+
+    print(f"✅ Usuario creado: {username} con rol: {rol}")
+    print(f"   Contraseña inicial: {password_inicial}")
+
+    return nuevo_usuario
+
+
+# Función para obtener el usuario actual del token
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar las credenciales",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    payload = decode_token(token)
+    if payload is None:
+        raise credentials_exception
+
+    user_id: int = payload.get("sub")
+    rol: str = payload.get("rol")
+
+    if user_id is None or rol is None:
+        raise credentials_exception
+
+    # Verificar que el usuario existe y está activo
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+    if not usuario or usuario.estado != 1:
+        raise credentials_exception
+
+    return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
+
+
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
+
+
+# ============ ENDPOINTS DE AUTENTICACIÓN ============
+
+
+@app.post("/api/token", response_model=Token)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
+    """
+    Endpoint de autenticación.
+    Retorna un token JWT si las credenciales son válidas.
+    """
+    try:
+        # Buscar usuario por username (RUT sin puntos ni guión)
+        usuario = (
+            db.query(models.Usuario)
+            .filter(models.Usuario.username == form_data.username)
+            .first()
+        )
+
+        if not usuario:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuario o contraseña incorrectos",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Verificar si el usuario está activo
+        if usuario.estado != 1:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Usuario deshabilitado. Contacte al administrador.",
+            )
+
+        # Verificar contraseña
+        if not verify_password(form_data.password, usuario.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuario o contraseña incorrectos",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Obtener datos del vecino
+        vecino = (
+            db.query(models.Vecino)
+            .filter(models.Vecino.id == usuario.vecino_id)
+            .first()
+        )
+
+        if not vecino:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Datos del vecino no encontrados",
+            )
+
+        # Verificar que el vecino también esté activo
+        if vecino.estado != 1:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Vecino deshabilitado. Contacte al administrador.",
+            )
+
+        # Crear token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": usuario.id, "rol": usuario.rol, "vecino_id": vecino.id},
+            expires_delta=access_token_expires,
+        )
+
+        nombre_completo = (
+            f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}"
+        )
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "rol": usuario.rol,
+            "user_id": usuario.id,
+            "vecino_id": vecino.id,
+            "nombre_completo": nombre_completo,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error en login: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al procesar la solicitud",
+        )
+
+
+@app.get("/api/me")
+async def get_me(
+    current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """
+    Retorna los datos del usuario autenticado
+    """
+    try:
+        vecino = (
+            db.query(models.Vecino)
+            .filter(models.Vecino.id == current_user["vecino_id"])
+            .first()
+        )
+
+        if not vecino:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Vecino no encontrado"
+            )
+
+        usuario = (
+            db.query(models.Usuario)
+            .filter(models.Usuario.id == current_user["user_id"])
+            .first()
+        )
+
+        return {
+            "user_id": usuario.id,
+            "username": usuario.username,
+            "rol": usuario.rol,
+            "vecino": {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+                "nombre_calle": vecino.nombre_calle,
+                "numero_casa": vecino.numero_casa,
+                "relacion_propiedad": vecino.relacion_propiedad,
+                "telefono": vecino.telefono,
+                "email": vecino.email,
+                "fecha_registro": str(vecino.fecha_registro),
+                "estado": vecino.estado,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error al obtener usuario: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al obtener datos del usuario",
+        )
+
+
+@app.post("/api/hash-password")
+async def hash_password(password: str):
+    """
+    Endpoint temporal para generar hashes de contraseñas.
+    ELIMINAR EN PRODUCCIÓN
+    """
+    return {"hashed_password": get_password_hash(password)}
+
+
+# ============ ENDPOINTS DE CRUD ============
 
 
 @app.get("/lista-vecinos/")
 async def lista_vecinos(db: Session = Depends(get_db)):
     try:
         vecinos = db.query(models.Vecino).order_by(models.Vecino.id).all()
-        print(f"Vecinos encontrados: {len(vecinos)}")  # Debug
+        print(f"Vecinos encontrados: {len(vecinos)}")
         return {"vecinos": vecinos}
     except Exception as e:
-        print(f"Error en lista_vecinos: {e}")  # Debug
+        print(f"Error en lista_vecinos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Otener un vecino específico
 @app.get("/vecino/{vecino_id}")
 async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
     try:
@@ -89,7 +346,7 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
         if not vecino:
             raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
-        print(f"Vecino encontrado: {vecino.nombres}")  # Debug
+        print(f"Vecino encontrado: {vecino.nombres}")
         return {
             "id": vecino.id,
             "nombres": vecino.nombres,
@@ -109,7 +366,7 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error en obtener_vecino: {e}")  # Debug
+        print(f"Error en obtener_vecino: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -134,6 +391,7 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
                 status_code=400, detail="El número de socio ya está registrado"
             )
 
+        # Crear el vecino
         nuevo_vecino = models.Vecino(
             nombres=vecino.nombres,
             apellido_paterno=vecino.apellido_paterno,
@@ -150,9 +408,13 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(nuevo_vecino)
 
-        print(f"Vecino creado exitosamente: {nuevo_vecino.nombres}")  # Debug
+        print(f"Vecino creado exitosamente: {nuevo_vecino.nombres}")
+
+        # Crear usuario automáticamente
+        nuevo_usuario = crear_usuario_para_vecino(db, nuevo_vecino)
+
         return {
-            "message": "Vecino registrado exitosamente",
+            "message": "Vecino y usuario registrados exitosamente",
             "vecino": {
                 "id": nuevo_vecino.id,
                 "nombres": nuevo_vecino.nombres,
@@ -169,36 +431,36 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
                 "fecha_edicion": str(nuevo_vecino.fecha_edicion),
                 "estado": nuevo_vecino.estado,
             },
+            "usuario": {
+                "username": nuevo_usuario.username,
+                "rol": nuevo_usuario.rol,
+                "password_inicial": generar_password_inicial(
+                    nuevo_vecino.rut, nuevo_vecino.apellido_paterno
+                ),
+            },
         }
     except HTTPException:
-        # Re-raise HTTPException para que FastAPI las maneje correctamente
         raise
     except Exception as e:
-        print(f"Error en agregar_vecino: {e}")  # Debug
-        db.rollback()  # Hacer rollback en caso de error
+        print(f"Error en agregar_vecino: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error interno del servidor: {str(e)}"
         )
 
 
-# Actualizar un vecino
 @app.put("/editar-vecino/{vecino_id}")
 async def editar_vecino(
     vecino_id: int, vecino_actualizado: VecinoUpdate, db: Session = Depends(get_db)
 ):
     try:
-        # Buscar el vecino existente
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
         )
         if not vecino_existente:
             raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
-        print(f"Actualizando vecino: {vecino_existente.nombres}")
-        print(f"Fecha registro original: {vecino_existente.fecha_registro}")
-        print(f"Fecha edición anterior: {vecino_existente.fecha_edicion}")
-
-        # Verificar si el RUT ya existe en otro registro (excluir el actual)
+        # Verificar RUT duplicado
         existing_rut = (
             db.query(models.Vecino)
             .filter(
@@ -212,7 +474,7 @@ async def editar_vecino(
                 status_code=400, detail="El RUT ya está registrado en otro vecino"
             )
 
-        # Verificar si el número de socio ya existe en otro registro (excluir el actual)
+        # Verificar número de socio duplicado
         existing_numero = (
             db.query(models.Vecino)
             .filter(
@@ -227,10 +489,7 @@ async def editar_vecino(
                 detail="El número de socio ya está registrado en otro vecino",
             )
 
-        # Guardar la fecha de registro original (para verificar que no cambie)
-        fecha_registro_original = vecino_existente.fecha_registro
-
-        # Actualizar SOLO los campos editables (NO la fecha_registro)
+        # Actualizar campos
         vecino_existente.nombres = vecino_actualizado.nombres
         vecino_existente.apellido_paterno = vecino_actualizado.apellido_paterno
         vecino_existente.apellido_materno = vecino_actualizado.apellido_materno
@@ -242,25 +501,20 @@ async def editar_vecino(
         vecino_existente.telefono = vecino_actualizado.telefono
         vecino_existente.email = vecino_actualizado.email
 
-        # IMPORTANTE: NO modificamos fecha_registro
-        # La fecha_edicion se actualizará automáticamente por el onupdate=text("now()") en el modelo
-
         db.commit()
         db.refresh(vecino_existente)
 
-        # Verificar que las fechas están como esperamos
-        print(
-            f"Fecha registro después del update: {vecino_existente.fecha_registro}"
-        )  # Debe ser igual a la original
-        print(
-            f"Fecha edición después del update: {vecino_existente.fecha_edicion}"
-        )  # Debe ser actual
-
-        # Verificar que fecha_registro no cambió
-        if str(vecino_existente.fecha_registro) != str(fecha_registro_original):
-            print("⚠️ ADVERTENCIA: La fecha de registro cambió inesperadamente")
-        else:
-            print("✅ La fecha de registro se conservó correctamente")
+        # Actualizar username del usuario si cambió el RUT
+        usuario = (
+            db.query(models.Usuario)
+            .filter(models.Usuario.vecino_id == vecino_id)
+            .first()
+        )
+        if usuario:
+            nuevo_username = vecino_actualizado.rut.replace(".", "").replace("-", "")
+            if usuario.username != nuevo_username:
+                usuario.username = nuevo_username
+                db.commit()
 
         return {
             "message": "Vecino actualizado exitosamente",
@@ -276,19 +530,15 @@ async def editar_vecino(
                 "relacion_propiedad": vecino_existente.relacion_propiedad,
                 "telefono": vecino_existente.telefono,
                 "email": vecino_existente.email,
-                "fecha_registro": str(
-                    vecino_existente.fecha_registro
-                ),  # Original conservada
-                "fecha_edicion": str(
-                    vecino_existente.fecha_edicion
-                ),  # Actualizada automáticamente
+                "fecha_registro": str(vecino_existente.fecha_registro),
+                "fecha_edicion": str(vecino_existente.fecha_edicion),
                 "estado": vecino_existente.estado,
             },
         }
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error en editar_vecino: {e}")  # Debug
+        print(f"Error en editar_vecino: {e}")
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error interno del servidor: {str(e)}"
@@ -298,23 +548,25 @@ async def editar_vecino(
 @app.patch("/cambiar-estado-vecino/{vecino_id}")
 async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
     try:
-        # Buscar el vecino existente
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
         )
         if not vecino_existente:
             raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
-        # Cambiar el estado (alternar entre 1 y 0)
         nuevo_estado = 0 if vecino_existente.estado == 1 else 1
         estado_texto = "habilitado" if nuevo_estado == 1 else "deshabilitado"
 
-        print(
-            f"Cambiando estado del vecino {vecino_existente.nombres} a {estado_texto}"
-        )  # Debug
-
         vecino_existente.estado = nuevo_estado
-        # La fecha_edicion se actualizará automáticamente
+
+        # También cambiar el estado del usuario asociado
+        usuario = (
+            db.query(models.Usuario)
+            .filter(models.Usuario.vecino_id == vecino_id)
+            .first()
+        )
+        if usuario:
+            usuario.estado = nuevo_estado
 
         db.commit()
         db.refresh(vecino_existente)
@@ -344,8 +596,26 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error en cambiar_estado_vecino: {e}")  # Debug
+        print(f"Error en cambiar_estado_vecino: {e}")
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error interno del servidor: {str(e)}"
         )
+
+
+@app.get("/siguiente-numero-socio/")
+async def obtener_siguiente_numero_socio(db: Session = Depends(get_db)):
+    try:
+        max_numero = (
+            db.query(models.Vecino.numero_socio)
+            .order_by(models.Vecino.numero_socio.desc())
+            .first()
+        )
+
+        siguiente_numero = (max_numero[0] + 1) if max_numero and max_numero[0] else 1
+
+        print(f"Siguiente número de socio: {siguiente_numero}")
+        return {"siguiente_numero_socio": siguiente_numero}
+    except Exception as e:
+        print(f"Error en obtener_siguiente_numero_socio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

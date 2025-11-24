@@ -40,6 +40,9 @@ import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 // Agregar esta importación al inicio del archivo
 import EditarVecinoForm from "../EditarVecinoForm";
 
+// Agregar esta importación al inicio del archivo
+import ConfirmDialog from "../ConfirmDialog";
+
 // Definición de la interfaz para las columnas de la tabla.
 interface Column {
   id:
@@ -219,14 +222,72 @@ export default function ListaVecinos() {
     fetchItems(); // Recargar la lista de vecinos
   };
 
-  // Función temporal para cambiar estado (solo visual por ahora)
-  const handleToggleEstado = (vecinoId: number, estadoActual: number) => {
-    console.log(
-      `Cambiando estado del vecino ${vecinoId} de ${estadoActual} a ${
-        estadoActual === 1 ? 0 : 1
-      }`
-    );
-    // Por ahora solo mostrar en consola, después implementarás la funcionalidad real
+  // Agregar estos estados después de los existentes
+  const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
+  const [vecinoToToggle, setVecinoToToggle] = React.useState<{
+    id: number;
+    nombre: string;
+    estadoActual: number;
+  } | null>(null);
+  const [loadingToggle, setLoadingToggle] = React.useState(false);
+
+  // Reemplazar la función handleToggleEstado existente con esta nueva:
+  const handleToggleEstado = (
+    vecinoId: number,
+    estadoActual: number,
+    nombreVecino: string
+  ) => {
+    console.log(`Preparando cambio de estado para vecino ${vecinoId}`);
+    setVecinoToToggle({
+      id: vecinoId,
+      nombre: nombreVecino,
+      estadoActual: estadoActual,
+    });
+    setConfirmDialogOpen(true);
+  };
+
+  // Agregar estas nuevas funciones:
+  const handleConfirmToggleEstado = async () => {
+    if (!vecinoToToggle) return;
+
+    setLoadingToggle(true);
+
+    try {
+      console.log(`Cambiando estado del vecino ${vecinoToToggle.id}`);
+
+      const response = await api.patch(
+        `/cambiar-estado-vecino/${vecinoToToggle.id}`
+      );
+      console.log("Estado cambiado exitosamente:", response.data);
+
+      // Mostrar mensaje de éxito
+      const nuevoEstado = response.data.nuevo_estado;
+      const estadoTexto = nuevoEstado === 1 ? "habilitado" : "deshabilitado";
+      alert(`Vecino ${estadoTexto} exitosamente`);
+
+      // Cerrar el diálogo y limpiar estados
+      setConfirmDialogOpen(false);
+      setVecinoToToggle(null);
+
+      // Recargar la lista para mostrar los cambios
+      fetchItems();
+    } catch (error: any) {
+      console.error("Error al cambiar estado del vecino:", error);
+
+      let errorMessage = "Error al cambiar el estado del vecino";
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoadingToggle(false);
+    }
+  };
+
+  const handleCancelToggleEstado = () => {
+    setConfirmDialogOpen(false);
+    setVecinoToToggle(null);
   };
 
   return (
@@ -358,14 +419,19 @@ export default function ListaVecinos() {
                             <IconButton
                               color={row.estado === 1 ? "success" : "error"}
                               onClick={() =>
-                                handleToggleEstado(row.id, row.estado)
-                              }
+                                handleToggleEstado(
+                                  row.id,
+                                  row.estado,
+                                  row.nombres
+                                )
+                              } // ← Agregar el nombre aquí
                               size="small"
                               title={
                                 row.estado === 1
                                   ? "Deshabilitar vecino"
                                   : "Habilitar vecino"
                               }
+                              disabled={loadingToggle} // ← Agregar disabled cuando está cargando
                             >
                               {row.estado === 1 ? (
                                 <ToggleOnIcon />
@@ -431,6 +497,24 @@ export default function ListaVecinos() {
           />
         )}
       </Modal>
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        title="Confirmar cambio de estado"
+        message={
+          vecinoToToggle
+            ? `¿Estás seguro de que deseas ${
+                vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"
+              } al vecino "${vecinoToToggle.nombre}"?`
+            : ""
+        }
+        confirmText={
+          vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar"
+        }
+        cancelText="Cancelar"
+        onConfirm={handleConfirmToggleEstado}
+        onCancel={handleCancelToggleEstado}
+        loading={loadingToggle}
+      />
     </Paper>
   );
 }

@@ -181,7 +181,7 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         )
 
 
-# Atualizar un vecino
+# Actualizar un vecino
 @app.put("/editar-vecino/{vecino_id}")
 async def editar_vecino(
     vecino_id: int, vecino_actualizado: VecinoUpdate, db: Session = Depends(get_db)

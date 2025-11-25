@@ -64,34 +64,33 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     can = canvas.Canvas(packet, pagesize=letter)
     width, height = letter
 
+    # CONFIGURACIÓN UNIFORME DE FUENTE
     can.setFillColorRGB(0, 0, 0)  # Color negro
+    can.setFont("Helvetica", 11)  # Fuente uniforme para todos los campos
 
-    # NOMBRES (ajusta las coordenadas según tu plantilla)
-    can.setFont("Helvetica-Bold", 12)
-    can.drawString(11 * cm, 17 * cm, nombres)
+    # NOMBRES
+    can.drawString(7 * cm, 19.3 * cm, nombres)
 
     # APELLIDOS
-    can.setFont("Helvetica-Bold", 12)
-    can.drawString(11 * cm, 16 * cm, apellidos)
+    can.drawString(7 * cm, 18.6 * cm, apellidos)
 
     # RUT
-    can.setFont("Helvetica", 11)
-    can.drawString(11 * cm, 15 * cm, rut)
+    can.drawString(7 * cm, 17.9 * cm, rut)
 
     # DOMICILIO
-    can.drawString(11 * cm, 14 * cm, domicilio)
+    can.drawString(7 * cm, 17.1 * cm, domicilio)
 
     # NÚMERO DE SOCIO
-    can.drawString(11 * cm, 13 * cm, str(numero_socio))
+    can.drawString(9 * cm, 16.5 * cm, str(numero_socio))
 
     # FECHA - DÍA
-    can.drawString(5 * cm, 5 * cm, dia)
+    can.drawString(7 * cm, 12.2 * cm, dia)
 
     # FECHA - MES
-    can.drawString(7 * cm, 5 * cm, mes_nombre)
+    can.drawString(9 * cm, 12.2 * cm, mes_nombre)
 
     # FECHA - AÑO (2 dígitos)
-    can.drawString(12 * cm, 5 * cm, anio_corto)
+    can.drawString(14.1 * cm, 12.2 * cm, anio_corto)
 
     can.save()
 

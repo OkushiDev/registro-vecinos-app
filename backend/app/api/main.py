@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import File, UploadFile
 from pathlib import Path
 import uuid
+from app.api import certificados
 
 
 # Importar funciones de seguridad
@@ -79,6 +80,7 @@ class UserLogin(BaseModel):
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
+app.include_router(certificados.router, prefix="/api", tags=["certificados"])
 
 db_dependency = Annotated[Session, Depends(get_db)]
 # ============ CONFIGURACIÓN DE ARCHIVOS ============

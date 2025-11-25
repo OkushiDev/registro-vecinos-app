@@ -1,28 +1,28 @@
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch, cm
+from reportlab.lib.units import cm
+from PyPDF2 import PdfReader, PdfWriter
+from io import BytesIO
 import os
 
-# Crear PDF de prueba
-c = canvas.Canvas("test_coordenadas.pdf", pagesize=letter)
-width, height = letter
-
-# Ruta relativa desde app/api/ hacia app/resources/
-ruta_imagen = os.path.join(
-    os.path.dirname(__file__), "..", "resources", "certificado_plantilla.jpg"
+# Ruta al PDF plantilla
+ruta_plantilla = os.path.join(
+    os.path.dirname(__file__), "..", "resources", "certificado_plantilla.pdf"
 )
 
-if os.path.exists(ruta_imagen):
-    c.drawImage(ruta_imagen, 0, 0, width, height, preserveAspectRatio=False)
-    print(f"Imagen cargada desde: {ruta_imagen}")
-else:
-    print(f"ADVERTENCIA: No se encontró la imagen en {ruta_imagen}")
-    print(f"Ruta absoluta buscada: {os.path.abspath(ruta_imagen)}")
-    print("Creando PDF solo con cuadrícula")
+if not os.path.exists(ruta_plantilla):
+    print(f"ERROR: No se encontró el archivo en {ruta_plantilla}")
+    print(f"Ruta absoluta: {os.path.abspath(ruta_plantilla)}")
+    exit(1)
+
+# Crear capa con la cuadrícula
+packet = BytesIO()
+c = canvas.Canvas(packet, pagesize=letter)
+width, height = letter
 
 # Dibujar líneas de referencia
-c.setStrokeColorRGB(1, 0, 0)
-c.setFont("Helvetica", 8)  # Tamaño original
+c.setStrokeColorRGB(1, 0, 0)  # Rojo
+c.setFont("Helvetica", 8)
 
 # Líneas horizontales cada centímetro
 num_lineas_y = int(height / cm) + 1
@@ -39,5 +39,28 @@ for i in range(num_lineas_x):
     c.drawString(x + 5, 10, f"{i}cm")
 
 c.save()
+
+# Combinar con el PDF plantilla
+packet.seek(0)
+
+plantilla_pdf = PdfReader(ruta_plantilla)
+cuadricula = PdfReader(packet)
+
+output = PdfWriter()
+
+# Obtener la primera página de la plantilla
+pagina_plantilla = plantilla_pdf.pages[0]
+
+# Superponer la cuadrícula
+pagina_plantilla.merge_page(cuadricula.pages[0])
+
+# Agregar al output
+output.add_page(pagina_plantilla)
+
+# Guardar el resultado
+with open("test_coordenadas.pdf", "wb") as output_file:
+    output.write(output_file)
+
 print("PDF creado: test_coordenadas.pdf")
 print(f"Ubicación: {os.path.abspath('test_coordenadas.pdf')}")
+print("Abre el PDF para ver tu plantilla con la cuadrícula de coordenadas")

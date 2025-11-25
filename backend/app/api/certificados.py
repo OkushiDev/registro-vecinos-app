@@ -6,6 +6,7 @@ from app.api import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
+from PyPDF2 import PdfReader, PdfWriter
 from io import BytesIO
 from datetime import datetime
 import os
@@ -31,31 +32,19 @@ MESES = {
 
 def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     """
-    Genera un PDF con el certificado de residencia usando una imagen de plantilla
+    Genera un PDF con el certificado de residencia usando un PDF como plantilla
     """
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    # Ruta a la imagen de plantilla
-    ruta_imagen = os.path.join(
-        os.path.dirname(__file__), "..", "resources", "certificado_plantilla.jpg"
+    # Ruta al PDF plantilla
+    ruta_plantilla = os.path.join(
+        os.path.dirname(__file__), "..", "resources", "certificado_plantilla.pdf"
     )
 
-    # Verificar si existe la imagen
-    if os.path.exists(ruta_imagen):
-        c.drawImage(
-            ruta_imagen,
-            x=0,
-            y=0,
-            width=width,
-            height=height,
-            preserveAspectRatio=False,  # Ajustar a toda la página
+    # Verificar si existe el PDF plantilla
+    if not os.path.exists(ruta_plantilla):
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se encontró el archivo de plantilla en {ruta_plantilla}",
         )
-    else:
-        print(f"ADVERTENCIA: No se encontró la imagen en {ruta_imagen}")
-        c.setFillColorRGB(1, 1, 1)
-        c.rect(0, 0, width, height, fill=True)
 
     # === DATOS DEL VECINO (SEPARADOS) ===
     nombres = vecino.nombres
@@ -66,45 +55,70 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
 
     # Fecha SEPARADA: día, mes, año (2 dígitos)
     fecha_actual = datetime.now()
-    dia = str(fecha_actual.day)  # "24"
-    mes_nombre = MESES[fecha_actual.month]  # "noviembre"
-    anio_corto = str(fecha_actual.year)[-2:]  # "25" (últimos 2 dígitos de 2025)
+    dia = str(fecha_actual.day)
+    mes_nombre = MESES[fecha_actual.month]
+    anio_corto = str(fecha_actual.year)[-2:]
 
-    # === SUPERPONER LOS DATOS EN LAS COORDENADAS ===
-    c.setFillColorRGB(0, 0, 0)  # Color negro
+    # === CREAR CAPA DE TEXTO ===
+    packet = BytesIO()
+    can = canvas.Canvas(packet, pagesize=letter)
+    width, height = letter
+
+    # CONFIGURACIÓN UNIFORME DE FUENTE
+    can.setFillColorRGB(0, 0, 0)  # Color negro
+    can.setFont("Helvetica", 11)  # Fuente uniforme para todos los campos
 
     # NOMBRES
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(11 * cm, 17 * cm, nombres)
+    can.drawString(7 * cm, 19.3 * cm, nombres)
 
     # APELLIDOS
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(11 * cm, 16 * cm, apellidos)
+    can.drawString(7 * cm, 18.6 * cm, apellidos)
 
     # RUT
-    c.setFont("Helvetica", 11)
-    c.drawString(11 * cm, 15 * cm, rut)
+    can.drawString(7 * cm, 17.9 * cm, rut)
 
     # DOMICILIO
-    c.drawString(11 * cm, 14 * cm, domicilio)
+    can.drawString(7 * cm, 17.1 * cm, domicilio)
 
     # NÚMERO DE SOCIO
-    c.drawString(11 * cm, 13 * cm, str(numero_socio))
+    can.drawString(9 * cm, 16.5 * cm, str(numero_socio))
 
     # FECHA - DÍA
-    c.drawString(10 * cm, 8.5 * cm, dia)  # 👈 CAMBIA COORDENADAS
+    can.drawString(7 * cm, 12.2 * cm, dia)
 
     # FECHA - MES
-    c.drawString(12 * cm, 8.5 * cm, mes_nombre)  # 👈 CAMBIA COORDENADAS
+    can.drawString(9 * cm, 12.2 * cm, mes_nombre)
 
     # FECHA - AÑO (2 dígitos)
-    c.drawString(16.5 * cm, 5 * cm, anio_corto)  # 👈 CAMBIA COORDENADAS
+    can.drawString(14.1 * cm, 12.2 * cm, anio_corto)
 
-    c.showPage()
-    c.save()
+    can.save()
 
-    buffer.seek(0)
-    return buffer
+    # === COMBINAR PDF PLANTILLA CON DATOS ===
+    packet.seek(0)
+
+    # Leer la plantilla
+    plantilla_pdf = PdfReader(ruta_plantilla)
+    nueva_capa = PdfReader(packet)
+
+    # Crear el PDF final
+    output = PdfWriter()
+
+    # Obtener la primera página de la plantilla
+    pagina_plantilla = plantilla_pdf.pages[0]
+
+    # Superponer la capa con los datos
+    pagina_plantilla.merge_page(nueva_capa.pages[0])
+
+    # Agregar al output
+    output.add_page(pagina_plantilla)
+
+    # Escribir el resultado en un buffer
+    resultado = BytesIO()
+    output.write(resultado)
+    resultado.seek(0)
+
+    return resultado
 
 
 @router.get("/generar-certificado/{vecino_id}")
@@ -131,9 +145,6 @@ async def generar_certificado(vecino_id: int, db: Session = Depends(get_db)):
     print(f"  RUT: {vecino.rut}")
     print(f"  Domicilio: {vecino.nombre_calle} N° {vecino.numero_casa}")
     print(f"  N° Socio: {vecino.numero_socio}")
-    print(
-        f"  Fecha: {datetime.now().day} de {MESES[datetime.now().month]} de {str(datetime.now().year)[-2:]}"
-    )
 
     # Generar el PDF
     pdf_buffer = generar_certificado_pdf(vecino)

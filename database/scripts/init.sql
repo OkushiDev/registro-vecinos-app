@@ -29,11 +29,15 @@ CREATE TABLE usuarios (
 
 CREATE TABLE documentos (
     id SERIAL PRIMARY KEY,
-    vecino_id INTEGER REFERENCES vecinos(id),
-    tipo_documento VARCHAR(100),
-    nombre_archivo VARCHAR(255),
-    ruta_archivo VARCHAR(500),
-    fecha_subida TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    vecino_id INT NOT NULL REFERENCES vecinos(id),
+    tipo_documento VARCHAR(255),
+    nombre_archivo VARCHAR(255) NOT NULL,
+    ruta_archivo VARCHAR(500) NOT NULL,
+    tipo_archivo VARCHAR(50),
+    tamanio INT,
+    descripcion VARCHAR(500),
+    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado INT DEFAULT 1
 );
 
 CREATE TABLE historial (
@@ -120,15 +124,3 @@ INSERT INTO usuarios (vecino_id, username, hashed_password, rol) VALUES
 
 
 
-CREATE TABLE documentos (
-    id SERIAL PRIMARY KEY,
-    vecino_id INT NOT NULL REFERENCES vecinos(id),
-    tipo_documento VARCHAR(255),
-    nombre_archivo VARCHAR(255) NOT NULL,
-    ruta_archivo VARCHAR(500) NOT NULL,
-    tipo_archivo VARCHAR(50),
-    tamanio INT,
-    descripcion VARCHAR(500),
-    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado INT DEFAULT 1
-);

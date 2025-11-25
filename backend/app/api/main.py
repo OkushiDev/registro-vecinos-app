@@ -278,7 +278,7 @@ async def login(
         # Crear token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": str(usuario.id) "rol": usuario.rol, "vecino_id": vecino.id},#agregue str a usuario para que no haya problemas a la hora de subir imagenes
+            data={"sub": str(usuario.id), "rol": usuario.rol, "vecino_id": vecino.id},#agregue str a usuario para que no haya problemas a la hora de subir imagenes
             expires_delta=access_token_expires,
         )
 
@@ -696,7 +696,7 @@ async def subir_documento(
         contenido = await file.read()
         tamanio = len(contenido)
         
-        # Validar tamaño
+        # Validar tamanio
         if tamanio > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,

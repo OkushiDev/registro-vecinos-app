@@ -9,6 +9,7 @@ import Historial from "./components/pages/Historial.tsx";
 import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
 import authService from "./services/authService";
 import "./services/axiosConfig"; // Importar configuración de axios
+import SubirDocumento from "./components/pages/SubirDocumento.tsx";
 
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -112,12 +113,12 @@ export default function App(): React.ReactElement {
             {/* RUTAS PENDIENTES DE IMPLEMENTAR: */}
 
             {/* Ruta: Subir Archivo/Antecedente */}
-            {/* 
+            
             <Route
               path="/vecino/subir-archivo"
-              element={<SubirAntecedente />}
+              element={<SubirDocumento />}
             />
-            */}
+            
 
             {/* Ruta: Solicitar Certificado de Residencia */}
             {/* 

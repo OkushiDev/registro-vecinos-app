@@ -1,19 +1,44 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+
 import Navbar, { type UserProfile } from "./components/Navbar";
 import Login from "./components/Login.tsx";
 import ListaVecinos from "./components/pages/ListaVecinos.tsx";
 import Historial from "./components/pages/Historial.tsx";
 import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
 import authService from "./services/authService";
-import "./services/axiosConfig"; // Importar configuración de axios
+import "./services/axiosConfig";
 
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // 1. ESTADO PARA EL TEMA (Inicia en Dark por defecto)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+
+  // 2. CREACIÓN DINÁMICA DEL TEMA
+  const theme = useMemo(() => createTheme({
+    palette: {
+      mode: isDarkMode ? 'dark' : 'light',
+      background: {
+        default: isDarkMode ? "#0b1121" : "#f1f5f9", // Azul oscuro vs Gris muy claro
+        paper: isDarkMode ? "#1e293b" : "#ffffff",   // Azul medio vs Blanco puro
+      },
+      text: {
+        primary: isDarkMode ? "#ffffff" : "#0f172a", // Blanco vs Azul oscuro casi negro
+      }
+    },
+  }), [isDarkMode]);
+
+  // 3. FUNCIÓN PARA CAMBIAR EL TEMA
+  const toggleTheme = () => {
+    setIsDarkMode((prevMode) => !prevMode);
+  };
 
   // Verificar si hay una sesión activa al cargar la aplicación
   useEffect(() => {
@@ -49,108 +74,65 @@ export default function App(): React.ReactElement {
     setIsAuthenticated(false);
   };
 
-  // Mostrar loading mientras se verifica la autenticación
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Si no está autenticado, mostrar Login
-  if (!isAuthenticated || !userProfile) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  // Si está autenticado, mostrar la aplicación con navegación
+  // === ESTRUCTURA CORREGIDA ===
+  // Envolvemos todo en ThemeProvider y BrowserRouter desde el inicio
   return (
-    <BrowserRouter>
-      <Navbar userProfile={userProfile} onLogout={handleLogout} />
-      <Routes>
-        {userProfile === "presidente" ? (
-          <>
-            {/* Redirigir la ruta raíz a la lista de vecinos */}
-            <Route
-              path="/"
-              element={<Navigate to="/presidente/vecinos" replace />}
-            />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        
+        {/* CASO 1: CARGANDO */}
+        {isLoading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "100vh",
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : !isAuthenticated || !userProfile ? (
+          
+          /* CASO 2: LOGIN (Ahora recibe las props del tema) */
+          <Login 
+            onLogin={handleLogin} 
+            isDarkMode={isDarkMode}        // <--- AGREGADO
+            onToggleTheme={toggleTheme}    // <--- AGREGADO
+          />
 
-            {/* Ruta: Lista de Vecinos (implementada) */}
-            <Route path="/presidente/vecinos" element={<ListaVecinos />} />
-
-            {/* Ruta: Historial de Acciones (implementada) */}
-            <Route path="/presidente/historial" element={<Historial />} />
-
-            {/* Ruta no encontrada - redirigir a vecinos */}
-            <Route
-              path="*"
-              element={<Navigate to="/presidente/vecinos" replace />}
-            />
-          </>
         ) : (
+          
+          /* CASO 3: APLICACIÓN PRINCIPAL */
           <>
-            {/* Redirigir la ruta raíz a antecedentes del vecino */}
-            <Route
-              path="/"
-              element={<Navigate to="/vecino/antecedentes-vecino" replace />}
+            <Navbar 
+              userProfile={userProfile} 
+              onLogout={handleLogout} 
+              isDarkMode={isDarkMode}
+              onToggleTheme={toggleTheme}
             />
-
-            {/* Ruta: Antecedentes del Vecino (implementada) */}
-            <Route
-              path="/vecino/antecedentes-vecino"
-              element={<AntecedentesVecino />}
-            />
-
-            {/* RUTAS PENDIENTES DE IMPLEMENTAR: */}
-
-            {/* Ruta: Subir Archivo/Antecedente */}
-            {/* 
-            <Route
-              path="/vecino/subir-archivo"
-              element={<SubirAntecedente />}
-            />
-            */}
-
-            {/* Ruta: Solicitar Certificado de Residencia */}
-            {/* 
-            <Route
-              path="/vecino/certificado"
-              element={<SolicitarCertificado />}
-            />
-            */}
-
-            {/* Ruta: Ver Documentos Subidos */}
-            {/* 
-            <Route
-              path="/vecino/documentos"
-              element={<MisDocumentos />}
-            />
-            */}
-
-            {/* Ruta: Perfil / Editar Datos Personales */}
-            {/* 
-            <Route
-              path="/vecino/perfil"
-              element={<PerfilVecino />}
-            />
-            */}
-
-            {/* Ruta no encontrada - redirigir a antecedentes */}
-            <Route
-              path="*"
-              element={<Navigate to="/vecino/antecedentes-vecino" replace />}
-            />
+            
+            <Routes>
+              {userProfile === "presidente" ? (
+                <>
+                  <Route path="/" element={<Navigate to="/presidente/vecinos" replace />} />
+                  <Route path="/presidente/vecinos" element={<ListaVecinos />} />
+                  <Route path="/presidente/historial" element={<Historial />} />
+                  <Route path="*" element={<Navigate to="/presidente/vecinos" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<Navigate to="/vecino/antecedentes-vecino" replace />} />
+                  <Route path="/vecino/antecedentes-vecino" element={<AntecedentesVecino />} />
+                  <Route path="*" element={<Navigate to="/vecino/antecedentes-vecino" replace />} />
+                </>
+              )}
+            </Routes>
           </>
         )}
-      </Routes>
-    </BrowserRouter>
+
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

@@ -88,7 +88,30 @@ def decode_token(token: str):
     """Decodifica y valida un token JWT"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        
+        # Validar que tenga los campos necesarios
+        sub = payload.get("sub")
+        if not sub:
+            print("Token no tiene campo 'sub'")
+            return None
+            
+        # Si sub es string, convertir a int
+        if isinstance(sub, str):
+            try:
+                user_id = int(sub)
+            except ValueError:
+                print(f"No se pudo convertir 'sub' a int: {sub}")
+                return None
+        else:
+            user_id = sub
+        
+        # Retornar payload normalizado
+        return {
+            "sub": user_id,
+            "rol": payload.get("rol"),
+            "vecino_id": payload.get("vecino_id")
+        }
+        
     except JWTError as e:
         print(f"Error al decodificar token: {e}")
         return None

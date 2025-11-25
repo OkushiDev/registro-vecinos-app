@@ -7,6 +7,10 @@ import app.api.models as models
 from app.api.database import SessionLocal, engine, get_db
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import File, UploadFile
+from pathlib import Path
+import uuid
+
 
 
 # Importar funciones de seguridad
@@ -78,6 +82,25 @@ app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
 db_dependency = Annotated[Session, Depends(get_db)]
+# ============ CONFIGURACIÓN DE ARCHIVOS ============
+
+UPLOAD_DIR = Path("uploads/documentos")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+def validate_file(file: UploadFile) -> tuple[bool, str]:
+    """Valida tipo y tamaño del archivo"""
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        return False, f"Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
+    
+    if not file.content_type.startswith("image/"):
+        return False, "El archivo debe ser una imagen"
+    
+    return True, ""
 
 # Configurar CORS
 origins = [
@@ -255,7 +278,7 @@ async def login(
         # Crear token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": usuario.id, "rol": usuario.rol, "vecino_id": vecino.id},
+            data={"sub": str(usuario.id) "rol": usuario.rol, "vecino_id": vecino.id},
             expires_delta=access_token_expires,
         )
 
@@ -651,3 +674,134 @@ async def siguiente_numero_socio(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error en siguiente_numero_socio: {e}")  # Debug
         raise HTTPException(status_code=500, detail=str(e))
+# ============ ENDPOINTS DE DOCUMENTOS ============
+
+@app.post("/api/documentos/subir")
+async def subir_documento(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Sube un documento (imagen) para un vecino"""
+    try:
+        print(f"\n--- Subiendo documento ---")
+        print(f"Vecino: {current_user['vecino_id']}, Archivo: {file.filename}")
+
+        # Validar archivo
+        es_valido, mensaje_error = validate_file(file)
+        if not es_valido:
+            raise HTTPException(status_code=400, detail=mensaje_error)
+
+        # Leer contenido
+        contenido = await file.read()
+        tamanio = len(contenido)
+        
+        # Validar tamaño
+        if tamanio > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Archivo muy grande. Máximo {MAX_FILE_SIZE / 1024 / 1024}MB"
+            )
+
+        # Generar nombre único
+        file_ext = Path(file.filename).suffix.lower()
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        
+        # Crear carpeta por vecino
+        vecino_dir = UPLOAD_DIR / str(current_user['vecino_id'])
+        vecino_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Guardar archivo
+        file_path = vecino_dir / unique_filename
+        with open(file_path, "wb") as buffer:
+            buffer.write(contenido)
+
+        print(f"Archivo guardado: {file_path}")
+
+        # Registrar en BD
+        nuevo_documento = models.Documento(
+            vecino_id=current_user['vecino_id'],
+            tipo_documento="imagen_subida",
+            nombre_archivo=file.filename,
+            ruta_archivo=str(file_path),
+            tipo_archivo=file.content_type,
+            tamanio=tamanio,
+        )
+
+        db.add(nuevo_documento)
+        db.commit()
+        db.refresh(nuevo_documento)
+
+        print(f"Documento registrado con ID: {nuevo_documento.id}\n")
+
+        return {
+            "message": "Documento subido exitosamente",
+            "documento": {
+                "id": nuevo_documento.id,
+                "nombre_archivo": nuevo_documento.nombre_archivo,
+                "tipo_archivo": nuevo_documento.tipo_archivo,
+                "tamanio": nuevo_documento.tamanio,
+                "fecha_subida": str(nuevo_documento.fecha_subida),
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/documentos/mis-documentos")
+async def listar_mis_documentos(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Lista documentos del vecino autenticado"""
+    documentos = (
+        db.query(models.Documento)
+        .filter(
+            models.Documento.vecino_id == current_user['vecino_id'],
+            models.Documento.estado == 1
+        )
+        .order_by(models.Documento.fecha_subida.desc())
+        .all()
+    )
+
+    return {
+        "documentos": [
+            {
+                "id": doc.id,
+                "nombre_archivo": doc.nombre_archivo,
+                "tipo_archivo": doc.tipo_archivo,
+                "tamanio": doc.tamanio,
+                "fecha_subida": str(doc.fecha_subida),
+            }
+            for doc in documentos
+        ]
+    }
+
+
+@app.delete("/api/documentos/{documento_id}")
+async def eliminar_documento(
+    documento_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Elimina un documento del vecino"""
+    documento = (
+        db.query(models.Documento)
+        .filter(
+            models.Documento.id == documento_id,
+            models.Documento.vecino_id == current_user['vecino_id']
+        )
+        .first()
+    )
+
+    if not documento:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    documento.estado = 0
+    db.commit()
+
+    return {"message": "Documento eliminado exitosamente"}

@@ -11,6 +11,8 @@ import ListaVecinos from "./components/pages/ListaVecinos.tsx";
 import Historial from "./components/pages/Historial.tsx";
 import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
 import authService from "./services/authService";
+import "./services/axiosConfig"; // Importar configuración de axios
+import SubirDocumento from "./components/pages/SubirDocumento.tsx";
 import "./services/axiosConfig";
 
 export default function App(): React.ReactElement {
@@ -126,6 +128,7 @@ export default function App(): React.ReactElement {
                   <Route path="/" element={<Navigate to="/vecino/antecedentes-vecino" replace />} />
                   <Route path="/vecino/antecedentes-vecino" element={<AntecedentesVecino />} />
                   <Route path="*" element={<Navigate to="/vecino/antecedentes-vecino" replace />} />
+                  <Route path="/vecino/subir-archivo" element={<SubirDocumento/>} />
                 </>
               )}
             </Routes>
@@ -136,3 +139,4 @@ export default function App(): React.ReactElement {
     </ThemeProvider>
   );
 }
+

@@ -12,7 +12,6 @@ from pathlib import Path
 import uuid
 
 
-
 # Importar funciones de seguridad
 from app.core.security import (
     verify_password,
@@ -96,11 +95,12 @@ def validate_file(file: UploadFile) -> tuple[bool, str]:
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         return False, f"Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
-    
+
     if not file.content_type.startswith("image/"):
         return False, "El archivo debe ser una imagen"
-    
+
     return True, ""
+
 
 # Configurar CORS
 origins = [
@@ -278,7 +278,11 @@ async def login(
         # Crear token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": str(usuario.id), "rol": usuario.rol, "vecino_id": vecino.id},#agregue str a usuario para que no haya problemas a la hora de subir imagenes
+            data={
+                "sub": str(usuario.id),
+                "rol": usuario.rol,
+                "vecino_id": vecino.id,
+            },  # agregue str a usuario para que no haya problemas a la hora de subir imagenes
             expires_delta=access_token_expires,
         )
 
@@ -562,9 +566,13 @@ async def editar_vecino(
             .first()
         )
         if usuario:
-            nuevo_username = vecino_actualizado.rut.replace(".", "").replace("-", "")
+            # 👇 CORRECCIÓN: Solo quitar puntos, MANTENER el guión
+            nuevo_username = vecino_actualizado.rut.replace(
+                ".", ""
+            )  # ✅ Solo quitar puntos
             if usuario.username != nuevo_username:
                 usuario.username = nuevo_username
+                print(f"Username actualizado: {nuevo_username}")  # Debug
                 db.commit()
 
         return {
@@ -674,13 +682,16 @@ async def siguiente_numero_socio(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error en siguiente_numero_socio: {e}")  # Debug
         raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ ENDPOINTS DE DOCUMENTOS ============
+
 
 @app.post("/api/documentos/subir")
 async def subir_documento(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Sube un documento (imagen) para un vecino"""
     try:
@@ -695,22 +706,22 @@ async def subir_documento(
         # Leer contenido
         contenido = await file.read()
         tamanio = len(contenido)
-        
+
         # Validar tamanio
         if tamanio > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"Archivo muy grande. Máximo {MAX_FILE_SIZE / 1024 / 1024}MB"
+                detail=f"Archivo muy grande. Máximo {MAX_FILE_SIZE / 1024 / 1024}MB",
             )
 
         # Generar nombre único
         file_ext = Path(file.filename).suffix.lower()
         unique_filename = f"{uuid.uuid4()}{file_ext}"
-        
+
         # Crear carpeta por vecino
-        vecino_dir = UPLOAD_DIR / str(current_user['vecino_id'])
+        vecino_dir = UPLOAD_DIR / str(current_user["vecino_id"])
         vecino_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Guardar archivo
         file_path = vecino_dir / unique_filename
         with open(file_path, "wb") as buffer:
@@ -720,7 +731,7 @@ async def subir_documento(
 
         # Registrar en BD
         nuevo_documento = models.Documento(
-            vecino_id=current_user['vecino_id'],
+            vecino_id=current_user["vecino_id"],
             tipo_documento="imagen_subida",
             nombre_archivo=file.filename,
             ruta_archivo=str(file_path),
@@ -742,7 +753,7 @@ async def subir_documento(
                 "tipo_archivo": nuevo_documento.tipo_archivo,
                 "tamanio": nuevo_documento.tamanio,
                 "fecha_subida": str(nuevo_documento.fecha_subida),
-            }
+            },
         }
 
     except HTTPException:
@@ -754,15 +765,14 @@ async def subir_documento(
 
 @app.get("/api/documentos/mis-documentos")
 async def listar_mis_documentos(
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Lista documentos del vecino autenticado"""
     documentos = (
         db.query(models.Documento)
         .filter(
-            models.Documento.vecino_id == current_user['vecino_id'],
-            models.Documento.estado == 1
+            models.Documento.vecino_id == current_user["vecino_id"],
+            models.Documento.estado == 1,
         )
         .order_by(models.Documento.fecha_subida.desc())
         .all()
@@ -786,14 +796,14 @@ async def listar_mis_documentos(
 async def eliminar_documento(
     documento_id: int,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Elimina un documento del vecino"""
     documento = (
         db.query(models.Documento)
         .filter(
             models.Documento.id == documento_id,
-            models.Documento.vecino_id == current_user['vecino_id']
+            models.Documento.vecino_id == current_user["vecino_id"],
         )
         .first()
     )

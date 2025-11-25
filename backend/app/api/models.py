@@ -24,19 +24,20 @@ class Vecino(Base):
     )
     estado = Column(Integer, default=1)  # 1: activo, 0: inactivo
 
-    # Relación con Usuario
+    # Relaciones
     usuario = relationship("Usuario", back_populates="vecino", uselist=False)
+    documentos = relationship("Documento", back_populates="vecino")
 
 
 class Usuario(Base):
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)  # RUT del vecino
+    username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     vecino_id = Column(Integer, ForeignKey("vecinos.id"), unique=True)
-    rol = Column(String, default="vecino")  # "presidente" o "vecino"
-    estado = Column(Integer, default=1)  # 1: activo, 0: inactivo
+    rol = Column(String, default="vecino")
+    estado = Column(Integer, default=1)
     fecha_creacion = Column(TIMESTAMP(timezone=True), default=text("now()"))
 
     # Relación con Vecino
@@ -47,11 +48,18 @@ class Documento(Base):
     __tablename__ = "documentos"
 
     id = Column(Integer, primary_key=True, index=True)
-    vecino_id = Column(Integer, ForeignKey("vecinos.id"))
-    tipo_documento = Column(String)
-    nombre_archivo = Column(String)
-    ruta_archivo = Column(String)
+    vecino_id = Column(Integer, ForeignKey("vecinos.id"), nullable=False)
+    tipo_documento = Column(String, nullable=True)
+    nombre_archivo = Column(String, nullable=False)
+    ruta_archivo = Column(String, nullable=False)
+    tipo_archivo = Column(String, nullable=True)
+    tamanio = Column(Integer, nullable=True)
+    descripcion = Column(String, nullable=True)
     fecha_subida = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
+    estado = Column(Integer, default=1)
+    
+    # Relación con Vecino
+    vecino = relationship("Vecino", back_populates="documentos")
 
 
 class Historial(Base):

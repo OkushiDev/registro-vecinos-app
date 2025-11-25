@@ -8,7 +8,13 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 
-// Importaciones adicionales para búsqueda y filtrado
+// Importación de XLSX para descargar historial
+import * as XLSX from 'xlsx';
+
+// Importación de la API (Asegúrate de tener el endpoint creado en el backend)
+import api from "../../api";
+
+// Importaciones para búsqueda y filtrado
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -19,39 +25,63 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
-// Definición de la interfaz para las columnas de la tabla.
+// === ESTILOS (Mismo tema Dark que ListaVecinos) ===
+const MAIN_BG_COLOR = "#0b1121";
+const SECONDARY_BG_COLOR = "#1e293b";
+const BORDER_COLOR = "rgba(255, 255, 255, 0.1)";
+
+const searchInputStyle = {
+  "& .MuiOutlinedInput-root": {
+    color: "white",
+    backgroundColor: "transparent",
+    border: `1px solid ${BORDER_COLOR}`,
+    borderRadius: "4px",
+    "& fieldset": { border: "none" },
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.05)",
+      borderColor: "rgba(255, 255, 255, 0.3)",
+    },
+    "&.Mui-focused": {
+      borderColor: "#3b82f6",
+      boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
+    },
+  },
+  "& .MuiSvgIcon-root": { color: "rgba(255, 255, 255, 0.5)" },
+};
+
+const filterComponentStyle = {
+  backgroundColor: SECONDARY_BG_COLOR,
+  color: "white",
+  borderRadius: "4px",
+  border: `1px solid ${BORDER_COLOR}`,
+  "& .MuiSelect-icon": { color: "white" },
+  "&:hover": {
+    backgroundColor: "#2d3748",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  minHeight: "56px",
+};
+
+// Definición de Columnas
 interface Column {
   id: "id" | "descripcion_accion" | "tipo_accion" | "fecha_accion" | "usuario";
   label: string;
   minWidth?: number;
   align?: "right";
-  format?: (value: any) => string;
 }
-// Definición de las columnas de la tabla de historial de acciones.
+
 const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 170 },
-  { id: "descripcion_accion", label: "Descripción", minWidth: 100 },
-  {
-    id: "tipo_accion",
-    label: "Tipo de Acción",
-    minWidth: 170,
-    align: "right",
-  },
-  {
-    id: "fecha_accion",
-    label: "Fecha de Acción",
-    minWidth: 170,
-    align: "right",
-  },
-  {
-    id: "usuario",
-    label: "Usuario",
-    minWidth: 170,
-    align: "right",
-  },
+  { id: "id", label: "ID", minWidth: 50 },
+  { id: "descripcion_accion", label: "Descripción", minWidth: 200 },
+  { id: "tipo_accion", label: "Tipo Acción", minWidth: 120 },
+  { id: "usuario", label: "Usuario", minWidth: 120 },
+  { id: "fecha_accion", label: "Fecha y Hora", minWidth: 170, align: "right" },
 ];
-// Definición de la interfaz para los datos de cada fila en la tabla.
+
+// Interfaz de Datos
 interface Data {
   id: number;
   descripcion_accion: string;
@@ -60,170 +90,192 @@ interface Data {
   usuario: string;
 }
 
-// Funcion para crear los datos de historial de acciones. Esta funcion manejara los datos de historial de acciones
-function createData(
-  id: number,
-  descripcion_accion: string,
-  tipo_accion: string,
-  fecha_accion: Date,
-  usuario: string
-): Data {
-  return {
-    id,
-    descripcion_accion,
-    tipo_accion,
-    fecha_accion: fecha_accion.toLocaleDateString("es-ES"),
-    usuario,
-  };
-}
-
-// Datos de ejemplo para el historial. Eventualmente, estos datos vendrán de una API o base de datos
-const rows = [
-  createData(1, "Descripción 1", "Tipo 1", new Date("2023-01-01"), "Usuario 1"),
-  createData(2, "Descripción 2", "Tipo 2", new Date("2023-01-02"), "Usuario 2"),
-  createData(3, "Descripción 3", "Tipo 3", new Date("2023-01-03"), "Usuario 3"),
-  createData(4, "Descripción 4", "Tipo 4", new Date("2023-01-04"), "Usuario 4"),
-  createData(5, "Descripción 5", "Tipo 5", new Date("2023-01-05"), "Usuario 5"),
-  createData(6, "Descripción 6", "Tipo 6", new Date("2023-01-06"), "Usuario 6"),
-  createData(7, "Descripción 7", "Tipo 7", new Date("2023-01-07"), "Usuario 7"),
-  createData(8, "Descripción 8", "Tipo 8", new Date("2023-01-08"), "Usuario 8"),
-  createData(9, "Descripción 9", "Tipo 9", new Date("2023-01-09"), "Usuario 9"),
-  createData(
-    10,
-    "Descripción 10",
-    "Tipo 10",
-    new Date("2023-01-10"),
-    "Usuario 10"
-  ),
-  createData(
-    11,
-    "Descripción 11",
-    "Tipo 11",
-    new Date("2023-01-11"),
-    "Usuario 11"
-  ),
-  createData(
-    12,
-    "Descripción 12",
-    "Tipo 12",
-    new Date("2023-01-12"),
-    "Usuario 12"
-  ),
-];
-
-//// Componente principal para mostrar el historial de acciones
 export default function Historial() {
-  // Con esto se manejara la paginación de la tabla (Pagina 1, Pagina 2, etc). Se define para iniciar en la pagina 0
   const [page, setPage] = React.useState(0);
-  // Con esto se manejara la cantidad de filas por página. Se define para iniciar con 10 filas por página
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  // Función para manejar el cambio de página (Ejemplo, al dar click en "Pagina siguiente" o "Pagina anterior")
+  const [rows, setRows] = React.useState<Data[]>([]); // Estado para los datos reales
+  const [loading, setLoading] = React.useState(true);
+
+  // === 1. OBTENER DATOS DEL BACKEND ===
+  const fetchHistorial = async () => {
+    try {
+      setLoading(true);
+      // Asumimos que tu backend tiene este endpoint.
+      // Si no lo tiene, avísame para darte el código de Python.
+      const response = await api.get("/historial/"); 
+      setRows(response.data || []);
+    } catch (error) {
+      console.error("Error al obtener el historial:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchHistorial();
+  }, []);
+
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
-  // Función para manejar el cambio de filas por página (Ejemplo, al seleccionar 10, 25 o 100 filas por página)
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
-  // Función para formatear los valores de las celdas, especialmente para fechas
-  const formatCellValue = (column: Column, value: any): string | number => {
-    if (column.format && value instanceof Date) {
-      return column.format(value);
-    }
-    if (value instanceof Date) {
-      return value.toLocaleDateString("es-ES");
-    }
-    return value;
-  };
 
-  // Estados para búsqueda y filtrado
+  // === BUSCADOR Y FILTROS ===
   const [searchTerm, setSearchTerm] = React.useState("");
-  // Estado para la columna por la cual se filtrará
   const [filterColumn, setFilterColumn] = React.useState("all");
 
-  // Filtrar filas basado en el término de búsqueda y columna seleccionada
   const filteredRows = React.useMemo(() => {
     if (!searchTerm) return rows;
 
     return rows.filter((row) => {
       if (filterColumn === "all") {
         return Object.values(row).some((value) =>
-          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          value ? value.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false
         );
       } else {
-        return row[filterColumn as keyof Data]
-          .toString()
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        const val = row[filterColumn as keyof Data];
+        return val ? val.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false;
       }
     });
-  }, [searchTerm, filterColumn]);
+  }, [searchTerm, filterColumn, rows]);
 
-  //Función para resetear página cuando se busca
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    setPage(0); // Resetear a primera página al buscar
+    setPage(0);
   };
 
   const handleFilterChange = (e: any) => {
     setFilterColumn(e.target.value);
-    setPage(0); // Resetear a primera página al cambiar filtro
+    setPage(0);
   };
+
+  // === EXPORTAR A EXCEL ===
+  const handleExportToExcel = () => {
+    const dataToExport = filteredRows.map((row) => ({
+      ID: row.id,
+      Descripción: row.descripcion_accion,
+      "Tipo Acción": row.tipo_accion,
+      Usuario: row.usuario,
+      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"), // Formato local
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
+    
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
+  };
+
+  // Función auxiliar para formatear fecha en la tabla visualmente
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleString("es-CL", {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+  };
+
   return (
-    <Paper sx={{ width: "100%", overflow: "hidden" }}>
-      {/* Barra de búsqueda con filtros */}
+    <Paper
+      sx={{
+        width: "100%",
+        minHeight: "100vh",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: MAIN_BG_COLOR,
+        color: "white",
+        borderRadius: 0,
+      }}
+      elevation={0}
+    >
+      {/* Barra superior */}
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={8}>
+          {/* BUSCADOR */}
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               variant="outlined"
               placeholder="Buscar en historial..."
               value={searchTerm}
               onChange={handleSearchChange}
+              sx={searchInputStyle}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: "rgba(255,255,255,0.7)" }} />
                   </InputAdornment>
                 ),
+                sx: { height: "56px" }
               }}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+
+          {/* FILTRO COLUMNA */}
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Buscar en</InputLabel>
               <Select
                 value={filterColumn}
                 label="Buscar en"
                 onChange={handleFilterChange}
+                sx={{
+                    ...filterComponentStyle,
+                    "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                }}
+                MenuProps={{
+                    PaperProps: { sx: { bgcolor: SECONDARY_BG_COLOR, color: "white" } },
+                }}
               >
-                <MenuItem value="all">Todas las columnas</MenuItem>
+                <MenuItem value="all">Todo</MenuItem>
                 <MenuItem value="descripcion_accion">Descripción</MenuItem>
-                <MenuItem value="tipo_accion">Tipo de Acción</MenuItem>
+                <MenuItem value="tipo_accion">Tipo</MenuItem>
                 <MenuItem value="usuario">Usuario</MenuItem>
               </Select>
             </FormControl>
           </Grid>
+          
+          {/* BOTON EXCEL */}
+          <Grid item xs={12} md={3}>
+             <Button
+              fullWidth
+              variant="contained"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExportToExcel}
+              sx={{
+                height: "56px",
+                background: "linear-gradient(to right, #059669, #10b981)",
+                fontWeight: "bold",
+                boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
+                "&:hover": {
+                  background: "linear-gradient(to right, #047857, #059669)",
+                },
+              }}
+            >
+              Descargar Reporte
+            </Button>
+          </Grid>
         </Grid>
       </Box>
 
+      {/* Resumen de resultados */}
       {searchTerm && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Mostrando {filteredRows.length} de {rows.length} registros
-            {filterColumn !== "all" &&
-              ` (filtrado por ${
-                columns.find((col) => col.id === filterColumn)?.label
-              })`}
+        <Box sx={{ px: 2, pb: 2 }}>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
+            Registros encontrados: {filteredRows.length}
           </Typography>
         </Box>
       )}
 
-      <TableContainer sx={{ maxHeight: 440 }}>
+      {/* TABLA */}
+      <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
@@ -232,6 +284,12 @@ export default function Historial() {
                   key={column.id}
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
+                  sx={{
+                    backgroundColor: SECONDARY_BG_COLOR,
+                    color: "#90caf9",
+                    fontWeight: "bold",
+                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  }}
                 >
                   {column.label}
                 </TableCell>
@@ -239,29 +297,57 @@ export default function Historial() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredRows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => {
-                return (
-                  <TableRow
-                    hover
-                    role="checkbox"
-                    tabIndex={-1}
-                    key={row.id}
-                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                  >
-                    {columns.map((column) => {
-                      const value = row[column.id];
+            {loading ? (
+                <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ color: "white", py: 4 }}>
+                        Cargando historial...
+                    </TableCell>
+                </TableRow>
+            ) : filteredRows.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ color: "rgba(255,255,255,0.5)", py: 4 }}>
+                        No hay registros de acciones.
+                    </TableCell>
+                </TableRow>
+            ) : (
+                filteredRows
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row) => {
+                    return (
+                    <TableRow
+                        hover
+                        role="checkbox"
+                        tabIndex={-1}
+                        key={row.id}
+                        sx={{
+                            backgroundColor: "transparent",
+                            "&:last-child td, &:last-child th": { border: 0 },
+                            "&:hover": { backgroundColor: "rgba(255,255,255,0.05) !important" },
+                        }}
+                    >
+                        {columns.map((column) => {
+                        const cellStyle = {
+                            color: "rgba(255,255,255,0.9)",
+                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        };
+                        
+                        let value = row[column.id];
 
-                      return (
-                        <TableCell key={column.id} align={column.align}>
-                          {value}{" "}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })}
+                        // Formatear fecha específicamente
+                        if (column.id === 'fecha_accion') {
+                            value = formatDate(row.fecha_accion);
+                        }
+
+                        return (
+                            <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                            {value}
+                            </TableCell>
+                        );
+                        })}
+                    </TableRow>
+                    );
+                })
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -273,6 +359,16 @@ export default function Historial() {
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        sx={{
+          backgroundColor: MAIN_BG_COLOR,
+          color: "white",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+          ".MuiTablePagination-selectIcon": { color: "white" },
+          ".MuiIconButton-root": {
+            color: "white",
+            "&.Mui-disabled": { color: "rgba(255,255,255,0.3)" },
+          },
+        }}
       />
     </Paper>
   );

@@ -4,14 +4,29 @@ from sqlalchemy.orm import Session
 from app.api.database import get_db
 from app.api import models
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
+from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
 from io import BytesIO
 from datetime import datetime
 import os
 
 router = APIRouter()
+
+# Mapeo de números de mes a nombres en español
+MESES = {
+    1: "enero",
+    2: "febrero",
+    3: "marzo",
+    4: "abril",
+    5: "mayo",
+    6: "junio",
+    7: "julio",
+    8: "agosto",
+    9: "septiembre",
+    10: "octubre",
+    11: "noviembre",
+    12: "diciembre",
+}
 
 
 def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
@@ -29,58 +44,61 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
 
     # Verificar si existe la imagen
     if os.path.exists(ruta_imagen):
-        # Dibujar la imagen como fondo
-        # Ajusta el tamaño según tu imagen (letter = 8.5" x 11")
         c.drawImage(
             ruta_imagen,
             x=0,
             y=0,
             width=width,
             height=height,
-            preserveAspectRatio=True,
-            mask="auto",
+            preserveAspectRatio=False,  # Ajustar a toda la página
         )
     else:
         print(f"ADVERTENCIA: No se encontró la imagen en {ruta_imagen}")
-        # Si no hay imagen, dibujar un rectángulo de fondo blanco
         c.setFillColorRGB(1, 1, 1)
         c.rect(0, 0, width, height, fill=True)
 
-    # === AHORA SUPERPONER LOS DATOS ===
-    # Ajusta las coordenadas (x, y) según donde quieras que aparezcan en tu imagen
+    # === DATOS DEL VECINO (SEPARADOS) ===
+    nombres = vecino.nombres
+    apellidos = f"{vecino.apellido_paterno} {vecino.apellido_materno}".strip()
+    rut = vecino.rut
+    domicilio = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
+    numero_socio = vecino.numero_socio
 
-    # Nombre completo
-    nombre_completo = (
-        f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}".strip()
-    )
-    c.setFont("Helvetica-Bold", 14)
-    c.setFillColorRGB(0, 0, 0)  # Negro
-    c.drawString(1.5 * inch, height - 4 * inch, nombre_completo)
+    # Fecha SEPARADA: día, mes, año (2 dígitos)
+    fecha_actual = datetime.now()
+    dia = str(fecha_actual.day)  # "24"
+    mes_nombre = MESES[fecha_actual.month]  # "noviembre"
+    anio_corto = str(fecha_actual.year)[-2:]  # "25" (últimos 2 dígitos de 2025)
+
+    # === SUPERPONER LOS DATOS EN LAS COORDENADAS ===
+    c.setFillColorRGB(0, 0, 0)  # Color negro
+
+    # NOMBRES
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(11 * cm, 17 * cm, nombres)
+
+    # APELLIDOS
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(11 * cm, 16 * cm, apellidos)
 
     # RUT
-    c.setFont("Helvetica", 12)
-    c.drawString(1.5 * inch, height - 4.4 * inch, f"RUT: {vecino.rut}")
+    c.setFont("Helvetica", 11)
+    c.drawString(11 * cm, 15 * cm, rut)
 
-    # Dirección
-    direccion = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
-    c.drawString(1.5 * inch, height - 4.8 * inch, f"Domicilio: {direccion}")
+    # DOMICILIO
+    c.drawString(11 * cm, 14 * cm, domicilio)
 
-    # Relación con la propiedad
-    c.drawString(
-        1.5 * inch, height - 5.2 * inch, f"Relación: {vecino.relacion_propiedad}"
-    )
+    # NÚMERO DE SOCIO
+    c.drawString(11 * cm, 13 * cm, str(numero_socio))
 
-    # Número de socio
-    c.drawString(1.5 * inch, height - 5.6 * inch, f"N° Socio: {vecino.numero_socio}")
+    # FECHA - DÍA
+    c.drawString(10 * cm, 8.5 * cm, dia)  # 👈 CAMBIA COORDENADAS
 
-    # Fecha de emisión (ajusta la posición según tu plantilla)
-    fecha_hoy = datetime.now().strftime("%d de %B de %Y")
-    c.drawString(1.5 * inch, height - 9 * inch, f"Fecha: {fecha_hoy}")
+    # FECHA - MES
+    c.drawString(12 * cm, 8.5 * cm, mes_nombre)  # 👈 CAMBIA COORDENADAS
 
-    # Si tu imagen YA tiene la firma y timbre, no necesitas agregar nada más
-    # Si quieres agregar texto adicional sobre la firma:
-    # c.setFont("Helvetica", 10)
-    # c.drawCentredString(width / 2, 1.5 * inch, "Nombre del Presidente")
+    # FECHA - AÑO (2 dígitos)
+    c.drawString(16.5 * cm, 5 * cm, anio_corto)  # 👈 CAMBIA COORDENADAS
 
     c.showPage()
     c.save()
@@ -106,6 +124,16 @@ async def generar_certificado(vecino_id: int, db: Session = Depends(get_db)):
             status_code=400,
             detail="No se puede generar certificado para un vecino inactivo",
         )
+
+    print(f"Generando certificado para:")
+    print(f"  Nombres: {vecino.nombres}")
+    print(f"  Apellidos: {vecino.apellido_paterno} {vecino.apellido_materno}")
+    print(f"  RUT: {vecino.rut}")
+    print(f"  Domicilio: {vecino.nombre_calle} N° {vecino.numero_casa}")
+    print(f"  N° Socio: {vecino.numero_socio}")
+    print(
+        f"  Fecha: {datetime.now().day} de {MESES[datetime.now().month]} de {str(datetime.now().year)[-2:]}"
+    )
 
     # Generar el PDF
     pdf_buffer = generar_certificado_pdf(vecino)

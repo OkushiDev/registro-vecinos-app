@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useTheme } from "@mui/material/styles"; // Hook para el tema
+import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -8,6 +8,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
+import TableSortLabel from "@mui/material/TableSortLabel";
 
 // Importación de XLSX para descargar historial
 import * as XLSX from 'xlsx';
@@ -28,20 +29,22 @@ import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { visuallyHidden } from "@mui/utils";
 
-// Definición de Columnas
+// Definición de Columnas (ORDEN ACTUALIZADO)
 interface Column {
-  id: "id" | "descripcion_accion" | "tipo_accion" | "fecha_accion" | "usuario";
+  id: "id" | "usuario" | "tipo_accion" | "descripcion_accion" | "fecha_accion";
   label: string;
   minWidth?: number;
   align?: "right";
+  sortable?: boolean;
 }
 
 const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 50 },
-  { id: "descripcion_accion", label: "Descripción", minWidth: 200 },
-  { id: "tipo_accion", label: "Tipo Acción", minWidth: 120 },
-  { id: "usuario", label: "Usuario", minWidth: 120 },
+  { id: "id", label: "ID", minWidth: 50, sortable: true },
+  { id: "usuario", label: "Usuario", minWidth: 120 }, // Movidó aquí
+  { id: "tipo_accion", label: "Acción", minWidth: 120 }, // Movidó aquí
+  { id: "descripcion_accion", label: "Descripción", minWidth: 250 }, // Movidó aquí y aumentado ancho
   { id: "fecha_accion", label: "Fecha y Hora", minWidth: 170, align: "right" },
 ];
 
@@ -54,12 +57,19 @@ interface Data {
   usuario: string;
 }
 
+// Tipos para el ordenamiento
+type Order = 'asc' | 'desc';
+
 export default function Historial() {
-  const theme = useTheme(); // Acceso al tema actual
+  const theme = useTheme();
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rowsPerPage, setRowsPerPage] = React.useState(25);
   const [rows, setRows] = React.useState<Data[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  // === ESTADOS PARA ORDENAMIENTO ===
+  const [order, setOrder] = React.useState<Order>('desc');
+  const [orderBy, setOrderBy] = React.useState<keyof Data>('id');
 
   // === OBTENER DATOS ===
   const fetchHistorial = async () => {
@@ -87,6 +97,13 @@ export default function Historial() {
     setPage(0);
   };
 
+  // === MANEJO DEL ORDENAMIENTO ===
+  const handleRequestSort = (property: keyof Data) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
   // === BUSCADOR Y FILTROS ===
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterColumn, setFilterColumn] = React.useState("all");
@@ -106,6 +123,20 @@ export default function Historial() {
     });
   }, [searchTerm, filterColumn, rows]);
 
+  // === APLICAR ORDENAMIENTO ===
+  const sortedRows = React.useMemo(() => {
+    const sorted = [...filteredRows];
+    
+    sorted.sort((a, b) => {
+        if (orderBy === 'id') {
+            return order === 'asc' ? a.id - b.id : b.id - a.id;
+        }
+        return 0;
+    });
+
+    return sorted;
+  }, [filteredRows, order, orderBy]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setPage(0);
@@ -116,13 +147,13 @@ export default function Historial() {
     setPage(0);
   };
 
-  // === EXPORTAR A EXCEL ===
+  // === EXPORTAR A EXCEL (Orden actualizado también aquí) ===
   const handleExportToExcel = () => {
-    const dataToExport = filteredRows.map((row) => ({
+    const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
+      Usuario: row.usuario,        // <--- Actualizado orden
+      Acción: row.tipo_accion,     // <--- Actualizado orden
       Descripción: row.descripcion_accion,
-      "Tipo Acción": row.tipo_accion,
-      Usuario: row.usuario,
       Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
     }));
 
@@ -134,7 +165,6 @@ export default function Historial() {
     XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
   };
 
-  // Formateo visual de fecha
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -144,7 +174,6 @@ export default function Historial() {
     });
   };
 
-  // Estilo común para selects (adaptable al tema)
   const commonFilterStyle = {
     backgroundColor: "background.paper",
     color: "text.primary",
@@ -168,17 +197,15 @@ export default function Historial() {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "background.default", // Fondo dinámico
-        color: "text.primary", // Texto dinámico
+        backgroundColor: "background.default",
+        color: "text.primary",
         borderRadius: 0,
         transition: "background-color 0.3s ease",
       }}
       elevation={0}
     >
-      {/* Barra superior */}
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          {/* BUSCADOR */}
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -195,9 +222,7 @@ export default function Historial() {
                   "& fieldset": { border: "none" },
                   "&:hover": {
                     borderColor: "text.primary",
-                    backgroundColor: theme.palette.mode === "dark" 
-                        ? "rgba(255,255,255,0.05)" 
-                        : "rgba(0,0,0,0.05)",
+                    backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
                   },
                   "&.Mui-focused": {
                     borderColor: "#3b82f6",
@@ -217,7 +242,6 @@ export default function Historial() {
             />
           </Grid>
 
-          {/* FILTRO COLUMNA */}
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>Buscar en</InputLabel>
@@ -234,23 +258,18 @@ export default function Historial() {
                 }}
                 MenuProps={{
                   PaperProps: { 
-                      sx: { 
-                          bgcolor: "background.paper", 
-                          color: "text.primary",
-                          backgroundImage: "none" 
-                        } 
+                      sx: { bgcolor: "background.paper", color: "text.primary", backgroundImage: "none" } 
                     },
                 }}
               >
                 <MenuItem value="all">Todo</MenuItem>
-                <MenuItem value="descripcion_accion">Descripción</MenuItem>
-                <MenuItem value="tipo_accion">Tipo</MenuItem>
                 <MenuItem value="usuario">Usuario</MenuItem>
+                <MenuItem value="tipo_accion">Acción</MenuItem>
+                <MenuItem value="descripcion_accion">Descripción</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           
-          {/* BOTON EXCEL */}
           <Grid item xs={12} md={3}>
              <Button
               fullWidth
@@ -274,7 +293,6 @@ export default function Historial() {
         </Grid>
       </Box>
 
-      {/* Resumen de resultados */}
       {searchTerm && (
         <Box sx={{ px: 2, pb: 2 }}>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -283,7 +301,6 @@ export default function Historial() {
         </Box>
       )}
 
-      {/* TABLA */}
       <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
@@ -294,13 +311,29 @@ export default function Historial() {
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
                   sx={{
-                    backgroundColor: "background.paper", // Cabecera dinámica
+                    backgroundColor: "background.paper",
                     color: "text.primary",
                     fontWeight: "bold",
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
+                  sortDirection={orderBy === column.id ? order : false}
                 >
-                  {column.label}
+                  {column.sortable ? (
+                    <TableSortLabel
+                      active={orderBy === column.id}
+                      direction={orderBy === column.id ? order : 'asc'}
+                      onClick={() => handleRequestSort(column.id)}
+                    >
+                      {column.label}
+                      {orderBy === column.id ? (
+                        <Box component="span" sx={visuallyHidden}>
+                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                        </Box>
+                      ) : null}
+                    </TableSortLabel>
+                  ) : (
+                    column.label
+                  )}
                 </TableCell>
               ))}
             </TableRow>
@@ -319,7 +352,7 @@ export default function Historial() {
                     </TableCell>
                 </TableRow>
             ) : (
-                filteredRows
+                sortedRows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                     return (
@@ -363,9 +396,8 @@ export default function Historial() {
         </Table>
       </TableContainer>
       
-      {/* PAGINACIÓN (Traducida al español como en ListaVecinos) */}
       <TablePagination
-        rowsPerPageOptions={[10, 25, 100]}
+        rowsPerPageOptions={[25, 50, 100]}
         component="div"
         count={filteredRows.length}
         rowsPerPage={rowsPerPage}

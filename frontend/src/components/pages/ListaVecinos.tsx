@@ -71,7 +71,7 @@ interface Column {
     | "acciones_estado";
   label: string;
   minWidth?: number;
-  align?: "right";
+  align?: "center" | "right" | "left";
   format?: (value: any) => string;
 }
 
@@ -81,7 +81,7 @@ const columns: readonly Column[] = [
   { id: "apellido_paterno", label: "Ap. Paterno", minWidth: 120 },
   { id: "apellido_materno", label: "Ap. Materno", minWidth: 120 },
   { id: "rut", label: "RUT", minWidth: 120 },
-  { id: "numero_socio", label: "N° Socio", minWidth: 80, align: "right" },
+  { id: "numero_socio", label: "N° Socio", minWidth: 95, align: "center" },
   { id: "nombre_calle", label: "Calle", minWidth: 150 },
   { id: "numero_casa", label: "N° Casa", minWidth: 80 },
   { id: "relacion_propiedad", label: "Relación", minWidth: 120 },
@@ -128,7 +128,7 @@ const CALLES = [
   "Lourdes",
   "Miguel Angel",
   "Rio Loco",
-  "Tizano",
+  "Tiziano",
 ];
 
 const RELACIONES_PROPIEDAD = [
@@ -381,7 +381,6 @@ export default function ListaVecinos() {
   ) => {
     try {
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
-        //                              👆 AGREGAR /api
         responseType: "blob",
       });
 
@@ -536,7 +535,7 @@ export default function ListaVecinos() {
                 sx={{
                   minHeight: "56px",
                   width: "100%",
-                  "& .MuiAccordionSummary-content": { margin: 0 },
+                  "& .MuiAccordionSummary-content": { marginRight: 5 },
                 }}
               >
                 <Typography noWrap sx={{ fontSize: "0.9rem" }}>
@@ -590,7 +589,7 @@ export default function ListaVecinos() {
                 sx={{
                   minHeight: "56px",
                   width: "100%",
-                  "& .MuiAccordionSummary-content": { margin: 0 },
+                  "& .MuiAccordionSummary-content": { margin: 2 },
                 }}
               >
                 <Typography noWrap sx={{ fontSize: "0.9rem" }}>

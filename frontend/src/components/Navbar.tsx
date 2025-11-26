@@ -46,11 +46,15 @@ const presidentePages: NavItem[] = [
     icon: <PeopleIcon fontSize="small" />,
   },
   {
-    label: "Registrar",
-    path: "/presidente/registrar",
+    label: "Documentos",
+    path: "/presidente/documentos",
     icon: <PeopleIcon fontSize="small" />,
   },
-  { label: "Historial", path: "/presidente/historial", icon: <HistoryIcon fontSize="small" /> },
+  {
+    label: "Historial",
+    path: "/presidente/historial",
+    icon: <HistoryIcon fontSize="small" />,
+  },
 ];
 
 const vecinoPages: NavItem[] = [
@@ -76,8 +80,8 @@ const settings = ["Perfil", "Configuración", "Cerrar Sesión"];
 export default function Navbar({
   userProfile,
   onLogout,
-  isDarkMode,     // Recibimos prop
-  onToggleTheme,  // Recibimos prop
+  isDarkMode, // Recibimos prop
+  onToggleTheme, // Recibimos prop
 }: NavbarProps): React.ReactElement {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
     null
@@ -123,34 +127,37 @@ export default function Navbar({
   };
 
   // Definimos colores dinámicos basados en el tema para el Navbar flotante
-  const navBgColor = isDarkMode ? 'rgba(3, 14, 29, 0.85)' : 'rgba(255, 255, 255, 0.85)';
-  const navTextColor = isDarkMode ? 'white' : '#1e293b'; 
-  const navBorderColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+  const navBgColor = isDarkMode
+    ? "rgba(3, 14, 29, 0.85)"
+    : "rgba(255, 255, 255, 0.85)";
+  const navTextColor = isDarkMode ? "white" : "#1e293b";
+  const navBorderColor = isDarkMode
+    ? "rgba(255, 255, 255, 0.08)"
+    : "rgba(0, 0, 0, 0.08)";
 
   return (
     <>
-      <AppBar 
-        position="fixed" 
+      <AppBar
+        position="fixed"
         elevation={0}
         sx={{
           top: 16,
           left: 0,
           right: 0,
-          width: 'auto',
-          maxWidth: '1200px',
-          mx: 'auto',
-          borderRadius: '999px',
+          width: "auto",
+          maxWidth: "1200px",
+          mx: "auto",
+          borderRadius: "999px",
           bgcolor: navBgColor,
-          color: navTextColor, 
-          backdropFilter: 'blur(24px)',
+          color: navTextColor,
+          backdropFilter: "blur(24px)",
           border: `1px solid ${navBorderColor}`,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          transition: 'all 0.3s ease',
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          transition: "all 0.3s ease",
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ minHeight: '64px' }}>
-            
+          <Toolbar disableGutters sx={{ minHeight: "64px" }}>
             {/* LOGO DESKTOP */}
             <Typography
               variant="h6"
@@ -166,7 +173,7 @@ export default function Navbar({
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                fontSize: '1.1rem'
+                fontSize: "1.1rem",
               }}
             >
               Villa Florencia
@@ -193,9 +200,9 @@ export default function Navbar({
                 sx={{ display: { xs: "block", md: "none" } }}
                 PaperProps={{
                   sx: {
-                      bgcolor: isDarkMode ? '#0a1929' : 'white',
-                      color: isDarkMode ? 'white' : 'black',
-                  }
+                    bgcolor: isDarkMode ? "#0a1929" : "white",
+                    color: isDarkMode ? "white" : "black",
+                  },
                 }}
               >
                 {pages.map((page) => (
@@ -213,7 +220,13 @@ export default function Navbar({
             </Box>
 
             {/* LOGO MOBILE */}
-            <HomeIcon sx={{ display: { xs: "flex", md: "none" }, mr: 1, color: '#66b2ff' }} />
+            <HomeIcon
+              sx={{
+                display: { xs: "flex", md: "none" },
+                mr: 1,
+                color: "#66b2ff",
+              }}
+            />
             <Typography
               variant="h5"
               noWrap
@@ -235,7 +248,9 @@ export default function Navbar({
             </Typography>
 
             {/* LINKS DESKTOP */}
-            <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, gap: 1 }}>
+            <Box
+              sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, gap: 1 }}
+            >
               {pages.map((page) => (
                 <Button
                   key={page.path}
@@ -244,18 +259,22 @@ export default function Navbar({
                     my: 2,
                     color: "inherit",
                     display: "block",
-                    fontSize: '0.875rem',
+                    fontSize: "0.875rem",
                     fontWeight: 500,
-                    textTransform: 'none',
-                    borderRadius: '20px',
+                    textTransform: "none",
+                    borderRadius: "20px",
                     px: 2,
                     backgroundColor:
                       location.pathname === page.path
-                        ? (isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)")
+                        ? isDarkMode
+                          ? "rgba(255,255,255,0.1)"
+                          : "rgba(0,0,0,0.05)"
                         : "transparent",
-                    '&:hover': {
-                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                    }
+                    "&:hover": {
+                      backgroundColor: isDarkMode
+                        ? "rgba(255,255,255,0.05)"
+                        : "rgba(0,0,0,0.04)",
+                    },
                   }}
                 >
                   {page.label}
@@ -264,10 +283,14 @@ export default function Navbar({
             </Box>
 
             {/* === 3. BOTÓN DE CAMBIO DE TEMA === */}
-            <Tooltip title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
-              <IconButton 
-                onClick={onToggleTheme} 
-                color="inherit" 
+            <Tooltip
+              title={
+                isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
+              }
+            >
+              <IconButton
+                onClick={onToggleTheme}
+                color="inherit"
                 sx={{ ml: 1, mr: 1 }}
               >
                 {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
@@ -280,12 +303,13 @@ export default function Navbar({
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                   <Avatar
                     sx={{
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       bgcolor:
-                        userProfile === "presidente"
-                          ? "#9c27b0"
-                          : "#0288d1",
-                      border: `2px solid ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'}`
+                        userProfile === "presidente" ? "#9c27b0" : "#0288d1",
+                      border: `2px solid ${
+                        isDarkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"
+                      }`,
                     }}
                   >
                     {userProfile === "presidente" ? "P" : "V"}
@@ -315,9 +339,12 @@ export default function Navbar({
           </Toolbar>
         </Container>
       </AppBar>
-      
+
       {/* Espaciador invisible */}
-      <Box sx={{ height: '100px', width: '100%', display: 'block' }} aria-hidden="true" />
+      <Box
+        sx={{ height: "100px", width: "100%", display: "block" }}
+        aria-hidden="true"
+      />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, ChangeEvent, FormEvent } from "react";
+import React, { useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import {
   Box,
   Button,
@@ -133,7 +133,7 @@ const SubirDocumento: React.FC = () => {
       const data = await response.json();
       setMessage({
         type: "success",
-        text: `${data.message} - ID: ${data.documento.id}`,
+        text:data.message,
       });
 
       // Limpiar formulario

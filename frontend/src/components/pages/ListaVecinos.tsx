@@ -128,7 +128,7 @@ const CALLES = [
   "Lourdes",
   "Miguel Angel",
   "Rio Loco",
-  "Tizano",
+  "Tiziano",
 ];
 
 const RELACIONES_PROPIEDAD = [

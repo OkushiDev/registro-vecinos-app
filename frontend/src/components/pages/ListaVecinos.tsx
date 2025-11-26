@@ -381,7 +381,6 @@ export default function ListaVecinos() {
   ) => {
     try {
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
-        //                              👆 AGREGAR /api
         responseType: "blob",
       });
 

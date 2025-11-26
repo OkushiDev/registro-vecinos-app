@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTheme } from "@mui/material/styles"; // Hook para el tema
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -11,10 +12,10 @@ import TablePagination from "@mui/material/TablePagination";
 // Importación de XLSX para descargar historial
 import * as XLSX from 'xlsx';
 
-// Importación de la API (Asegúrate de tener el endpoint creado en el backend)
+// Importación de la API
 import api from "../../api";
 
-// Importaciones para búsqueda y filtrado
+// Componentes UI
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -27,43 +28,6 @@ import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-
-// === ESTILOS (Mismo tema Dark que ListaVecinos) ===
-const MAIN_BG_COLOR = "#0b1121";
-const SECONDARY_BG_COLOR = "#1e293b";
-const BORDER_COLOR = "rgba(255, 255, 255, 0.1)";
-
-const searchInputStyle = {
-  "& .MuiOutlinedInput-root": {
-    color: "white",
-    backgroundColor: "transparent",
-    border: `1px solid ${BORDER_COLOR}`,
-    borderRadius: "4px",
-    "& fieldset": { border: "none" },
-    "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      borderColor: "rgba(255, 255, 255, 0.3)",
-    },
-    "&.Mui-focused": {
-      borderColor: "#3b82f6",
-      boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
-    },
-  },
-  "& .MuiSvgIcon-root": { color: "rgba(255, 255, 255, 0.5)" },
-};
-
-const filterComponentStyle = {
-  backgroundColor: SECONDARY_BG_COLOR,
-  color: "white",
-  borderRadius: "4px",
-  border: `1px solid ${BORDER_COLOR}`,
-  "& .MuiSelect-icon": { color: "white" },
-  "&:hover": {
-    backgroundColor: "#2d3748",
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  minHeight: "56px",
-};
 
 // Definición de Columnas
 interface Column {
@@ -91,17 +55,16 @@ interface Data {
 }
 
 export default function Historial() {
+  const theme = useTheme(); // Acceso al tema actual
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const [rows, setRows] = React.useState<Data[]>([]); // Estado para los datos reales
+  const [rows, setRows] = React.useState<Data[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // === 1. OBTENER DATOS DEL BACKEND ===
+  // === OBTENER DATOS ===
   const fetchHistorial = async () => {
     try {
       setLoading(true);
-      // Asumimos que tu backend tiene este endpoint.
-      // Si no lo tiene, avísame para darte el código de Python.
       const response = await api.get("/historial/"); 
       setRows(response.data || []);
     } catch (error) {
@@ -160,7 +123,7 @@ export default function Historial() {
       Descripción: row.descripcion_accion,
       "Tipo Acción": row.tipo_accion,
       Usuario: row.usuario,
-      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"), // Formato local
+      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -171,7 +134,7 @@ export default function Historial() {
     XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
   };
 
-  // Función auxiliar para formatear fecha en la tabla visualmente
+  // Formateo visual de fecha
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -179,6 +142,22 @@ export default function Historial() {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
+  };
+
+  // Estilo común para selects (adaptable al tema)
+  const commonFilterStyle = {
+    backgroundColor: "background.paper",
+    color: "text.primary",
+    borderRadius: "4px",
+    border: `1px solid ${theme.palette.divider}`,
+    "&:hover": {
+      backgroundColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
+      borderColor: "text.primary",
+    },
+    minHeight: "56px",
+    display: "flex",
+    alignItems: "center",
+    "& .MuiSelect-icon": { color: "text.primary" },
   };
 
   return (
@@ -189,9 +168,10 @@ export default function Historial() {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: MAIN_BG_COLOR,
-        color: "white",
+        backgroundColor: "background.default", // Fondo dinámico
+        color: "text.primary", // Texto dinámico
         borderRadius: 0,
+        transition: "background-color 0.3s ease",
       }}
       elevation={0}
     >
@@ -206,11 +186,30 @@ export default function Historial() {
               placeholder="Buscar en historial..."
               value={searchTerm}
               onChange={handleSearchChange}
-              sx={searchInputStyle}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "text.primary",
+                  backgroundColor: "transparent",
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: "4px",
+                  "& fieldset": { border: "none" },
+                  "&:hover": {
+                    borderColor: "text.primary",
+                    backgroundColor: theme.palette.mode === "dark" 
+                        ? "rgba(255,255,255,0.05)" 
+                        : "rgba(0,0,0,0.05)",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#3b82f6",
+                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
+                  },
+                },
+                "& .MuiSvgIcon-root": { color: "text.secondary" },
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "rgba(255,255,255,0.7)" }} />
+                    <SearchIcon />
                   </InputAdornment>
                 ),
                 sx: { height: "56px" }
@@ -221,17 +220,26 @@ export default function Historial() {
           {/* FILTRO COLUMNA */}
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Buscar en</InputLabel>
+              <InputLabel sx={{ color: "text.secondary" }}>Buscar en</InputLabel>
               <Select
                 value={filterColumn}
                 label="Buscar en"
                 onChange={handleFilterChange}
+                displayEmpty
+                variant="outlined"
                 sx={{
-                    ...filterComponentStyle,
+                    ...commonFilterStyle,
                     "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                    width: "100%"
                 }}
                 MenuProps={{
-                    PaperProps: { sx: { bgcolor: SECONDARY_BG_COLOR, color: "white" } },
+                  PaperProps: { 
+                      sx: { 
+                          bgcolor: "background.paper", 
+                          color: "text.primary",
+                          backgroundImage: "none" 
+                        } 
+                    },
                 }}
               >
                 <MenuItem value="all">Todo</MenuItem>
@@ -252,6 +260,7 @@ export default function Historial() {
               sx={{
                 height: "56px",
                 background: "linear-gradient(to right, #059669, #10b981)",
+                color: "white",
                 fontWeight: "bold",
                 boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
                 "&:hover": {
@@ -268,7 +277,7 @@ export default function Historial() {
       {/* Resumen de resultados */}
       {searchTerm && (
         <Box sx={{ px: 2, pb: 2 }}>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             Registros encontrados: {filteredRows.length}
           </Typography>
         </Box>
@@ -285,10 +294,10 @@ export default function Historial() {
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
                   sx={{
-                    backgroundColor: SECONDARY_BG_COLOR,
-                    color: "#90caf9",
+                    backgroundColor: "background.paper", // Cabecera dinámica
+                    color: "text.primary",
                     fontWeight: "bold",
-                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
                 >
                   {column.label}
@@ -299,13 +308,13 @@ export default function Historial() {
           <TableBody>
             {loading ? (
                 <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "white", py: 4 }}>
+                    <TableCell colSpan={5} align="center" sx={{ color: "text.primary", py: 4 }}>
                         Cargando historial...
                     </TableCell>
                 </TableRow>
             ) : filteredRows.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "rgba(255,255,255,0.5)", py: 4 }}>
+                    <TableCell colSpan={5} align="center" sx={{ color: "text.secondary", py: 4 }}>
                         No hay registros de acciones.
                     </TableCell>
                 </TableRow>
@@ -322,18 +331,20 @@ export default function Historial() {
                         sx={{
                             backgroundColor: "transparent",
                             "&:last-child td, &:last-child th": { border: 0 },
-                            "&:hover": { backgroundColor: "rgba(255,255,255,0.05) !important" },
+                            "&:hover": { 
+                                backgroundColor: theme.palette.mode === 'dark' 
+                                ? "rgba(255,255,255,0.05) !important"
+                                : "rgba(0,0,0,0.04) !important" 
+                            },
                         }}
                     >
                         {columns.map((column) => {
                         const cellStyle = {
-                            color: "rgba(255,255,255,0.9)",
-                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                            color: "text.primary",
+                            borderBottom: `1px solid ${theme.palette.divider}`,
                         };
                         
                         let value = row[column.id];
-
-                        // Formatear fecha específicamente
                         if (column.id === 'fecha_accion') {
                             value = formatDate(row.fecha_accion);
                         }
@@ -351,6 +362,8 @@ export default function Historial() {
           </TableBody>
         </Table>
       </TableContainer>
+      
+      {/* PAGINACIÓN (Traducida al español como en ListaVecinos) */}
       <TablePagination
         rowsPerPageOptions={[10, 25, 100]}
         component="div"
@@ -359,14 +372,18 @@ export default function Historial() {
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Filas por página:"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
         sx={{
-          backgroundColor: MAIN_BG_COLOR,
-          color: "white",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
-          ".MuiTablePagination-selectIcon": { color: "white" },
+          backgroundColor: "background.default",
+          color: "text.primary",
+          borderTop: `1px solid ${theme.palette.divider}`,
+          ".MuiTablePagination-selectIcon": { color: "text.primary" },
           ".MuiIconButton-root": {
-            color: "white",
-            "&.Mui-disabled": { color: "rgba(255,255,255,0.3)" },
+            color: "text.primary",
+            "&.Mui-disabled": { color: "text.disabled" },
           },
         }}
       />

@@ -42,17 +42,23 @@ class VecinoCreate(BaseModel):
         from_attributes = True
 
 
-class VecinoUpdate(BaseModel):
+# --- CLASE CORREGIDA Y RENOMBRADA PARA EVITAR CONFLICTOS ---
+class VecinoEdicionSchema(BaseModel):
     nombres: str
     apellido_paterno: str
     apellido_materno: str
-    rut: str
+    rut: str  
     numero_socio: int
     nombre_calle: Optional[str] = None
     numero_casa: Optional[str] = None
     relacion_propiedad: Optional[str] = None
     telefono: Optional[str] = None
     email: Optional[str] = None
+
+    # Campos para cambio de contraseña
+    currentPassword: Optional[str] = None
+    newPassword: Optional[str] = None
+    password: Optional[str] = None  # Backup
 
     class Config:
         from_attributes = True
@@ -116,6 +122,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ============ UTILIDADES Y LOGS ============
+
+# --- FUNCIÓN AUXILIAR PARA REGISTRAR ACCIONES ---
+def registrar_accion(db: Session, usuario_id: int, descripcion: str, tipo: str):
+    """
+    Guarda una acción en el historial.
+    """
+    try:
+        if not usuario_id:
+            return # Evitar error si no hay usuario
+            
+        nueva_accion = models.Historial(
+            usuario_id=usuario_id,
+            descripcion=descripcion,
+            tipo_accion=tipo
+        )
+        db.add(nueva_accion)
+        db.commit() # Guardamos inmediatamente
+        db.refresh(nueva_accion)
+        print(f"📝 Historial registrado: {descripcion}")
+    except Exception as e:
+        print(f"Error al registrar historial: {e}")
+        # No hacemos raise para no interrumpir el flujo principal
 
 
 # Función auxiliar para generar contraseña
@@ -234,7 +264,6 @@ async def login(
         print(
             f"Usuario encontrado - ID: {usuario.id}, Rol: {usuario.rol}, Estado: {usuario.estado}"
         )
-        print(f"Hash almacenado (primeros 30 chars): {usuario.hashed_password[:30]}...")
 
         # Verificar si el usuario está activo
         if usuario.estado != 1:
@@ -247,7 +276,6 @@ async def login(
         # Verificar contraseña
         print(f"Verificando contraseña...")
         password_valida = verify_password(form_data.password, usuario.hashed_password)
-        print(f"Password valida: {password_valida}")
 
         if not password_valida:
             print("Contraseña incorrecta")
@@ -293,6 +321,16 @@ async def login(
         )
 
         print(f"Login exitoso para: {nombre_completo}")
+        
+        # --- LOG: REGISTRAR LOGIN ---
+        registrar_accion(
+            db=db, 
+            usuario_id=usuario.id, 
+            descripcion="Inicio de sesión exitoso", 
+            tipo="LOGIN"
+        )
+        # ---------------------------
+
         print("--- Fin intento de login ---\n")
 
         return {
@@ -380,6 +418,43 @@ async def hash_password(password: str):
     ELIMINAR EN PRODUCCIÓN
     """
     return {"hashed_password": get_password_hash(password)}
+
+
+# ============ ENDPOINTS DE HISTORIAL ============
+
+@app.get("/historial/")
+async def obtener_historial(
+    db: Session = Depends(get_db),
+    # Opcional: Si quieres que solo admins vean el historial, descomenta la siguiente línea:
+    # current_user: dict = Depends(get_current_user) 
+):
+    try:
+        # Hacemos un JOIN para obtener los datos del Historial Y los datos del Vecino (nombre)
+        # Historial -> Usuario -> Vecino
+        resultados = (
+            db.query(models.Historial, models.Vecino)
+            .join(models.Usuario, models.Historial.usuario_id == models.Usuario.id)
+            .join(models.Vecino, models.Usuario.vecino_id == models.Vecino.id)
+            .order_by(models.Historial.fecha_accion.desc())
+            .all()
+        )
+
+        lista_historial = []
+        for accion, vecino in resultados:
+            # Construimos el objeto tal como lo pide tu React
+            lista_historial.append({
+                "id": accion.id,
+                "descripcion_accion": accion.descripcion, # Mapeamos descripcion -> descripcion_accion
+                "tipo_accion": accion.tipo_accion,
+                "fecha_accion": str(accion.fecha_accion),
+                "usuario": f"{vecino.nombres} {vecino.apellido_paterno}" # Nombre completo
+            })
+
+        return lista_historial
+
+    except Exception as e:
+        print(f"Error al obtener historial: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============ ENDPOINTS DE CRUD ============
@@ -470,23 +545,22 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         # Crear usuario automáticamente
         nuevo_usuario = crear_usuario_para_vecino(db, nuevo_vecino)
 
+        # --- LOG: REGISTRAR CREACIÓN ---
+        registrar_accion(
+            db=db, 
+            usuario_id=nuevo_usuario.id, # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
+            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}", 
+            tipo="CREACION"
+        )
+        # ------------------------------
+
         return {
             "message": "Vecino y usuario registrados exitosamente",
             "vecino": {
                 "id": nuevo_vecino.id,
                 "nombres": nuevo_vecino.nombres,
-                "apellido_paterno": nuevo_vecino.apellido_paterno,
-                "apellido_materno": nuevo_vecino.apellido_materno,
                 "rut": nuevo_vecino.rut,
-                "numero_socio": nuevo_vecino.numero_socio,
-                "nombre_calle": nuevo_vecino.nombre_calle,
-                "numero_casa": nuevo_vecino.numero_casa,
-                "relacion_propiedad": nuevo_vecino.relacion_propiedad,
-                "telefono": nuevo_vecino.telefono,
                 "email": nuevo_vecino.email,
-                "fecha_registro": str(nuevo_vecino.fecha_registro),
-                "fecha_edicion": str(nuevo_vecino.fecha_edicion),
-                "estado": nuevo_vecino.estado,
             },
             "usuario": {
                 "username": nuevo_usuario.username,
@@ -508,20 +582,42 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
 
 @app.put("/editar-vecino/{vecino_id}")
 async def editar_vecino(
-    vecino_id: int, vecino_actualizado: VecinoUpdate, db: Session = Depends(get_db)
+    vecino_id: int, payload: VecinoEdicionSchema, db: Session = Depends(get_db)
 ):
     try:
+        print(f"\n--- INICIO EDICIÓN VECINO {vecino_id} ---")
+        
+        # 1. Buscar el Vecino
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
         )
         if not vecino_existente:
             raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
-        # Verificar RUT duplicado
+        # 2. Buscar el Usuario asociado
+        usuario_asociado = (
+            db.query(models.Usuario).filter(models.Usuario.vecino_id == vecino_id).first()
+        )
+
+        # 3. VERIFICACIÓN DE SEGURIDAD (Si viene currentPassword)
+        if payload.currentPassword:
+            if not usuario_asociado:
+                raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
+            
+            # Verificar si la contraseña actual es correcta
+            if not verify_password(payload.currentPassword, usuario_asociado.hashed_password):
+                raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+            # 4. CAMBIO DE CONTRASEÑA
+            if payload.newPassword:
+                print(f"Actualizando contraseña para usuario {usuario_asociado.username}")
+                usuario_asociado.hashed_password = get_password_hash(payload.newPassword)
+
+        # 5. Validaciones de duplicados
         existing_rut = (
             db.query(models.Vecino)
             .filter(
-                models.Vecino.rut == vecino_actualizado.rut,
+                models.Vecino.rut == payload.rut,
                 models.Vecino.id != vecino_id,
             )
             .first()
@@ -531,11 +627,10 @@ async def editar_vecino(
                 status_code=400, detail="El RUT ya está registrado en otro vecino"
             )
 
-        # Verificar número de socio duplicado
         existing_numero = (
             db.query(models.Vecino)
             .filter(
-                models.Vecino.numero_socio == vecino_actualizado.numero_socio,
+                models.Vecino.numero_socio == payload.numero_socio,
                 models.Vecino.id != vecino_id,
             )
             .first()
@@ -546,56 +641,56 @@ async def editar_vecino(
                 detail="El número de socio ya está registrado en otro vecino",
             )
 
-        # Actualizar campos
-        vecino_existente.nombres = vecino_actualizado.nombres
-        vecino_existente.apellido_paterno = vecino_actualizado.apellido_paterno
-        vecino_existente.apellido_materno = vecino_actualizado.apellido_materno
-        vecino_existente.rut = vecino_actualizado.rut
-        vecino_existente.numero_socio = vecino_actualizado.numero_socio
-        vecino_existente.nombre_calle = vecino_actualizado.nombre_calle
-        vecino_existente.numero_casa = vecino_actualizado.numero_casa
-        vecino_existente.relacion_propiedad = vecino_actualizado.relacion_propiedad
-        vecino_existente.telefono = vecino_actualizado.telefono
-        vecino_existente.email = vecino_actualizado.email
+        # 6. Actualizar campos del Vecino
+        vecino_existente.nombres = payload.nombres
+        vecino_existente.apellido_paterno = payload.apellido_paterno
+        vecino_existente.apellido_materno = payload.apellido_materno
+        vecino_existente.rut = payload.rut
+        vecino_existente.numero_socio = payload.numero_socio
+        vecino_existente.nombre_calle = payload.nombre_calle
+        vecino_existente.numero_casa = payload.numero_casa
+        vecino_existente.relacion_propiedad = payload.relacion_propiedad
+        vecino_existente.telefono = payload.telefono
+        vecino_existente.email = payload.email
 
+        # 7. Actualizar Username si cambió el RUT
+        if usuario_asociado:
+            nuevo_username = payload.rut.replace(".", "")
+            if usuario_asociado.username != nuevo_username:
+                usuario_asociado.username = nuevo_username
+                print(f"Username actualizado: {nuevo_username}")
+
+        # Guardar todo
         db.commit()
         db.refresh(vecino_existente)
 
-        # Actualizar username del usuario si cambió el RUT
-        usuario = (
-            db.query(models.Usuario)
-            .filter(models.Usuario.vecino_id == vecino_id)
-            .first()
-        )
-        if usuario:
-            # 👇 CORRECCIÓN: Solo quitar puntos, MANTENER el guión
-            nuevo_username = vecino_actualizado.rut.replace(
-                ".", ""
-            )  # ✅ Solo quitar puntos
-            if usuario.username != nuevo_username:
-                usuario.username = nuevo_username
-                print(f"Username actualizado: {nuevo_username}")  # Debug
-                db.commit()
+        # --- LOG: REGISTRAR EDICIÓN ---
+        # Como este endpoint es público (no usa current_user), registramos en nombre del usuario editado
+        usuario_responsable = usuario_asociado.id if usuario_asociado else None
+        
+        if usuario_responsable:
+            detalles = "Actualización de datos"
+            if payload.newPassword: detalles += " y cambio de contraseña"
+            
+            registrar_accion(
+                db=db,
+                usuario_id=usuario_responsable,
+                descripcion=detalles,
+                tipo="EDICION"
+            )
+        # -----------------------------
 
         return {
-            "message": "Vecino actualizado exitosamente",
+            "message": "Datos actualizados exitosamente",
             "vecino": {
                 "id": vecino_existente.id,
                 "nombres": vecino_existente.nombres,
-                "apellido_paterno": vecino_existente.apellido_paterno,
-                "apellido_materno": vecino_existente.apellido_materno,
                 "rut": vecino_existente.rut,
-                "numero_socio": vecino_existente.numero_socio,
-                "nombre_calle": vecino_existente.nombre_calle,
-                "numero_casa": vecino_existente.numero_casa,
-                "relacion_propiedad": vecino_existente.relacion_propiedad,
-                "telefono": vecino_existente.telefono,
                 "email": vecino_existente.email,
-                "fecha_registro": str(vecino_existente.fecha_registro),
-                "fecha_edicion": str(vecino_existente.fecha_edicion),
-                "estado": vecino_existente.estado,
+                "telefono": vecino_existente.telefono
             },
         }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -634,22 +729,20 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
 
         print(f"✅ Estado cambiado exitosamente a {estado_texto}")
 
+        # --- LOG: REGISTRAR CAMBIO ESTADO ---
+        if usuario:
+            registrar_accion(
+                db=db,
+                usuario_id=usuario.id,
+                descripcion=f"Vecino {estado_texto}",
+                tipo="ESTADO"
+            )
+        # -----------------------------------
+
         return {
             "message": f"Vecino {estado_texto} exitosamente",
             "vecino": {
                 "id": vecino_existente.id,
-                "nombres": vecino_existente.nombres,
-                "apellido_paterno": vecino_existente.apellido_paterno,
-                "apellido_materno": vecino_existente.apellido_materno,
-                "rut": vecino_existente.rut,
-                "numero_socio": vecino_existente.numero_socio,
-                "nombre_calle": vecino_existente.nombre_calle,
-                "numero_casa": vecino_existente.numero_casa,
-                "relacion_propiedad": vecino_existente.relacion_propiedad,
-                "telefono": vecino_existente.telefono,
-                "email": vecino_existente.email,
-                "fecha_registro": str(vecino_existente.fecha_registro),
-                "fecha_edicion": str(vecino_existente.fecha_edicion),
                 "estado": vecino_existente.estado,
             },
             "nuevo_estado": nuevo_estado,
@@ -747,6 +840,15 @@ async def subir_documento(
 
         print(f"Documento registrado con ID: {nuevo_documento.id}\n")
 
+        # --- LOG: REGISTRAR SUBIDA ---
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Subió documento: {file.filename}",
+            tipo="DOCUMENTO"
+        )
+        # ------------------------------
+
         return {
             "message": "Documento subido exitosamente",
             "documento": {
@@ -815,5 +917,14 @@ async def eliminar_documento(
 
     documento.estado = 0
     db.commit()
+
+    # --- LOG: REGISTRAR ELIMINACIÓN ---
+    registrar_accion(
+        db=db,
+        usuario_id=current_user["user_id"],
+        descripcion=f"Eliminó documento ID: {documento_id}",
+        tipo="ELIMINACION"
+    )
+    # -----------------------------------
 
     return {"message": "Documento eliminado exitosamente"}

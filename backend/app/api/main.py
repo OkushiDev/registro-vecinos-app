@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
@@ -7,9 +7,7 @@ import app.api.models as models
 from app.api.database import SessionLocal, engine, get_db
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-# DESPUÉS
-from fastapi import File, UploadFile, Form  # ← Agregado Form
-
+from fastapi import File, UploadFile
 from pathlib import Path
 import uuid
 
@@ -22,6 +20,7 @@ from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     decode_token,
 )
+
 
 # Configurar OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
@@ -83,11 +82,11 @@ app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
 db_dependency = Annotated[Session, Depends(get_db)]
+
 # ============ CONFIGURACIÓN DE ARCHIVOS ============
 
 UPLOAD_DIR = Path("uploads/documentos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -102,14 +101,20 @@ TIPOS_DOCUMENTO = [
     "escritura_casa",
 ]
 
+
 def validate_file(file: UploadFile) -> tuple[bool, str]:
     """Valida tipo y tamaño del archivo"""
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         return False, f"Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
 
-    if not file.content_type.startswith("image/"):
-        return False, "El archivo debe ser una imagen"
+    # Validar MIME type
+    if file_ext == ".pdf":
+        if file.content_type != "application/pdf":
+            return False, "El archivo debe ser un PDF válido"
+    else:
+        if not file.content_type.startswith("image/"):
+            return False, "El archivo debe ser una imagen válida"
 
     return True, ""
 
@@ -294,7 +299,7 @@ async def login(
                 "sub": str(usuario.id),
                 "rol": usuario.rol,
                 "vecino_id": vecino.id,
-            },  # agregue str a usuario para que no haya problemas a la hora de subir imagenes
+            },
             expires_delta=access_token_expires,
         )
 
@@ -578,13 +583,10 @@ async def editar_vecino(
             .first()
         )
         if usuario:
-            # 👇 CORRECCIÓN: Solo quitar puntos, MANTENER el guión
-            nuevo_username = vecino_actualizado.rut.replace(
-                ".", ""
-            )  # ✅ Solo quitar puntos
+            nuevo_username = vecino_actualizado.rut.replace(".", "")
             if usuario.username != nuevo_username:
                 usuario.username = nuevo_username
-                print(f"Username actualizado: {nuevo_username}")  # Debug
+                print(f"Username actualizado: {nuevo_username}")
                 db.commit()
 
         return {
@@ -689,26 +691,51 @@ async def siguiente_numero_socio(db: Session = Depends(get_db)):
         else:
             siguiente_numero = 1  # Si no hay vecinos, empezar desde 1
 
-        print(f"Siguiente número de socio disponible: {siguiente_numero}")  # Debug
+        print(f"Siguiente número de socio disponible: {siguiente_numero}")
         return {"siguiente_numero_socio": siguiente_numero}
     except Exception as e:
-        print(f"Error en siguiente_numero_socio: {e}")  # Debug
+        print(f"Error en siguiente_numero_socio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============ ENDPOINTS DE DOCUMENTOS ============
 
 
+@app.get("/api/documentos/tipos")
+async def obtener_tipos_documento():
+    """Retorna los tipos de documentos permitidos"""
+    return {
+        "tipos": [
+            {"value": "cedula_identidad", "label": "Cédula de Identidad"},
+            {"value": "registro_social_hogares", "label": "Registro Social de Hogares"},
+            {"value": "avaluo_fiscal", "label": "Avalúo Fiscal"},
+            {"value": "boleta_agua", "label": "Boleta de Agua"},
+            {"value": "boleta_luz", "label": "Boleta de Luz"},
+            {"value": "escritura_casa", "label": "Escritura de Casa"},
+        ]
+    }
+
+
 @app.post("/api/documentos/subir")
 async def subir_documento(
     file: UploadFile = File(...),
+    tipo_documento: str = Form(...),
+    descripcion: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Sube un documento (imagen) para un vecino"""
+    """Sube un documento (imagen o PDF) para un vecino"""
     try:
         print(f"\n--- Subiendo documento ---")
         print(f"Vecino: {current_user['vecino_id']}, Archivo: {file.filename}")
+        print(f"Tipo: {tipo_documento}, Descripción: {descripcion}")
+
+        # Validar tipo de documento
+        if tipo_documento not in TIPOS_DOCUMENTO:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de documento inválido. Debe ser uno de: {', '.join(TIPOS_DOCUMENTO)}",
+            )
 
         # Validar archivo
         es_valido, mensaje_error = validate_file(file)
@@ -744,11 +771,12 @@ async def subir_documento(
         # Registrar en BD
         nuevo_documento = models.Documento(
             vecino_id=current_user["vecino_id"],
-            tipo_documento="imagen_subida",
+            tipo_documento=tipo_documento,
             nombre_archivo=file.filename,
             ruta_archivo=str(file_path),
             tipo_archivo=file.content_type,
             tamanio=tamanio,
+            descripcion=descripcion,
         )
 
         db.add(nuevo_documento)
@@ -761,9 +789,11 @@ async def subir_documento(
             "message": "Documento subido exitosamente",
             "documento": {
                 "id": nuevo_documento.id,
+                "tipo_documento": nuevo_documento.tipo_documento,
                 "nombre_archivo": nuevo_documento.nombre_archivo,
                 "tipo_archivo": nuevo_documento.tipo_archivo,
                 "tamanio": nuevo_documento.tamanio,
+                "descripcion": nuevo_documento.descripcion,
                 "fecha_subida": str(nuevo_documento.fecha_subida),
             },
         }
@@ -794,9 +824,11 @@ async def listar_mis_documentos(
         "documentos": [
             {
                 "id": doc.id,
+                "tipo_documento": doc.tipo_documento,
                 "nombre_archivo": doc.nombre_archivo,
                 "tipo_archivo": doc.tipo_archivo,
                 "tamanio": doc.tamanio,
+                "descripcion": doc.descripcion,
                 "fecha_subida": str(doc.fecha_subida),
             }
             for doc in documentos

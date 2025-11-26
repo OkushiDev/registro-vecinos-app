@@ -10,7 +10,7 @@ import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 
 // Importación de XLSX
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 // Importación de la API
 import api from "../../api";
@@ -42,16 +42,33 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 
 // Iconos
 import AddIcon from "@mui/icons-material/Add";
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import EditIcon from "@mui/icons-material/Edit";
 import IconButton from "@mui/material/IconButton";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import DescriptionIcon from "@mui/icons-material/Description";
 
 // Definición de Columnas
 interface Column {
-  id: "id" | "nombres" | "apellido_paterno" | "apellido_materno" | "rut" | "numero_socio" | "nombre_calle" | "numero_casa" | "relacion_propiedad" | "fecha_registro" | "fecha_edicion" | "telefono" | "email" | "acciones_editar" | "acciones_estado";
+  id:
+    | "id"
+    | "nombres"
+    | "apellido_paterno"
+    | "apellido_materno"
+    | "rut"
+    | "numero_socio"
+    | "nombre_calle"
+    | "numero_casa"
+    | "relacion_propiedad"
+    | "fecha_registro"
+    | "fecha_edicion"
+    | "telefono"
+    | "email"
+    | "acciones_certificado"
+    | "acciones_editar"
+    | "acciones_estado";
   label: string;
   minWidth?: number;
   align?: "right";
@@ -72,6 +89,7 @@ const columns: readonly Column[] = [
   { id: "fecha_edicion", label: "F. Edición", minWidth: 120, align: "right" },
   { id: "telefono", label: "Teléfono", minWidth: 120 },
   { id: "email", label: "Email", minWidth: 200 },
+  { id: "acciones_certificado", label: "Certificado", minWidth: 100 },
   { id: "acciones_editar", label: "Editar", minWidth: 80 },
   { id: "acciones_estado", label: "Estado", minWidth: 100 },
 ];
@@ -104,29 +122,40 @@ const formatearRutConPuntos = (rut: string): string => {
 };
 
 const CALLES = [
-  "Boticelli", "Giovanni Bocaccio", "Leonardo da Vinci", "Lourdes", "Miguel Angel", "Rio Loco", "Tizano",
+  "Boticelli",
+  "Giovanni Bocaccio",
+  "Leonardo da Vinci",
+  "Lourdes",
+  "Miguel Angel",
+  "Rio Loco",
+  "Tizano",
 ];
 
 const RELACIONES_PROPIEDAD = [
-  "Propietario", "Arrendatario", "Residente", "Otro",
+  "Propietario",
+  "Arrendatario",
+  "Residente",
+  "Otro",
 ];
 
 export default function ListaVecinos() {
   const theme = useTheme(); // <--- ACCEDEMOS AL TEMA ACTUAL (Light/Dark)
-  
+
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
   const [items, setItems] = React.useState<Data[]>([]);
-  
+
   const fetchItems = async () => {
     try {
       const response = await api.get("/lista-vecinos/");
@@ -144,7 +173,9 @@ export default function ListaVecinos() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterColumn, setFilterColumn] = React.useState("all");
   const [selectedCalles, setSelectedCalles] = React.useState<string[]>([]);
-  const [selectedRelaciones, setSelectedRelaciones] = React.useState<string[]>([]);
+  const [selectedRelaciones, setSelectedRelaciones] = React.useState<string[]>(
+    []
+  );
   const [estadoFiltro, setEstadoFiltro] = React.useState<string>("todos");
 
   const handleCalleChange = (calle: string) => {
@@ -178,15 +209,21 @@ export default function ListaVecinos() {
           );
         } else {
           return item[filterColumn as keyof Data]
-            .toString().toLowerCase().includes(searchTerm.toLowerCase());
+            .toString()
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
         }
       });
     }
     if (selectedCalles.length > 0) {
-      filtered = filtered.filter((item) => selectedCalles.includes(item.nombre_calle));
+      filtered = filtered.filter((item) =>
+        selectedCalles.includes(item.nombre_calle)
+      );
     }
     if (selectedRelaciones.length > 0) {
-      filtered = filtered.filter((item) => selectedRelaciones.includes(item.relacion_propiedad));
+      filtered = filtered.filter((item) =>
+        selectedRelaciones.includes(item.relacion_propiedad)
+      );
     }
     if (estadoFiltro === "habilitados") {
       filtered = filtered.filter((item) => item.estado === 1);
@@ -194,7 +231,14 @@ export default function ListaVecinos() {
       filtered = filtered.filter((item) => item.estado === 0);
     }
     return filtered;
-  }, [searchTerm, filterColumn, items, selectedCalles, selectedRelaciones, estadoFiltro]);
+  }, [
+    searchTerm,
+    filterColumn,
+    items,
+    selectedCalles,
+    selectedRelaciones,
+    estadoFiltro,
+  ]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -221,34 +265,38 @@ export default function ListaVecinos() {
       Teléfono: row.telefono,
       Email: row.email,
       "Fecha Registro": row.fecha_registro,
-      Estado: row.estado === 1 ? "Habilitado" : "Deshabilitado"
+      Estado: row.estado === 1 ? "Habilitado" : "Deshabilitado",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Vecinos");
-    const date = new Date().toISOString().split('T')[0];
+    const date = new Date().toISOString().split("T")[0];
     XLSX.writeFile(workbook, `Reporte_Vecinos_${date}.xlsx`);
   };
 
   // === ESTILOS DINÁMICOS BASADOS EN EL TEMA ===
   // Movemos los estilos aquí dentro para usar 'theme'
   const commonFilterStyle = {
-    backgroundColor: 'background.paper', // Automático: #1e293b (Dark) o #fff (Light)
-    color: 'text.primary',
+    backgroundColor: "background.paper", // Automático: #1e293b (Dark) o #fff (Light)
+    color: "text.primary",
     borderRadius: "4px",
     border: `1px solid ${theme.palette.divider}`, // Borde sutil automático
     "&:hover": {
-        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-        borderColor: theme.palette.text.primary,
+      backgroundColor:
+        theme.palette.mode === "dark"
+          ? "rgba(255, 255, 255, 0.05)"
+          : "rgba(0, 0, 0, 0.04)",
+      borderColor: theme.palette.text.primary,
     },
     minHeight: "56px",
     display: "flex",
     alignItems: "center",
     // Fix para iconos en modo claro/oscuro
-    "& .MuiSelect-icon, & .MuiAccordionSummary-expandIconWrapper .MuiSvgIcon-root": {
-        color: 'text.primary',
-    },
+    "& .MuiSelect-icon, & .MuiAccordionSummary-expandIconWrapper .MuiSvgIcon-root":
+      {
+        color: "text.primary",
+      },
     "&:before": { display: "none" }, // Quitar linea de accordion
   };
 
@@ -261,7 +309,9 @@ export default function ListaVecinos() {
   };
 
   const [editModalOpen, setEditModalOpen] = React.useState(false);
-  const [selectedVecinoId, setSelectedVecinoId] = React.useState<number | null>(null);
+  const [selectedVecinoId, setSelectedVecinoId] = React.useState<number | null>(
+    null
+  );
 
   const handleOpenEditModal = (vecinoId: number) => {
     setSelectedVecinoId(vecinoId);
@@ -285,8 +335,16 @@ export default function ListaVecinos() {
   } | null>(null);
   const [loadingToggle, setLoadingToggle] = React.useState(false);
 
-  const handleToggleEstado = (vecinoId: number, estadoActual: number, nombreVecino: string) => {
-    setVecinoToToggle({ id: vecinoId, nombre: nombreVecino, estadoActual: estadoActual });
+  const handleToggleEstado = (
+    vecinoId: number,
+    estadoActual: number,
+    nombreVecino: string
+  ) => {
+    setVecinoToToggle({
+      id: vecinoId,
+      nombre: nombreVecino,
+      estadoActual: estadoActual,
+    });
     setConfirmDialogOpen(true);
   };
 
@@ -294,8 +352,14 @@ export default function ListaVecinos() {
     if (!vecinoToToggle) return;
     setLoadingToggle(true);
     try {
-      const response = await api.patch(`/cambiar-estado-vecino/${vecinoToToggle.id}`);
-      alert(`Vecino ${response.data.nuevo_estado === 1 ? "habilitado" : "deshabilitado"} exitosamente`);
+      const response = await api.patch(
+        `/cambiar-estado-vecino/${vecinoToToggle.id}`
+      );
+      alert(
+        `Vecino ${
+          response.data.nuevo_estado === 1 ? "habilitado" : "deshabilitado"
+        } exitosamente`
+      );
       setConfirmDialogOpen(false);
       setVecinoToToggle(null);
       fetchItems();
@@ -311,6 +375,33 @@ export default function ListaVecinos() {
     setVecinoToToggle(null);
   };
 
+  const handleDescargarCertificado = async (
+    vecinoId: number,
+    rutVecino: string
+  ) => {
+    try {
+      const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
+        //                              👆 AGREGAR /api
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Certificado_Residencia_${rutVecino.replace(/-/g, "_")}.pdf`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error al generar certificado:", error);
+      alert(error.response?.data?.detail || "Error al generar el certificado");
+    }
+  };
+
   return (
     <Paper
       sx={{
@@ -320,11 +411,11 @@ export default function ListaVecinos() {
         display: "flex",
         flexDirection: "column",
         // Aquí usamos las variables del sistema en lugar de colores fijos
-        backgroundColor: 'background.default', 
-        color: 'text.primary',
+        backgroundColor: "background.default",
+        color: "text.primary",
         borderRadius: 0,
         backgroundImage: "none",
-        transition: 'background-color 0.3s ease', // Suavizar transición
+        transition: "background-color 0.3s ease", // Suavizar transición
       }}
       elevation={0}
     >
@@ -340,22 +431,25 @@ export default function ListaVecinos() {
               onChange={handleSearchChange}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                    color: 'text.primary',
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: "4px",
-                    transition: "all 0.2s",
-                    "& fieldset": { border: "none" },
-                    "&:hover": {
-                        borderColor: 'text.primary',
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                    },
-                    "&.Mui-focused": {
-                        borderColor: "#3b82f6",
-                        boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
-                    },
+                  color: "text.primary",
+                  backgroundColor: "transparent",
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: "4px",
+                  transition: "all 0.2s",
+                  "& fieldset": { border: "none" },
+                  "&:hover": {
+                    borderColor: "text.primary",
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.05)"
+                        : "rgba(0,0,0,0.05)",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#3b82f6",
+                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
+                  },
                 },
-                "& .MuiSvgIcon-root": { color: 'text.secondary' },
+                "& .MuiSvgIcon-root": { color: "text.secondary" },
               }}
               InputProps={{
                 startAdornment: (
@@ -363,7 +457,7 @@ export default function ListaVecinos() {
                     <SearchIcon />
                   </InputAdornment>
                 ),
-                sx: { height: "56px" }
+                sx: { height: "56px" },
               }}
             />
           </Grid>
@@ -371,7 +465,9 @@ export default function ListaVecinos() {
           {/* FILTRO COLUMNA */}
           <Grid item xs={6} md={1.5}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'text.secondary' }}>Buscar en</InputLabel>
+              <InputLabel sx={{ color: "text.secondary" }}>
+                Buscar en
+              </InputLabel>
               <Select
                 value={filterColumn}
                 label="Buscar en"
@@ -381,16 +477,16 @@ export default function ListaVecinos() {
                 sx={{
                   ...commonFilterStyle,
                   "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                  width: "100%"
+                  width: "100%",
                 }}
                 MenuProps={{
-                  PaperProps: { 
-                      sx: { 
-                          bgcolor: 'background.paper', 
-                          color: 'text.primary',
-                          backgroundImage: 'none'
-                        } 
+                  PaperProps: {
+                    sx: {
+                      bgcolor: "background.paper",
+                      color: "text.primary",
+                      backgroundImage: "none",
                     },
+                  },
                 }}
               >
                 <MenuItem value="all">Todo</MenuItem>
@@ -405,7 +501,7 @@ export default function ListaVecinos() {
           {/* FILTRO ESTADO */}
           <Grid item xs={6} md={1.5}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'text.secondary' }}>Estado</InputLabel>
+              <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
               <Select
                 value={estadoFiltro}
                 label="Estado"
@@ -416,13 +512,13 @@ export default function ListaVecinos() {
                   "& .MuiOutlinedInput-notchedOutline": { border: "none" },
                 }}
                 MenuProps={{
-                  PaperProps: { 
-                      sx: { 
-                        bgcolor: 'background.paper', 
-                        color: 'text.primary',
-                        backgroundImage: 'none'
-                    } 
-                },
+                  PaperProps: {
+                    sx: {
+                      bgcolor: "background.paper",
+                      color: "text.primary",
+                      backgroundImage: "none",
+                    },
+                  },
                 }}
               >
                 <MenuItem value="todos">Todos</MenuItem>
@@ -437,13 +533,15 @@ export default function ListaVecinos() {
             <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
-                sx={{ 
-                    minHeight: "56px", 
-                    width: "100%",
-                    "& .MuiAccordionSummary-content": { margin: 0 }
+                sx={{
+                  minHeight: "56px",
+                  width: "100%",
+                  "& .MuiAccordionSummary-content": { margin: 0 },
                 }}
               >
-                <Typography noWrap sx={{ fontSize: '0.9rem' }}>Calle</Typography>
+                <Typography noWrap sx={{ fontSize: "0.9rem" }}>
+                  Calle
+                </Typography>
               </AccordionSummary>
               <AccordionDetails
                 sx={{
@@ -451,15 +549,15 @@ export default function ListaVecinos() {
                   top: "100%",
                   left: 0,
                   width: "100%",
-                  backgroundColor: 'background.paper', // Dinámico
-                  color: 'text.primary',
+                  backgroundColor: "background.paper", // Dinámico
+                  color: "text.primary",
                   maxHeight: "300px",
                   overflowY: "auto",
                   zIndex: 10,
                   border: `1px solid ${theme.palette.divider}`,
                   boxShadow: theme.shadows[4],
                   borderRadius: "0 0 4px 4px",
-                  padding: 1
+                  padding: 1,
                 }}
               >
                 <FormGroup>
@@ -470,10 +568,10 @@ export default function ListaVecinos() {
                         <Checkbox
                           checked={selectedCalles.includes(calle)}
                           onChange={() => handleCalleChange(calle)}
-                          sx={{ 
-                              color: 'text.secondary', 
-                              "&.Mui-checked": { color: "#3b82f6" } 
-                            }}
+                          sx={{
+                            color: "text.secondary",
+                            "&.Mui-checked": { color: "#3b82f6" },
+                          }}
                         />
                       }
                       label={<Typography variant="body2">{calle}</Typography>}
@@ -489,13 +587,15 @@ export default function ListaVecinos() {
             <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
-                sx={{ 
-                    minHeight: "56px", 
-                    width: "100%",
-                    "& .MuiAccordionSummary-content": { margin: 0 }
+                sx={{
+                  minHeight: "56px",
+                  width: "100%",
+                  "& .MuiAccordionSummary-content": { margin: 0 },
                 }}
               >
-                <Typography noWrap sx={{ fontSize: '0.9rem' }}>Relación</Typography>
+                <Typography noWrap sx={{ fontSize: "0.9rem" }}>
+                  Relación
+                </Typography>
               </AccordionSummary>
               <AccordionDetails
                 sx={{
@@ -503,15 +603,15 @@ export default function ListaVecinos() {
                   top: "100%",
                   left: 0,
                   width: "100%",
-                  backgroundColor: 'background.paper',
-                  color: 'text.primary',
+                  backgroundColor: "background.paper",
+                  color: "text.primary",
                   maxHeight: "300px",
                   overflowY: "auto",
                   zIndex: 10,
                   border: `1px solid ${theme.palette.divider}`,
                   boxShadow: theme.shadows[4],
                   borderRadius: "0 0 4px 4px",
-                  padding: 1
+                  padding: 1,
                 }}
               >
                 <FormGroup>
@@ -522,13 +622,15 @@ export default function ListaVecinos() {
                         <Checkbox
                           checked={selectedRelaciones.includes(relacion)}
                           onChange={() => handleRelacionChange(relacion)}
-                          sx={{ 
-                            color: 'text.secondary', 
-                            "&.Mui-checked": { color: "#3b82f6" } 
+                          sx={{
+                            color: "text.secondary",
+                            "&.Mui-checked": { color: "#3b82f6" },
                           }}
                         />
                       }
-                      label={<Typography variant="body2">{relacion}</Typography>}
+                      label={
+                        <Typography variant="body2">{relacion}</Typography>
+                      }
                     />
                   ))}
                 </FormGroup>
@@ -582,9 +684,12 @@ export default function ListaVecinos() {
         </Grid>
 
         {/* Resumen de Filtros */}
-        {(searchTerm || selectedCalles.length > 0 || selectedRelaciones.length > 0 || estadoFiltro !== "todos") && (
+        {(searchTerm ||
+          selectedCalles.length > 0 ||
+          selectedRelaciones.length > 0 ||
+          estadoFiltro !== "todos") && (
           <Box sx={{ mt: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
               Resultados: {filteredRows.length}
             </Typography>
           </Box>
@@ -610,8 +715,8 @@ export default function ListaVecinos() {
                   style={{ minWidth: column.minWidth }}
                   sx={{
                     // Headers adaptativos
-                    backgroundColor: 'background.paper',
-                    color: 'text.primary',
+                    backgroundColor: "background.paper",
+                    color: "text.primary",
                     fontWeight: "bold",
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
@@ -635,22 +740,27 @@ export default function ListaVecinos() {
                       backgroundColor: "transparent",
                       "&:last-child td, &:last-child th": { border: 0 },
                       // Hover dinámico
-                      "&:hover": { 
-                          backgroundColor: theme.palette.mode === 'dark' 
-                            ? "rgba(255,255,255,0.05) !important" 
-                            : "rgba(0,0,0,0.04) !important"
-                        },
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.05) !important"
+                            : "rgba(0,0,0,0.04) !important",
+                      },
                     }}
                   >
                     {columns.map((column) => {
                       const cellStyle = {
-                        color: 'text.primary',
+                        color: "text.primary",
                         borderBottom: `1px solid ${theme.palette.divider}`,
                       };
 
                       if (column.id === "id") {
                         return (
-                          <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
                             <Typography variant="body2" fontWeight="bold">
                               {row.id}
                             </Typography>
@@ -659,14 +769,44 @@ export default function ListaVecinos() {
                       }
                       if (column.id === "rut") {
                         return (
-                          <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
                             {formatearRutConPuntos(row.rut)}
+                          </TableCell>
+                        );
+                      }
+
+                      if (column.id === "acciones_certificado") {
+                        return (
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
+                            <IconButton
+                              onClick={() =>
+                                handleDescargarCertificado(row.id, row.rut)
+                              }
+                              size="small"
+                              title="Generar certificado de residencia"
+                              sx={{ color: "#9c27b0" }}
+                              disabled={row.estado !== 1}
+                            >
+                              <DescriptionIcon />
+                            </IconButton>
                           </TableCell>
                         );
                       }
                       if (column.id === "acciones_editar") {
                         return (
-                          <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
                             <IconButton
                               onClick={() => handleOpenEditModal(row.id)}
                               size="small"
@@ -680,22 +820,44 @@ export default function ListaVecinos() {
                       }
                       if (column.id === "acciones_estado") {
                         return (
-                          <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
                             <IconButton
                               color={row.estado === 1 ? "success" : "error"}
-                              onClick={() => handleToggleEstado(row.id, row.estado, row.nombres)}
+                              onClick={() =>
+                                handleToggleEstado(
+                                  row.id,
+                                  row.estado,
+                                  row.nombres
+                                )
+                              }
                               size="small"
-                              title={row.estado === 1 ? "Deshabilitar vecino" : "Habilitar vecino"}
+                              title={
+                                row.estado === 1
+                                  ? "Deshabilitar vecino"
+                                  : "Habilitar vecino"
+                              }
                               disabled={loadingToggle}
                             >
-                              {row.estado === 1 ? <ToggleOnIcon /> : <ToggleOffIcon />}
+                              {row.estado === 1 ? (
+                                <ToggleOnIcon />
+                              ) : (
+                                <ToggleOffIcon />
+                              )}
                             </IconButton>
                           </TableCell>
                         );
                       }
                       const value = row[column.id];
                       return (
-                        <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                        <TableCell
+                          key={column.id}
+                          align={column.align}
+                          sx={cellStyle}
+                        >
                           {value || "-"}
                         </TableCell>
                       );
@@ -719,31 +881,56 @@ export default function ListaVecinos() {
           `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
         sx={{
-          backgroundColor: 'background.default',
-          color: 'text.primary',
+          backgroundColor: "background.default",
+          color: "text.primary",
           borderTop: `1px solid ${theme.palette.divider}`,
-          ".MuiTablePagination-selectIcon": { color: 'text.primary' },
+          ".MuiTablePagination-selectIcon": { color: "text.primary" },
           ".MuiIconButton-root": {
-            color: 'text.primary',
-            "&.Mui-disabled": { color: 'text.disabled' },
+            color: "text.primary",
+            "&.Mui-disabled": { color: "text.disabled" },
           },
         }}
       />
-      
+
       {/* Modales y Diálogos */}
-      <Modal open={modalOpen} onClose={handleCloseModal} title="Registrar Nuevo Vecino" maxWidth="md">
-        <RegistroVecinoForm onSuccess={handleRegistroSuccess} onCancel={handleCloseModal} />
+      <Modal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        title="Registrar Nuevo Vecino"
+        maxWidth="md"
+      >
+        <RegistroVecinoForm
+          onSuccess={handleRegistroSuccess}
+          onCancel={handleCloseModal}
+        />
       </Modal>
-      <Modal open={editModalOpen} onClose={handleCloseEditModal} title="Editar Vecino" maxWidth="md">
+      <Modal
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        title="Editar Vecino"
+        maxWidth="md"
+      >
         {selectedVecinoId && (
-          <EditarVecinoForm vecinoId={selectedVecinoId} onSuccess={handleEditSuccess} onCancel={handleCloseEditModal} />
+          <EditarVecinoForm
+            vecinoId={selectedVecinoId}
+            onSuccess={handleEditSuccess}
+            onCancel={handleCloseEditModal}
+          />
         )}
       </Modal>
       <ConfirmDialog
         open={confirmDialogOpen}
         title="Confirmar cambio de estado"
-        message={vecinoToToggle ? `¿Estás seguro de que deseas ${vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"} al vecino "${vecinoToToggle.nombre}"?` : ""}
-        confirmText={vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar"}
+        message={
+          vecinoToToggle
+            ? `¿Estás seguro de que deseas ${
+                vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"
+              } al vecino "${vecinoToToggle.nombre}"?`
+            : ""
+        }
+        confirmText={
+          vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar"
+        }
         cancelText="Cancelar"
         onConfirm={handleConfirmToggleEstado}
         onCancel={handleCancelToggleEstado}

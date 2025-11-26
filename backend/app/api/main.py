@@ -481,10 +481,41 @@ async def obtener_historial(
 
 @app.get("/lista-vecinos/")
 async def lista_vecinos(db: Session = Depends(get_db)):
+    """
+    Retorna la lista de todos los vecinos con fechas formateadas
+    """
     try:
-        vecinos = db.query(models.Vecino).order_by(models.Vecino.id).all()
-        print(f"Vecinos encontrados: {len(vecinos)}")
-        return {"vecinos": vecinos}
+        vecinos = db.query(models.Vecino).all()
+
+        def formatear_fecha(fecha_obj):
+            """Convierte datetime a string DD-MM-YYYY"""
+            if not fecha_obj:
+                return None
+            if isinstance(fecha_obj, str):
+                fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
+            return fecha_obj.strftime("%d-%m-%Y")
+
+        vecinos_formateados = [
+            {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+                "nombre_calle": vecino.nombre_calle,
+                "numero_casa": vecino.numero_casa,
+                "relacion_propiedad": vecino.relacion_propiedad,
+                "fecha_registro": formatear_fecha(vecino.fecha_registro),
+                "fecha_edicion": formatear_fecha(vecino.fecha_edicion),
+                "telefono": vecino.telefono,
+                "email": vecino.email,
+                "estado": vecino.estado,
+            }
+            for vecino in vecinos
+        ]
+
+        return {"vecinos": vecinos_formateados}
     except Exception as e:
         print(f"Error en lista_vecinos: {e}")
         raise HTTPException(status_code=500, detail=str(e))

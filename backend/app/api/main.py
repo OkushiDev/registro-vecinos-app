@@ -788,7 +788,6 @@ async def subir_documento(
         return {
             "message": "Documento subido exitosamente",
             "documento": {
-                "id": nuevo_documento.id,
                 "tipo_documento": nuevo_documento.tipo_documento,
                 "nombre_archivo": nuevo_documento.nombre_archivo,
                 "tipo_archivo": nuevo_documento.tipo_archivo,

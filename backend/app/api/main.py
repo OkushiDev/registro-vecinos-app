@@ -7,7 +7,9 @@ import app.api.models as models
 from app.api.database import SessionLocal, engine, get_db
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import File, UploadFile
+# DESPUÉS
+from fastapi import File, UploadFile, Form  # ← Agregado Form
+
 from pathlib import Path
 import uuid
 
@@ -86,9 +88,19 @@ db_dependency = Annotated[Session, Depends(get_db)]
 UPLOAD_DIR = Path("uploads/documentos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
+# Tipos de documentos permitidos
+TIPOS_DOCUMENTO = [
+    "cedula_identidad",
+    "registro_social_hogares",
+    "avaluo_fiscal",
+    "boleta_agua",
+    "boleta_luz",
+    "escritura_casa",
+]
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:
     """Valida tipo y tamaño del archivo"""

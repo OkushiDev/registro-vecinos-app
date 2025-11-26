@@ -1,229 +1,274 @@
-import React, { useState, useRef } from "react";
-import type { ChangeEvent } from "react";
+import React, { useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import {
   Box,
   Button,
   Typography,
-  Paper,
-  LinearProgress,
   Alert,
-  IconButton,
-  Stack,
+  CircularProgress,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  FormHelperText,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DeleteIcon from "@mui/icons-material/Delete";
+import DescriptionIcon from "@mui/icons-material/Description";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageIcon from "@mui/icons-material/Image";
-import axios from "axios";
+
+interface TipoDocumento {
+  value: string;
+  label: string;
+}
 
 const SubirDocumento: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState<boolean>(false);
-  const [progress, setProgress] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
+  const [tipoDocumento, setTipoDocumento] = useState<string>("");
+  const [descripcion, setDescripcion] = useState<string>("");
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg"];
-  const MAX_SIZE = 5 * 1024 * 1024;
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (!file) return;
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Solo se permiten archivos PNG, JPG o JPEG");
-      return;
-    }
-
-    if (file.size > MAX_SIZE) {
-      setError("El archivo no puede superar los 5MB");
-      return;
-    }
-
-    setError(null);
-    setSuccess(false);
-    setSelectedFile(file);
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
+  // Cargar tipos de documentos al montar el componente
+  React.useEffect(() => {
+    const fetchTipos = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/documentos/tipos");
+        const data = await response.json();
+        setTiposDocumento(data.tipos);
+      } catch (error) {
+        console.error("Error al cargar tipos de documentos:", error);
+      }
     };
-    reader.readAsDataURL(file);
+    fetchTipos();
+  }, []);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validar tipo de archivo
+      const validTypes = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
+      if (!validTypes.includes(file.type)) {
+        setMessage({
+          type: "error",
+          text: "Solo se permiten archivos PNG, JPG, JPEG o PDF",
+        });
+        return;
+      }
+
+      // Validar tamaño (5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setMessage({
+          type: "error",
+          text: "El archivo no debe superar 5MB",
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+      setMessage(null);
+
+      // Generar preview solo para imágenes
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPreview(null);
+      }
+    }
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      setMessage({ type: "error", text: "Por favor selecciona un archivo" });
+      return;
+    }
+
+    if (!tipoDocumento) {
+      setMessage({ type: "error", text: "Por favor selecciona el tipo de documento" });
+      return;
+    }
 
     setUploading(true);
-    setProgress(0);
-    setError(null);
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+    setMessage(null);
 
     try {
-      await axios.post(
-        "http://localhost:8000/api/documentos/subir",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 100)
-            );
-            setProgress(percentCompleted);
-          },
-        }
-      );
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No hay sesión activa");
+      }
 
-      setSuccess(true);
-      setUploading(false);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("tipo_documento", tipoDocumento);
+      if (descripcion.trim()) {
+        formData.append("descripcion", descripcion.trim());
+      }
 
-      setTimeout(() => {
-        handleClear();
-      }, 3000);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.detail || "Error al subir el archivo"  // ✅ CORREGIDO
-      );
+      const response = await fetch("http://localhost:8000/api/documentos/subir", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al subir el documento");
+      }
+
+      const data = await response.json();
+      setMessage({
+        type: "success",
+        text:data.message,
+      });
+
+      // Limpiar formulario
+      setSelectedFile(null);
+      setPreview(null);
+      setTipoDocumento("");
+      setDescripcion("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: error.message || "Error al subir el documento",
+      });
+    } finally {
       setUploading(false);
     }
   };
 
-  const handleClear = () => {
-    setSelectedFile(null);
-    setPreview(null);
-    setProgress(0);
-    setError(null);
-    setSuccess(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  const isPDF = selectedFile?.type === "application/pdf";
 
   return (
-    <Box sx={{ maxWidth: 800, mx: "auto", p: 3 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom align="center">
-          Subir Documento
-        </Typography>
+    <Box sx={{ maxWidth: 600, margin: "auto", padding: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        <CloudUploadIcon sx={{ verticalAlign: "middle", mr: 1 }} />
+        Subir Documento
+      </Typography>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Formatos permitidos: PNG, JPG, JPEG (máx. 5MB)
-        </Typography>
-
-        {!selectedFile && (
-          <Box
-            sx={{
-              border: "2px dashed",
-              borderColor: error ? "error.main" : "grey.400",
-              borderRadius: 2,
-              p: 4,
-              textAlign: "center",
-              cursor: "pointer",
-              bgcolor: "background.paper",
-              transition: "all 0.3s",
-              "&:hover": {
-                borderColor: "primary.main",
-                bgcolor: "action.hover",
-              },
-            }}
-            onClick={() => fileInputRef.current?.click()}
+      <form onSubmit={handleSubmit}>
+        {/* Tipo de Documento */}
+        <FormControl fullWidth required sx={{ mb: 2 }}>
+          <InputLabel>Tipo de Documento</InputLabel>
+          <Select
+            value={tipoDocumento}
+            label="Tipo de Documento"
+            onChange={(e) => setTipoDocumento(e.target.value)}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
+            {tiposDocumento.map((tipo) => (
+              <MenuItem key={tipo.value} value={tipo.value}>
+                {tipo.label}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>Selecciona el tipo de documento *</FormHelperText>
+        </FormControl>
+
+        {/* Descripción (Opcional) */}
+        <TextField
+          fullWidth
+          label="Descripción (opcional)"
+          multiline
+          rows={3}
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          placeholder="Agrega una descripción del documento..."
+          sx={{ mb: 2 }}
+        />
+
+        {/* Seleccionar archivo */}
+        <Button
+          variant="outlined"
+          component="label"
+          fullWidth
+          startIcon={<DescriptionIcon />}
+          sx={{ mb: 2 }}
+        >
+          Seleccionar Archivo (PNG, JPG, PDF)
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept="image/png,image/jpeg,image/jpg,application/pdf"
+            onChange={handleFileChange}
+          />
+        </Button>
+
+        {/* Nombre del archivo seleccionado */}
+        {selectedFile && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ display: "flex", alignItems: "center" }}>
+              {isPDF ? (
+                <PictureAsPdfIcon sx={{ mr: 1, color: "error.main" }} />
+              ) : (
+                <ImageIcon sx={{ mr: 1, color: "primary.main" }} />
+              )}
+              <strong>Archivo:</strong>&nbsp;{selectedFile.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Tamaño: {(selectedFile.size / 1024).toFixed(2)} KB
+            </Typography>
+          </Box>
+        )}
+
+        {/* Preview de imagen */}
+        {preview && (
+          <Box sx={{ mb: 2, textAlign: "center" }}>
+            <img
+              src={preview}
+              alt="Preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "300px",
+                borderRadius: "8px",
+                border: "2px solid #ddd",
+              }}
             />
-            <CloudUploadIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              Haz clic o arrastra un archivo aquí
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              PNG, JPG o JPEG
-            </Typography>
           </Box>
         )}
 
-        {selectedFile && preview && (
-          <Box sx={{ mt: 2 }}>
-            <Paper elevation={1} sx={{ p: 2, bgcolor: "grey.50" }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <ImageIcon color="primary" />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body1" noWrap>
-                    {selectedFile.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </Typography>
-                </Box>
-                {!uploading && (
-                  <IconButton onClick={handleClear} color="error" size="small">
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-              </Stack>
-
-              <Box
-                component="img"
-                src={preview}
-                alt="Preview"
-                sx={{
-                  width: "100%",
-                  maxHeight: 300,
-                  objectFit: "contain",
-                  mt: 2,
-                  borderRadius: 1,
-                }}
-              />
-            </Paper>
-          </Box>
-        )}
-
-        {uploading && (
-          <Box sx={{ width: "100%", mt: 2 }}>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{ height: 10, borderRadius: 5 }}
-            />
-            <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-              Subiendo: {progress}%
-            </Typography>
-          </Box>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
-            {error}
+        {/* Indicador PDF */}
+        {isPDF && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Archivo PDF seleccionado. Vista previa no disponible.
           </Alert>
         )}
 
-        {success && (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            ¡Archivo subido exitosamente!
+        {/* Mensajes */}
+        {message && (
+          <Alert severity={message.type} sx={{ mb: 2 }}>
+            {message.text}
           </Alert>
         )}
 
-        {selectedFile && !uploading && !success && (
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleUpload}
-            startIcon={<CloudUploadIcon />}
-            sx={{ mt: 2 }}
-          >
-            Subir Documento
-          </Button>
-        )}
-      </Paper>
+        {/* Botón subir */}
+        <Button
+          type="submit"
+          variant="contained"
+          fullWidth
+          disabled={uploading || !selectedFile || !tipoDocumento}
+          startIcon={uploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+        >
+          {uploading ? "Subiendo..." : "Subir Documento"}
+        </Button>
+      </form>
     </Box>
   );
 };

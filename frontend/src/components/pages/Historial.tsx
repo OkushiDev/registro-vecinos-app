@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -7,14 +8,15 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
+import TableSortLabel from "@mui/material/TableSortLabel";
 
 // Importación de XLSX para descargar historial
 import * as XLSX from 'xlsx';
 
-// Importación de la API (Asegúrate de tener el endpoint creado en el backend)
+// Importación de la API
 import api from "../../api";
 
-// Importaciones para búsqueda y filtrado
+// Componentes UI
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -27,57 +29,22 @@ import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { visuallyHidden } from "@mui/utils";
 
-// === ESTILOS (Mismo tema Dark que ListaVecinos) ===
-const MAIN_BG_COLOR = "#0b1121";
-const SECONDARY_BG_COLOR = "#1e293b";
-const BORDER_COLOR = "rgba(255, 255, 255, 0.1)";
-
-const searchInputStyle = {
-  "& .MuiOutlinedInput-root": {
-    color: "white",
-    backgroundColor: "transparent",
-    border: `1px solid ${BORDER_COLOR}`,
-    borderRadius: "4px",
-    "& fieldset": { border: "none" },
-    "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      borderColor: "rgba(255, 255, 255, 0.3)",
-    },
-    "&.Mui-focused": {
-      borderColor: "#3b82f6",
-      boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
-    },
-  },
-  "& .MuiSvgIcon-root": { color: "rgba(255, 255, 255, 0.5)" },
-};
-
-const filterComponentStyle = {
-  backgroundColor: SECONDARY_BG_COLOR,
-  color: "white",
-  borderRadius: "4px",
-  border: `1px solid ${BORDER_COLOR}`,
-  "& .MuiSelect-icon": { color: "white" },
-  "&:hover": {
-    backgroundColor: "#2d3748",
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  minHeight: "56px",
-};
-
-// Definición de Columnas
+// Definición de Columnas (ORDEN ACTUALIZADO)
 interface Column {
-  id: "id" | "descripcion_accion" | "tipo_accion" | "fecha_accion" | "usuario";
+  id: "id" | "usuario" | "tipo_accion" | "descripcion_accion" | "fecha_accion";
   label: string;
   minWidth?: number;
   align?: "right";
+  sortable?: boolean;
 }
 
 const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 50 },
-  { id: "descripcion_accion", label: "Descripción", minWidth: 200 },
-  { id: "tipo_accion", label: "Tipo Acción", minWidth: 120 },
-  { id: "usuario", label: "Usuario", minWidth: 120 },
+  { id: "id", label: "ID", minWidth: 50, sortable: true },
+  { id: "usuario", label: "Usuario", minWidth: 120 }, // Movidó aquí
+  { id: "tipo_accion", label: "Acción", minWidth: 120 }, // Movidó aquí
+  { id: "descripcion_accion", label: "Descripción", minWidth: 250 }, // Movidó aquí y aumentado ancho
   { id: "fecha_accion", label: "Fecha y Hora", minWidth: 170, align: "right" },
 ];
 
@@ -90,18 +57,24 @@ interface Data {
   usuario: string;
 }
 
+// Tipos para el ordenamiento
+type Order = 'asc' | 'desc';
+
 export default function Historial() {
+  const theme = useTheme();
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const [rows, setRows] = React.useState<Data[]>([]); // Estado para los datos reales
+  const [rowsPerPage, setRowsPerPage] = React.useState(25);
+  const [rows, setRows] = React.useState<Data[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // === 1. OBTENER DATOS DEL BACKEND ===
+  // === ESTADOS PARA ORDENAMIENTO ===
+  const [order, setOrder] = React.useState<Order>('desc');
+  const [orderBy, setOrderBy] = React.useState<keyof Data>('id');
+
+  // === OBTENER DATOS ===
   const fetchHistorial = async () => {
     try {
       setLoading(true);
-      // Asumimos que tu backend tiene este endpoint.
-      // Si no lo tiene, avísame para darte el código de Python.
       const response = await api.get("/historial/"); 
       setRows(response.data || []);
     } catch (error) {
@@ -124,6 +97,13 @@ export default function Historial() {
     setPage(0);
   };
 
+  // === MANEJO DEL ORDENAMIENTO ===
+  const handleRequestSort = (property: keyof Data) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
   // === BUSCADOR Y FILTROS ===
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterColumn, setFilterColumn] = React.useState("all");
@@ -143,6 +123,20 @@ export default function Historial() {
     });
   }, [searchTerm, filterColumn, rows]);
 
+  // === APLICAR ORDENAMIENTO ===
+  const sortedRows = React.useMemo(() => {
+    const sorted = [...filteredRows];
+    
+    sorted.sort((a, b) => {
+        if (orderBy === 'id') {
+            return order === 'asc' ? a.id - b.id : b.id - a.id;
+        }
+        return 0;
+    });
+
+    return sorted;
+  }, [filteredRows, order, orderBy]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setPage(0);
@@ -153,14 +147,14 @@ export default function Historial() {
     setPage(0);
   };
 
-  // === EXPORTAR A EXCEL ===
+  // === EXPORTAR A EXCEL (Orden actualizado también aquí) ===
   const handleExportToExcel = () => {
-    const dataToExport = filteredRows.map((row) => ({
+    const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
+      Usuario: row.usuario,        // <--- Actualizado orden
+      Acción: row.tipo_accion,     // <--- Actualizado orden
       Descripción: row.descripcion_accion,
-      "Tipo Acción": row.tipo_accion,
-      Usuario: row.usuario,
-      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"), // Formato local
+      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -171,7 +165,6 @@ export default function Historial() {
     XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
   };
 
-  // Función auxiliar para formatear fecha en la tabla visualmente
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -179,6 +172,21 @@ export default function Historial() {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
+  };
+
+  const commonFilterStyle = {
+    backgroundColor: "background.paper",
+    color: "text.primary",
+    borderRadius: "4px",
+    border: `1px solid ${theme.palette.divider}`,
+    "&:hover": {
+      backgroundColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
+      borderColor: "text.primary",
+    },
+    minHeight: "56px",
+    display: "flex",
+    alignItems: "center",
+    "& .MuiSelect-icon": { color: "text.primary" },
   };
 
   return (
@@ -189,16 +197,15 @@ export default function Historial() {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: MAIN_BG_COLOR,
-        color: "white",
+        backgroundColor: "background.default",
+        color: "text.primary",
         borderRadius: 0,
+        transition: "background-color 0.3s ease",
       }}
       elevation={0}
     >
-      {/* Barra superior */}
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          {/* BUSCADOR */}
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -206,11 +213,28 @@ export default function Historial() {
               placeholder="Buscar en historial..."
               value={searchTerm}
               onChange={handleSearchChange}
-              sx={searchInputStyle}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "text.primary",
+                  backgroundColor: "transparent",
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: "4px",
+                  "& fieldset": { border: "none" },
+                  "&:hover": {
+                    borderColor: "text.primary",
+                    backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#3b82f6",
+                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
+                  },
+                },
+                "& .MuiSvgIcon-root": { color: "text.secondary" },
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "rgba(255,255,255,0.7)" }} />
+                    <SearchIcon />
                   </InputAdornment>
                 ),
                 sx: { height: "56px" }
@@ -218,31 +242,34 @@ export default function Historial() {
             />
           </Grid>
 
-          {/* FILTRO COLUMNA */}
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Buscar en</InputLabel>
+              <InputLabel sx={{ color: "text.secondary" }}>Buscar en</InputLabel>
               <Select
                 value={filterColumn}
                 label="Buscar en"
                 onChange={handleFilterChange}
+                displayEmpty
+                variant="outlined"
                 sx={{
-                    ...filterComponentStyle,
+                    ...commonFilterStyle,
                     "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                    width: "100%"
                 }}
                 MenuProps={{
-                    PaperProps: { sx: { bgcolor: SECONDARY_BG_COLOR, color: "white" } },
+                  PaperProps: { 
+                      sx: { bgcolor: "background.paper", color: "text.primary", backgroundImage: "none" } 
+                    },
                 }}
               >
                 <MenuItem value="all">Todo</MenuItem>
-                <MenuItem value="descripcion_accion">Descripción</MenuItem>
-                <MenuItem value="tipo_accion">Tipo</MenuItem>
                 <MenuItem value="usuario">Usuario</MenuItem>
+                <MenuItem value="tipo_accion">Acción</MenuItem>
+                <MenuItem value="descripcion_accion">Descripción</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           
-          {/* BOTON EXCEL */}
           <Grid item xs={12} md={3}>
              <Button
               fullWidth
@@ -252,6 +279,7 @@ export default function Historial() {
               sx={{
                 height: "56px",
                 background: "linear-gradient(to right, #059669, #10b981)",
+                color: "white",
                 fontWeight: "bold",
                 boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
                 "&:hover": {
@@ -265,16 +293,14 @@ export default function Historial() {
         </Grid>
       </Box>
 
-      {/* Resumen de resultados */}
       {searchTerm && (
         <Box sx={{ px: 2, pb: 2 }}>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             Registros encontrados: {filteredRows.length}
           </Typography>
         </Box>
       )}
 
-      {/* TABLA */}
       <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
@@ -285,13 +311,29 @@ export default function Historial() {
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
                   sx={{
-                    backgroundColor: SECONDARY_BG_COLOR,
-                    color: "#90caf9",
+                    backgroundColor: "background.paper",
+                    color: "text.primary",
                     fontWeight: "bold",
-                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
+                  sortDirection={orderBy === column.id ? order : false}
                 >
-                  {column.label}
+                  {column.sortable ? (
+                    <TableSortLabel
+                      active={orderBy === column.id}
+                      direction={orderBy === column.id ? order : 'asc'}
+                      onClick={() => handleRequestSort(column.id)}
+                    >
+                      {column.label}
+                      {orderBy === column.id ? (
+                        <Box component="span" sx={visuallyHidden}>
+                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                        </Box>
+                      ) : null}
+                    </TableSortLabel>
+                  ) : (
+                    column.label
+                  )}
                 </TableCell>
               ))}
             </TableRow>
@@ -299,18 +341,18 @@ export default function Historial() {
           <TableBody>
             {loading ? (
                 <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "white", py: 4 }}>
+                    <TableCell colSpan={5} align="center" sx={{ color: "text.primary", py: 4 }}>
                         Cargando historial...
                     </TableCell>
                 </TableRow>
             ) : filteredRows.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "rgba(255,255,255,0.5)", py: 4 }}>
+                    <TableCell colSpan={5} align="center" sx={{ color: "text.secondary", py: 4 }}>
                         No hay registros de acciones.
                     </TableCell>
                 </TableRow>
             ) : (
-                filteredRows
+                sortedRows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                     return (
@@ -322,18 +364,20 @@ export default function Historial() {
                         sx={{
                             backgroundColor: "transparent",
                             "&:last-child td, &:last-child th": { border: 0 },
-                            "&:hover": { backgroundColor: "rgba(255,255,255,0.05) !important" },
+                            "&:hover": { 
+                                backgroundColor: theme.palette.mode === 'dark' 
+                                ? "rgba(255,255,255,0.05) !important"
+                                : "rgba(0,0,0,0.04) !important" 
+                            },
                         }}
                     >
                         {columns.map((column) => {
                         const cellStyle = {
-                            color: "rgba(255,255,255,0.9)",
-                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                            color: "text.primary",
+                            borderBottom: `1px solid ${theme.palette.divider}`,
                         };
                         
                         let value = row[column.id];
-
-                        // Formatear fecha específicamente
                         if (column.id === 'fecha_accion') {
                             value = formatDate(row.fecha_accion);
                         }
@@ -351,22 +395,27 @@ export default function Historial() {
           </TableBody>
         </Table>
       </TableContainer>
+      
       <TablePagination
-        rowsPerPageOptions={[10, 25, 100]}
+        rowsPerPageOptions={[25, 50, 100]}
         component="div"
         count={filteredRows.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Filas por página:"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
         sx={{
-          backgroundColor: MAIN_BG_COLOR,
-          color: "white",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
-          ".MuiTablePagination-selectIcon": { color: "white" },
+          backgroundColor: "background.default",
+          color: "text.primary",
+          borderTop: `1px solid ${theme.palette.divider}`,
+          ".MuiTablePagination-selectIcon": { color: "text.primary" },
           ".MuiIconButton-root": {
-            color: "white",
-            "&.Mui-disabled": { color: "rgba(255,255,255,0.3)" },
+            color: "text.primary",
+            "&.Mui-disabled": { color: "text.disabled" },
           },
         }}
       />

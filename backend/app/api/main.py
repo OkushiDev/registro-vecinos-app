@@ -1,3 +1,4 @@
+from jose.exceptions import JWTError
 from fastapi import FastAPI, HTTPException, Depends, status, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -18,8 +19,10 @@ from app.core.security import (
     verify_password,
     get_password_hash,
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     decode_token,
+    SECRET_KEY,
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
 
@@ -218,28 +221,57 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    print(f"\n=== VALIDANDO TOKEN ===")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = decode_token(token)
-    if payload is None:
+    try:
+        # Usar decode_token de security.py
+        payload = decode_token(token)
+        print(f"Payload decodificado: {payload}")
+
+        if payload is None:
+            print("ERROR: payload es None - Token inválido")
+            raise credentials_exception
+
+        user_id: int = payload.get("sub")
+        rol: str = payload.get("rol")
+
+        print(f"User ID: {user_id}, Rol: {rol}")
+
+        if user_id is None or rol is None:
+            print("ERROR: user_id o rol es None")
+            raise credentials_exception
+
+        # Verificar que el usuario existe y está activo
+        usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+
+        if not usuario:
+            print(f"ERROR: Usuario {user_id} no encontrado")
+            raise credentials_exception
+
+        if usuario.estado != 1:
+            print(f"ERROR: Usuario {user_id} deshabilitado")
+            raise credentials_exception
+
+        print(f"Usuario validado: {usuario.username}, vecino_id: {usuario.vecino_id}")
+        print("=== FIN VALIDACIÓN ===\n")
+
+        return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
+
+    except JWTError as e:
+        print(f"ERROR JWT: {e}")
         raise credentials_exception
+    except Exception as e:
+        print(f"ERROR: {e}")
+        import traceback
 
-    user_id: int = payload.get("sub")
-    rol: str = payload.get("rol")
-
-    if user_id is None or rol is None:
+        traceback.print_exc()
         raise credentials_exception
-
-    # Verificar que el usuario existe y está activo
-    usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
-    if not usuario or usuario.estado != 1:
-        raise credentials_exception
-
-    return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
 
 
 @app.get("/")
@@ -1020,3 +1052,128 @@ async def eliminar_documento(
     # -----------------------------------
 
     return {"message": "Documento eliminado exitosamente"}
+
+
+@app.get("/api/documentos/vecino/{vecino_id}")
+async def obtener_documentos_vecino(
+    vecino_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene todos los documentos de un vecino específico.
+    Solo accesible para presidentes o el propio vecino.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER DOCUMENTOS - Vecino ID: {vecino_id}")
+        print(f"Usuario solicitante: {current_user}")
+        print(f"{'=' * 50}")
+
+        # Verificar permisos: solo presidente o el mismo vecino
+        if (
+            current_user["rol"] != "presidente"
+            and current_user.get("vecino_id") != vecino_id
+        ):
+            print(
+                f"ACCESO DENEGADO - Rol: {current_user['rol']}, Vecino ID solicitante: {current_user.get('vecino_id')}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para ver documentos de otros vecinos",
+            )
+
+        print(f"Permisos verificados OK - Rol: {current_user['rol']}")
+
+        # Verificar que el vecino existe
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        if not vecino:
+            print(f"ERROR: Vecino con ID {vecino_id} no encontrado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Vecino no encontrado"
+            )
+
+        print(f"Vecino encontrado: {vecino.nombres} {vecino.apellido_paterno}")
+
+        # Obtener documentos del vecino (solo activos)
+        documentos = (
+            db.query(models.Documento)
+            .filter(
+                models.Documento.vecino_id == vecino_id, models.Documento.estado == 1
+            )
+            .order_by(models.Documento.fecha_subida.desc())
+            .all()
+        )
+
+        print(f"Total documentos encontrados: {len(documentos)}")
+
+        # Función para formatear fechas
+        def formatear_fecha(fecha_obj):
+            if not fecha_obj:
+                return None
+            if isinstance(fecha_obj, str):
+                return fecha_obj
+            return fecha_obj.strftime("%d-%m-%Y %H:%M")
+
+        # Mapeo de tipos de documentos a nombres legibles
+        TIPOS_DOCUMENTO_LABELS = {
+            "cedula_identidad": "Cédula de Identidad",
+            "registro_social_hogares": "Registro Social de Hogares",
+            "avaluo_fiscal": "Avalúo Fiscal",
+            "boleta_agua": "Boleta de Agua",
+            "boleta_luz": "Boleta de Luz",
+            "escritura_casa": "Escritura de Casa",
+        }
+
+        # Construir respuesta
+        documentos_lista = []
+        for doc in documentos:
+            doc_data = {
+                "id": doc.id,
+                "vecino_id": doc.vecino_id,
+                "tipo_documento": TIPOS_DOCUMENTO_LABELS.get(
+                    doc.tipo_documento, doc.tipo_documento
+                ),
+                "tipo_documento_value": doc.tipo_documento,
+                "nombre_archivo": doc.nombre_archivo,
+                "descripcion": doc.descripcion if doc.descripcion else "",
+                "fecha_subida": formatear_fecha(doc.fecha_subida),
+                "ruta_archivo": doc.ruta_archivo,
+                "tipo_archivo": doc.tipo_archivo
+                if hasattr(doc, "tipo_archivo")
+                else None,
+                "tamanio": doc.tamanio if hasattr(doc, "tamanio") else None,
+            }
+            documentos_lista.append(doc_data)
+            print(f"  - Doc ID {doc.id}: {doc.tipo_documento} - {doc.nombre_archivo}")
+
+        respuesta = {
+            "success": True,
+            "vecino": {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+            },
+            "documentos": documentos_lista,
+            "total": len(documentos_lista),
+        }
+
+        print(f"Respuesta preparada - Total documentos: {len(documentos_lista)}")
+        print(f"{'=' * 50}\n")
+
+        return respuesta
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR INESPERADO: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener documentos: {str(e)}",
+        )

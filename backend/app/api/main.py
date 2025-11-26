@@ -11,7 +11,7 @@ from fastapi import File, UploadFile
 from pathlib import Path
 import uuid
 from app.api import certificados
-
+from datetime import datetime
 
 # Importar funciones de seguridad
 from app.core.security import (
@@ -48,7 +48,7 @@ class VecinoEdicionSchema(BaseModel):
     nombres: str
     apellido_paterno: str
     apellido_materno: str
-    rut: str  
+    rut: str
     numero_socio: int
     nombre_calle: Optional[str] = None
     numero_casa: Optional[str] = None
@@ -142,6 +142,7 @@ app.add_middleware(
 
 # ============ UTILIDADES Y LOGS ============
 
+
 # --- FUNCIÓN AUXILIAR PARA REGISTRAR ACCIONES ---
 def registrar_accion(db: Session, usuario_id: int, descripcion: str, tipo: str):
     """
@@ -149,15 +150,13 @@ def registrar_accion(db: Session, usuario_id: int, descripcion: str, tipo: str):
     """
     try:
         if not usuario_id:
-            return # Evitar error si no hay usuario
-            
+            return  # Evitar error si no hay usuario
+
         nueva_accion = models.Historial(
-            usuario_id=usuario_id,
-            descripcion=descripcion,
-            tipo_accion=tipo
+            usuario_id=usuario_id, descripcion=descripcion, tipo_accion=tipo
         )
         db.add(nueva_accion)
-        db.commit() # Guardamos inmediatamente
+        db.commit()  # Guardamos inmediatamente
         db.refresh(nueva_accion)
         print(f"📝 Historial registrado: {descripcion}")
     except Exception as e:
@@ -338,13 +337,13 @@ async def login(
         )
 
         print(f"Login exitoso para: {nombre_completo}")
-        
+
         # --- LOG: REGISTRAR LOGIN ---
         registrar_accion(
-            db=db, 
-            usuario_id=usuario.id, 
-            descripcion="Inicio de sesión exitoso", 
-            tipo="LOGIN"
+            db=db,
+            usuario_id=usuario.id,
+            descripcion="Inicio de sesión exitoso",
+            tipo="LOGIN",
         )
         # ---------------------------
 
@@ -439,11 +438,12 @@ async def hash_password(password: str):
 
 # ============ ENDPOINTS DE HISTORIAL ============
 
+
 @app.get("/historial/")
 async def obtener_historial(
     db: Session = Depends(get_db),
     # Opcional: Si quieres que solo admins vean el historial, descomenta la siguiente línea:
-    # current_user: dict = Depends(get_current_user) 
+    # current_user: dict = Depends(get_current_user)
 ):
     try:
         # Hacemos un JOIN para obtener los datos del Historial Y los datos del Vecino (nombre)
@@ -459,13 +459,15 @@ async def obtener_historial(
         lista_historial = []
         for accion, vecino in resultados:
             # Construimos el objeto tal como lo pide tu React
-            lista_historial.append({
-                "id": accion.id,
-                "descripcion_accion": accion.descripcion, # Mapeamos descripcion -> descripcion_accion
-                "tipo_accion": accion.tipo_accion,
-                "fecha_accion": str(accion.fecha_accion),
-                "usuario": f"{vecino.nombres} {vecino.apellido_paterno}" # Nombre completo
-            })
+            lista_historial.append(
+                {
+                    "id": accion.id,
+                    "descripcion_accion": accion.descripcion,  # Mapeamos descripcion -> descripcion_accion
+                    "tipo_accion": accion.tipo_accion,
+                    "fecha_accion": str(accion.fecha_accion),
+                    "usuario": f"{vecino.nombres} {vecino.apellido_paterno}",  # Nombre completo
+                }
+            )
 
         return lista_historial
 
@@ -564,10 +566,10 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
 
         # --- LOG: REGISTRAR CREACIÓN ---
         registrar_accion(
-            db=db, 
-            usuario_id=nuevo_usuario.id, # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
-            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}", 
-            tipo="CREACION"
+            db=db,
+            usuario_id=nuevo_usuario.id,  # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
+            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}",
+            tipo="CREACION",
         )
         # ------------------------------
 
@@ -603,7 +605,7 @@ async def editar_vecino(
 ):
     try:
         print(f"\n--- INICIO EDICIÓN VECINO {vecino_id} ---")
-        
+
         # 1. Buscar el Vecino
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
@@ -613,22 +615,34 @@ async def editar_vecino(
 
         # 2. Buscar el Usuario asociado
         usuario_asociado = (
-            db.query(models.Usuario).filter(models.Usuario.vecino_id == vecino_id).first()
+            db.query(models.Usuario)
+            .filter(models.Usuario.vecino_id == vecino_id)
+            .first()
         )
 
         # 3. VERIFICACIÓN DE SEGURIDAD (Si viene currentPassword)
         if payload.currentPassword:
             if not usuario_asociado:
-                raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
-            
+                raise HTTPException(
+                    status_code=404, detail="Usuario asociado no encontrado"
+                )
+
             # Verificar si la contraseña actual es correcta
-            if not verify_password(payload.currentPassword, usuario_asociado.hashed_password):
-                raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+            if not verify_password(
+                payload.currentPassword, usuario_asociado.hashed_password
+            ):
+                raise HTTPException(
+                    status_code=400, detail="La contraseña actual es incorrecta"
+                )
 
             # 4. CAMBIO DE CONTRASEÑA
             if payload.newPassword:
-                print(f"Actualizando contraseña para usuario {usuario_asociado.username}")
-                usuario_asociado.hashed_password = get_password_hash(payload.newPassword)
+                print(
+                    f"Actualizando contraseña para usuario {usuario_asociado.username}"
+                )
+                usuario_asociado.hashed_password = get_password_hash(
+                    payload.newPassword
+                )
 
         # 5. Validaciones de duplicados
         existing_rut = (
@@ -684,16 +698,17 @@ async def editar_vecino(
         # --- LOG: REGISTRAR EDICIÓN ---
         # Como este endpoint es público (no usa current_user), registramos en nombre del usuario editado
         usuario_responsable = usuario_asociado.id if usuario_asociado else None
-        
+
         if usuario_responsable:
             detalles = "Actualización de datos"
-            if payload.newPassword: detalles += " y cambio de contraseña"
-            
+            if payload.newPassword:
+                detalles += " y cambio de contraseña"
+
             registrar_accion(
                 db=db,
                 usuario_id=usuario_responsable,
                 descripcion=detalles,
-                tipo="EDICION"
+                tipo="EDICION",
             )
         # -----------------------------
 
@@ -704,7 +719,7 @@ async def editar_vecino(
                 "nombres": vecino_existente.nombres,
                 "rut": vecino_existente.rut,
                 "email": vecino_existente.email,
-                "telefono": vecino_existente.telefono
+                "telefono": vecino_existente.telefono,
             },
         }
 
@@ -752,7 +767,7 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
                 db=db,
                 usuario_id=usuario.id,
                 descripcion=f"Vecino {estado_texto}",
-                tipo="ESTADO"
+                tipo="ESTADO",
             )
         # -----------------------------------
 
@@ -888,7 +903,7 @@ async def subir_documento(
             db=db,
             usuario_id=current_user["user_id"],
             descripcion=f"Subió documento: {file.filename}",
-            tipo="DOCUMENTO"
+            tipo="DOCUMENTO",
         )
         # ------------------------------
 
@@ -969,7 +984,7 @@ async def eliminar_documento(
         db=db,
         usuario_id=current_user["user_id"],
         descripcion=f"Eliminó documento ID: {documento_id}",
-        tipo="ELIMINACION"
+        tipo="ELIMINACION",
     )
     # -----------------------------------
 

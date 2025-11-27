@@ -1263,3 +1263,346 @@ async def descargar_documento(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al descargar documento: {str(e)}",
         )
+
+
+# ============ ENDPOINTS DE SOLICITUDES ============
+
+
+@app.post("/api/solicitudes/crear")
+async def crear_solicitud(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Crea una nueva solicitud de certificado de residencia.
+    Solo vecinos pueden crear solicitudes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"CREAR SOLICITUD")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea un vecino
+        if current_user["rol"] != "vecino":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo vecinos pueden solicitar certificados",
+            )
+
+        vecino_id = current_user["vecino_id"]
+
+        # Verificar que no tenga una solicitud pendiente
+        solicitud_existente = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.vecino_id == vecino_id,
+                models.Solicitud.estado == "pendiente",
+            )
+            .first()
+        )
+
+        if solicitud_existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ya tienes una solicitud pendiente. Espera a que sea procesada.",
+            )
+
+        # Crear nueva solicitud
+        nueva_solicitud = models.Solicitud(
+            vecino_id=vecino_id,
+            tipo_solicitud="certificado_residencia",
+            estado="pendiente",
+            visibilidad="mostrar",
+        )
+
+        db.add(nueva_solicitud)
+        db.commit()
+        db.refresh(nueva_solicitud)
+
+        # Obtener datos del vecino para la respuesta
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+
+        print(f"Solicitud creada exitosamente:")
+        print(f"  - ID: {nueva_solicitud.id}")
+        print(f"  - Vecino: {vecino.nombres} {vecino.apellido_paterno}")
+        print(f"  - RUT: {vecino.rut}")
+        print(f"  - Fecha: {nueva_solicitud.fecha_solicitud}")
+        print(f"{'=' * 50}\n")
+
+        # Registrar en historial
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Solicitó certificado de residencia",
+            tipo="SOLICITUD",
+        )
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud creada exitosamente. El presidente será notificado.",
+            "solicitud": {
+                "id": nueva_solicitud.id,
+                "tipo_solicitud": nueva_solicitud.tipo_solicitud,
+                "estado": nueva_solicitud.estado,
+                "fecha_solicitud": nueva_solicitud.fecha_solicitud.isoformat(),
+                "vecino": {
+                    "rut": vecino.rut,
+                    "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}",
+                },
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al crear solicitud: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear solicitud: {str(e)}",
+        )
+
+
+@app.get("/api/solicitudes/notificaciones")
+async def obtener_notificaciones(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene todas las solicitudes visibles para notificaciones del presidente.
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER NOTIFICACIONES")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ver notificaciones",
+            )
+
+        # Obtener solicitudes visibles, ordenadas por fecha (más recientes primero)
+        solicitudes = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.visibilidad == "mostrar")
+            .order_by(models.Solicitud.fecha_solicitud.desc())
+            .all()
+        )
+
+        print(f"Total solicitudes visibles: {len(solicitudes)}")
+
+        # Formatear respuesta con datos completos del vecino
+        notificaciones = []
+        for sol in solicitudes:
+            vecino = sol.vecino
+
+            notificacion = {
+                "id": sol.id,
+                "tipo_solicitud": sol.tipo_solicitud,
+                "rut": vecino.rut,
+                "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
+                "fecha_solicitud": sol.fecha_solicitud.isoformat(),
+                "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
+                    "%d-%m-%Y %H:%M"
+                ),
+                "estado": sol.estado,
+                "visibilidad": sol.visibilidad,
+                "vecino_id": vecino.id,
+                "numero_socio": vecino.numero_socio,
+            }
+
+            notificaciones.append(notificacion)
+            print(
+                f"  - Solicitud {sol.id}: {vecino.nombres} {vecino.apellido_paterno} - {sol.estado}"
+            )
+
+        # Contar pendientes
+        pendientes = sum(1 for n in notificaciones if n["estado"] == "pendiente")
+
+        print(f"Pendientes: {pendientes}/{len(notificaciones)}")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "total": len(notificaciones),
+            "pendientes": pendientes,
+            "notificaciones": notificaciones,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al obtener notificaciones: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener notificaciones: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/marcar-realizada")
+async def marcar_solicitud_realizada(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Marca una solicitud como 'realizado'.
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"MARCAR SOLICITUD COMO REALIZADA - ID: {solicitud_id}")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden marcar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Solicitud no encontrada"
+            )
+
+        # Cambiar estado
+        solicitud.estado = "realizado"
+        db.commit()
+        db.refresh(solicitud)
+
+        vecino = solicitud.vecino
+
+        print(f"Solicitud marcada como realizada:")
+        print(f"  - Vecino: {vecino.nombres} {vecino.apellido_paterno}")
+        print(f"  - Nuevo estado: {solicitud.estado}")
+        print(f"{'=' * 50}\n")
+
+        # Registrar en historial
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Marcó solicitud #{solicitud_id} como realizada (Vecino: {vecino.rut})",
+            tipo="SOLICITUD",
+        )
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud marcada como realizada",
+            "solicitud": {
+                "id": solicitud.id,
+                "estado": solicitud.estado,
+                "vecino": f"{vecino.nombres} {vecino.apellido_paterno}",
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al marcar solicitud: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al marcar solicitud: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/ocultar")
+async def ocultar_solicitud(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Oculta una solicitud de las notificaciones (cambia visibilidad a 'no_mostrar').
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OCULTAR SOLICITUD - ID: {solicitud_id}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ocultar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Solicitud no encontrada"
+            )
+
+        # Cambiar visibilidad
+        solicitud.visibilidad = "no_mostrar"
+        db.commit()
+
+        print(f"Solicitud ocultada exitosamente")
+        print(f"{'=' * 50}\n")
+
+        return {"success": True, "mensaje": "Solicitud ocultada de las notificaciones"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al ocultar solicitud: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al ocultar solicitud: {str(e)}",
+        )
+
+
+@app.get("/api/solicitudes/contador-pendientes")
+async def contador_solicitudes_pendientes(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna solo el número de solicitudes pendientes y visibles.
+    Útil para el badge de notificaciones en el menú.
+    Solo accesible para presidentes.
+    """
+    try:
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            return {"pendientes": 0}
+
+        # Contar solicitudes pendientes y visibles
+        contador = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.estado == "pendiente",
+                models.Solicitud.visibilidad == "mostrar",
+            )
+            .count()
+        )
+
+        return {"success": True, "pendientes": contador}
+
+    except Exception as e:
+        print(f"ERROR al contar pendientes: {e}")
+        return {"pendientes": 0}

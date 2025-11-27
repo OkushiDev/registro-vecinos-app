@@ -14,6 +14,9 @@ import uuid
 from app.api import certificados
 from datetime import datetime
 
+# --- NUEVO IMPORT PARA SERVIR ARCHIVOS ---
+from fastapi.staticfiles import StaticFiles
+
 # Importar funciones de seguridad
 from app.core.security import (
     verify_password,
@@ -91,6 +94,12 @@ class UserLogin(BaseModel):
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 app.include_router(certificados.router, prefix="/api", tags=["certificados"])
+
+# ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
+# Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."
+# FastAPI busque el archivo en la carpeta física "uploads" y lo entregue.
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# =============================================================
 
 db_dependency = Annotated[Session, Depends(get_db)]
 

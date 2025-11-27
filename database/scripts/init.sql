@@ -83,8 +83,8 @@ INSERT INTO vecinos (nombres, apellido_paterno, apellido_materno, rut, numero_so
 ('Sofia', 'Mendoza', 'Sepulveda', '15567890-2', 32, 'Boticelli', '2198', 'Residente', '2004-10-21', '2004-10-21', '912345670', 'sofia.sepulveda@outlook.com', 1),
 ('Matias', 'Flores', 'Campos', '14456789-1', 33, 'Miguel Angel', '2340', 'Propietario', '2004-10-21', '2004-10-21', '967890125', 'matias.campos@yahoo.com', 1),
 ('Antonella', 'Lagos', 'Rios', '13345678-k', 34, 'Leonardo da Vinci', '2467', 'Otro', '2004-10-21', '2004-10-21', '978901236', 'antonella.lagos@gmail.com', 1),
-('Jose Luis', 'Benavides', 'Gonzalez', '14306046-2', 35, 'Leonardo da Vinci', '2603', 'Propietario', '2004-10-21', '2004-10-21', '991234567', 'jose.benavide@yahoo.com', 1);
-('Cesar Raul', 'Galaz', 'Godoy', '21437513-2', 36, 'Leonardo da Vinci', '2222', 'Propietario', '2025-11-27', '2025-11-27', '123456789', 'cesar@gmail.com', 1);
+('Jose Luis', 'Benavides', 'Gonzalez', '14306046-2', 35, 'Leonardo da Vinci', '2603', 'Propietario', '2004-10-21', '2004-10-21', '991234567', 'jose.benavide@yahoo.com', 1),
+('Cesar Raul', 'Galaz', 'Godoy', '21437513-3', 36, 'Leonardo da Vinci', '2222', 'Propietario', '2025-11-27', '2025-11-27', '123456789', 'cesar@gmail.com', 1);
 
 
 INSERT INTO usuarios (vecino_id, username, hashed_password, rol) VALUES
@@ -122,7 +122,7 @@ INSERT INTO usuarios (vecino_id, username, hashed_password, rol) VALUES
 (32, '15567890-2', crypt('Mendoza1556', gen_salt('bf', 8)), 'vecino'),
 (33, '14456789-1', crypt('Flores1445', gen_salt('bf', 8)), 'vecino'),
 (34, '13345678-k', crypt('Lagos1334', gen_salt('bf', 8)), 'vecino'),
-(35, '14306046-2', crypt('Benavides1430', gen_salt('bf', 8)), 'presidente');
+(35, '14306046-2', crypt('Benavides1430', gen_salt('bf', 8)), 'presidente'),
 (36, '21437513-3', crypt('Galaz2143', gen_salt('bf', 8)), 'presidente');
 
 

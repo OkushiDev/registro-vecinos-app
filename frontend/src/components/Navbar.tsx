@@ -68,14 +68,9 @@ const vecinoPages: NavItem[] = [
     path: "/vecino/subir-archivo",
     icon: <UploadFileIcon fontSize="small" />,
   },
-  {
-    label: "Certificado",
-    path: "/vecino/certificado",
-    icon: <CertificateIcon fontSize="small" />,
-  },
 ];
 
-const settings = ["Perfil", "Configuración", "Cerrar Sesión"];
+const settings = ["Cerrar Sesión"];
 
 export default function Navbar({
   userProfile,

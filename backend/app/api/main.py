@@ -1,3 +1,4 @@
+from jose.exceptions import JWTError
 from fastapi import FastAPI, HTTPException, Depends, status, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -11,15 +12,17 @@ from fastapi import File, UploadFile
 from pathlib import Path
 import uuid
 from app.api import certificados
-
+from datetime import datetime
 
 # Importar funciones de seguridad
 from app.core.security import (
     verify_password,
     get_password_hash,
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     decode_token,
+    SECRET_KEY,
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
 
@@ -48,7 +51,7 @@ class VecinoEdicionSchema(BaseModel):
     nombres: str
     apellido_paterno: str
     apellido_materno: str
-    rut: str  
+    rut: str
     numero_socio: int
     nombre_calle: Optional[str] = None
     numero_casa: Optional[str] = None
@@ -142,6 +145,7 @@ app.add_middleware(
 
 # ============ UTILIDADES Y LOGS ============
 
+
 # --- FUNCIÓN AUXILIAR PARA REGISTRAR ACCIONES ---
 def registrar_accion(db: Session, usuario_id: int, descripcion: str, tipo: str):
     """
@@ -149,15 +153,13 @@ def registrar_accion(db: Session, usuario_id: int, descripcion: str, tipo: str):
     """
     try:
         if not usuario_id:
-            return # Evitar error si no hay usuario
-            
+            return  # Evitar error si no hay usuario
+
         nueva_accion = models.Historial(
-            usuario_id=usuario_id,
-            descripcion=descripcion,
-            tipo_accion=tipo
+            usuario_id=usuario_id, descripcion=descripcion, tipo_accion=tipo
         )
         db.add(nueva_accion)
-        db.commit() # Guardamos inmediatamente
+        db.commit()  # Guardamos inmediatamente
         db.refresh(nueva_accion)
         print(f"📝 Historial registrado: {descripcion}")
     except Exception as e:
@@ -219,28 +221,57 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    print(f"\n=== VALIDANDO TOKEN ===")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = decode_token(token)
-    if payload is None:
+    try:
+        # Usar decode_token de security.py
+        payload = decode_token(token)
+        print(f"Payload decodificado: {payload}")
+
+        if payload is None:
+            print("ERROR: payload es None - Token inválido")
+            raise credentials_exception
+
+        user_id: int = payload.get("sub")
+        rol: str = payload.get("rol")
+
+        print(f"User ID: {user_id}, Rol: {rol}")
+
+        if user_id is None or rol is None:
+            print("ERROR: user_id o rol es None")
+            raise credentials_exception
+
+        # Verificar que el usuario existe y está activo
+        usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+
+        if not usuario:
+            print(f"ERROR: Usuario {user_id} no encontrado")
+            raise credentials_exception
+
+        if usuario.estado != 1:
+            print(f"ERROR: Usuario {user_id} deshabilitado")
+            raise credentials_exception
+
+        print(f"Usuario validado: {usuario.username}, vecino_id: {usuario.vecino_id}")
+        print("=== FIN VALIDACIÓN ===\n")
+
+        return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
+
+    except JWTError as e:
+        print(f"ERROR JWT: {e}")
         raise credentials_exception
+    except Exception as e:
+        print(f"ERROR: {e}")
+        import traceback
 
-    user_id: int = payload.get("sub")
-    rol: str = payload.get("rol")
-
-    if user_id is None or rol is None:
+        traceback.print_exc()
         raise credentials_exception
-
-    # Verificar que el usuario existe y está activo
-    usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
-    if not usuario or usuario.estado != 1:
-        raise credentials_exception
-
-    return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
 
 
 @app.get("/")
@@ -338,13 +369,13 @@ async def login(
         )
 
         print(f"Login exitoso para: {nombre_completo}")
-        
+
         # --- LOG: REGISTRAR LOGIN ---
         registrar_accion(
-            db=db, 
-            usuario_id=usuario.id, 
-            descripcion="Inicio de sesión exitoso", 
-            tipo="LOGIN"
+            db=db,
+            usuario_id=usuario.id,
+            descripcion="Inicio de sesión exitoso",
+            tipo="LOGIN",
         )
         # ---------------------------
 
@@ -439,11 +470,12 @@ async def hash_password(password: str):
 
 # ============ ENDPOINTS DE HISTORIAL ============
 
+
 @app.get("/historial/")
 async def obtener_historial(
     db: Session = Depends(get_db),
     # Opcional: Si quieres que solo admins vean el historial, descomenta la siguiente línea:
-    # current_user: dict = Depends(get_current_user) 
+    # current_user: dict = Depends(get_current_user)
 ):
     try:
         # Hacemos un JOIN para obtener los datos del Historial Y los datos del Vecino (nombre)
@@ -459,13 +491,15 @@ async def obtener_historial(
         lista_historial = []
         for accion, vecino in resultados:
             # Construimos el objeto tal como lo pide tu React
-            lista_historial.append({
-                "id": accion.id,
-                "descripcion_accion": accion.descripcion, # Mapeamos descripcion -> descripcion_accion
-                "tipo_accion": accion.tipo_accion,
-                "fecha_accion": str(accion.fecha_accion),
-                "usuario": f"{vecino.nombres} {vecino.apellido_paterno}" # Nombre completo
-            })
+            lista_historial.append(
+                {
+                    "id": accion.id,
+                    "descripcion_accion": accion.descripcion,  # Mapeamos descripcion -> descripcion_accion
+                    "tipo_accion": accion.tipo_accion,
+                    "fecha_accion": str(accion.fecha_accion),
+                    "usuario": f"{vecino.nombres} {vecino.apellido_paterno}",  # Nombre completo
+                }
+            )
 
         return lista_historial
 
@@ -479,10 +513,41 @@ async def obtener_historial(
 
 @app.get("/lista-vecinos/")
 async def lista_vecinos(db: Session = Depends(get_db)):
+    """
+    Retorna la lista de todos los vecinos con fechas formateadas
+    """
     try:
-        vecinos = db.query(models.Vecino).order_by(models.Vecino.id).all()
-        print(f"Vecinos encontrados: {len(vecinos)}")
-        return {"vecinos": vecinos}
+        vecinos = db.query(models.Vecino).all()
+
+        def formatear_fecha(fecha_obj):
+            """Convierte datetime a string DD-MM-YYYY"""
+            if not fecha_obj:
+                return None
+            if isinstance(fecha_obj, str):
+                fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
+            return fecha_obj.strftime("%d-%m-%Y")
+
+        vecinos_formateados = [
+            {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+                "nombre_calle": vecino.nombre_calle,
+                "numero_casa": vecino.numero_casa,
+                "relacion_propiedad": vecino.relacion_propiedad,
+                "fecha_registro": formatear_fecha(vecino.fecha_registro),
+                "fecha_edicion": formatear_fecha(vecino.fecha_edicion),
+                "telefono": vecino.telefono,
+                "email": vecino.email,
+                "estado": vecino.estado,
+            }
+            for vecino in vecinos
+        ]
+
+        return {"vecinos": vecinos_formateados}
     except Exception as e:
         print(f"Error en lista_vecinos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -564,10 +629,10 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
 
         # --- LOG: REGISTRAR CREACIÓN ---
         registrar_accion(
-            db=db, 
-            usuario_id=nuevo_usuario.id, # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
-            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}", 
-            tipo="CREACION"
+            db=db,
+            usuario_id=nuevo_usuario.id,  # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
+            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}",
+            tipo="CREACION",
         )
         # ------------------------------
 
@@ -603,7 +668,7 @@ async def editar_vecino(
 ):
     try:
         print(f"\n--- INICIO EDICIÓN VECINO {vecino_id} ---")
-        
+
         # 1. Buscar el Vecino
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
@@ -613,22 +678,34 @@ async def editar_vecino(
 
         # 2. Buscar el Usuario asociado
         usuario_asociado = (
-            db.query(models.Usuario).filter(models.Usuario.vecino_id == vecino_id).first()
+            db.query(models.Usuario)
+            .filter(models.Usuario.vecino_id == vecino_id)
+            .first()
         )
 
         # 3. VERIFICACIÓN DE SEGURIDAD (Si viene currentPassword)
         if payload.currentPassword:
             if not usuario_asociado:
-                raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
-            
+                raise HTTPException(
+                    status_code=404, detail="Usuario asociado no encontrado"
+                )
+
             # Verificar si la contraseña actual es correcta
-            if not verify_password(payload.currentPassword, usuario_asociado.hashed_password):
-                raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+            if not verify_password(
+                payload.currentPassword, usuario_asociado.hashed_password
+            ):
+                raise HTTPException(
+                    status_code=400, detail="La contraseña actual es incorrecta"
+                )
 
             # 4. CAMBIO DE CONTRASEÑA
             if payload.newPassword:
-                print(f"Actualizando contraseña para usuario {usuario_asociado.username}")
-                usuario_asociado.hashed_password = get_password_hash(payload.newPassword)
+                print(
+                    f"Actualizando contraseña para usuario {usuario_asociado.username}"
+                )
+                usuario_asociado.hashed_password = get_password_hash(
+                    payload.newPassword
+                )
 
         # 5. Validaciones de duplicados
         existing_rut = (
@@ -684,16 +761,17 @@ async def editar_vecino(
         # --- LOG: REGISTRAR EDICIÓN ---
         # Como este endpoint es público (no usa current_user), registramos en nombre del usuario editado
         usuario_responsable = usuario_asociado.id if usuario_asociado else None
-        
+
         if usuario_responsable:
             detalles = "Actualización de datos"
-            if payload.newPassword: detalles += " y cambio de contraseña"
-            
+            if payload.newPassword:
+                detalles += " y cambio de contraseña"
+
             registrar_accion(
                 db=db,
                 usuario_id=usuario_responsable,
                 descripcion=detalles,
-                tipo="EDICION"
+                tipo="EDICION",
             )
         # -----------------------------
 
@@ -704,7 +782,7 @@ async def editar_vecino(
                 "nombres": vecino_existente.nombres,
                 "rut": vecino_existente.rut,
                 "email": vecino_existente.email,
-                "telefono": vecino_existente.telefono
+                "telefono": vecino_existente.telefono,
             },
         }
 
@@ -752,7 +830,7 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
                 db=db,
                 usuario_id=usuario.id,
                 descripcion=f"Vecino {estado_texto}",
-                tipo="ESTADO"
+                tipo="ESTADO",
             )
         # -----------------------------------
 
@@ -888,7 +966,7 @@ async def subir_documento(
             db=db,
             usuario_id=current_user["user_id"],
             descripcion=f"Subió documento: {file.filename}",
-            tipo="DOCUMENTO"
+            tipo="DOCUMENTO",
         )
         # ------------------------------
 
@@ -969,8 +1047,133 @@ async def eliminar_documento(
         db=db,
         usuario_id=current_user["user_id"],
         descripcion=f"Eliminó documento ID: {documento_id}",
-        tipo="ELIMINACION"
+        tipo="ELIMINACION",
     )
     # -----------------------------------
 
     return {"message": "Documento eliminado exitosamente"}
+
+
+@app.get("/api/documentos/vecino/{vecino_id}")
+async def obtener_documentos_vecino(
+    vecino_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene todos los documentos de un vecino específico.
+    Solo accesible para presidentes o el propio vecino.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER DOCUMENTOS - Vecino ID: {vecino_id}")
+        print(f"Usuario solicitante: {current_user}")
+        print(f"{'=' * 50}")
+
+        # Verificar permisos: solo presidente o el mismo vecino
+        if (
+            current_user["rol"] != "presidente"
+            and current_user.get("vecino_id") != vecino_id
+        ):
+            print(
+                f"ACCESO DENEGADO - Rol: {current_user['rol']}, Vecino ID solicitante: {current_user.get('vecino_id')}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para ver documentos de otros vecinos",
+            )
+
+        print(f"Permisos verificados OK - Rol: {current_user['rol']}")
+
+        # Verificar que el vecino existe
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        if not vecino:
+            print(f"ERROR: Vecino con ID {vecino_id} no encontrado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Vecino no encontrado"
+            )
+
+        print(f"Vecino encontrado: {vecino.nombres} {vecino.apellido_paterno}")
+
+        # Obtener documentos del vecino (solo activos)
+        documentos = (
+            db.query(models.Documento)
+            .filter(
+                models.Documento.vecino_id == vecino_id, models.Documento.estado == 1
+            )
+            .order_by(models.Documento.fecha_subida.desc())
+            .all()
+        )
+
+        print(f"Total documentos encontrados: {len(documentos)}")
+
+        # Función para formatear fechas
+        def formatear_fecha(fecha_obj):
+            if not fecha_obj:
+                return None
+            if isinstance(fecha_obj, str):
+                return fecha_obj
+            return fecha_obj.strftime("%d-%m-%Y %H:%M")
+
+        # Mapeo de tipos de documentos a nombres legibles
+        TIPOS_DOCUMENTO_LABELS = {
+            "cedula_identidad": "Cédula de Identidad",
+            "registro_social_hogares": "Registro Social de Hogares",
+            "avaluo_fiscal": "Avalúo Fiscal",
+            "boleta_agua": "Boleta de Agua",
+            "boleta_luz": "Boleta de Luz",
+            "escritura_casa": "Escritura de Casa",
+        }
+
+        # Construir respuesta
+        documentos_lista = []
+        for doc in documentos:
+            doc_data = {
+                "id": doc.id,
+                "vecino_id": doc.vecino_id,
+                "tipo_documento": TIPOS_DOCUMENTO_LABELS.get(
+                    doc.tipo_documento, doc.tipo_documento
+                ),
+                "tipo_documento_value": doc.tipo_documento,
+                "nombre_archivo": doc.nombre_archivo,
+                "descripcion": doc.descripcion if doc.descripcion else "",
+                "fecha_subida": formatear_fecha(doc.fecha_subida),
+                "ruta_archivo": doc.ruta_archivo,
+                "tipo_archivo": doc.tipo_archivo
+                if hasattr(doc, "tipo_archivo")
+                else None,
+                "tamanio": doc.tamanio if hasattr(doc, "tamanio") else None,
+            }
+            documentos_lista.append(doc_data)
+            print(f"  - Doc ID {doc.id}: {doc.tipo_documento} - {doc.nombre_archivo}")
+
+        respuesta = {
+            "success": True,
+            "vecino": {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+            },
+            "documentos": documentos_lista,
+            "total": len(documentos_lista),
+        }
+
+        print(f"Respuesta preparada - Total documentos: {len(documentos_lista)}")
+        print(f"{'=' * 50}\n")
+
+        return respuesta
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR INESPERADO: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener documentos: {str(e)}",
+        )

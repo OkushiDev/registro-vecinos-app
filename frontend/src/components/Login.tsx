@@ -27,22 +27,25 @@ import type { UserProfile } from "./Navbar";
 
 // --- UTILIDAD DE SEGURIDAD ---
 const getErrorMessage = (error: any): string => {
-    if (!error) return "Error desconocido";
+  if (!error) return "Error desconocido";
 
-    if (error.response && error.response.data) {
-        const data = error.response.data;
-        if (data.detail && Array.isArray(data.detail)) {
-            return `Datos inválidos: ${data.detail.map((e: any) => e.loc[1] || e.msg).join(", ")}`;
-        }
-        if (data.detail && typeof data.detail === 'string') {
-            return data.detail;
-        }
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+    if (data.detail && Array.isArray(data.detail)) {
+      return `Datos inválidos: ${data.detail
+        .map((e: any) => e.loc[1] || e.msg)
+        .join(", ")}`;
     }
-    if (error.response?.status === 401) return "RUT o contraseña incorrectos.";
-    if (error.response?.status === 403) return "Usuario deshabilitado o sin permisos.";
-    if (error.message) return error.message;
+    if (data.detail && typeof data.detail === "string") {
+      return data.detail;
+    }
+  }
+  if (error.response?.status === 401) return "RUT o contraseña incorrectos.";
+  if (error.response?.status === 403)
+    return "Usuario deshabilitado o sin permisos.";
+  if (error.message) return error.message;
 
-    return "Error de conexión. Intente nuevamente.";
+  return "Error de conexión. Intente nuevamente.";
 };
 
 interface LoginProps {
@@ -85,23 +88,34 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
 
       // 4. VERIFICACIÓN DEFENSIVA (Esto evita el crash si authService falla silenciosamente)
       if (!response) {
-         throw new Error("El servidor no devolvió respuesta (Posible error de conexión).");
+        throw new Error(
+          "El servidor no devolvió respuesta (Posible error de conexión)."
+        );
       }
       if (!response.access_token && !response.token && !response.rol) {
-         // Si llegamos aquí sin token ni rol, algo salió mal en el servicio pero no lanzó error
-         throw new Error("Credenciales inválidas.");
+        // Si llegamos aquí sin token ni rol, algo salió mal en el servicio pero no lanzó error
+        throw new Error("Credenciales inválidas.");
       }
 
       console.log("Login exitoso:", response);
 
       // 5. Guardar sesión
       localStorage.setItem("usuario", JSON.stringify(response));
+      localStorage.setItem("access_token", response.access_token); // <-- IMPORTANTE
+      localStorage.setItem("user_role", response.rol);
+      localStorage.setItem("user_id", response.user_id?.toString() || "");
+      localStorage.setItem("vecino_id", response.vecino_id?.toString() || "");
+
+      console.log(
+        "Token guardado en localStorage:",
+        localStorage.getItem("access_token")
+      );
 
       // 6. Redirigir
       const userRole = response.rol || response.role || "vecino";
-      const userProfile: UserProfile = userRole === "presidente" ? "presidente" : "vecino";
+      const userProfile: UserProfile =
+        userRole === "presidente" ? "presidente" : "vecino";
       onLogin(userProfile);
-
     } catch (err: any) {
       console.error("Error capturado en Login:", err);
       const msg = getErrorMessage(err);
@@ -113,7 +127,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
 
   // Manejador para detectar ENTER en los inputs
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleLoginClick();
     }
   };
@@ -139,9 +153,21 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
   };
 
   const features = [
-    { icon: <SettingsSuggest sx={{ color: "#90caf9" }} />, title: "Gestión eficiente", desc: "Trámites y solicitudes en línea." },
-    { icon: <Security sx={{ color: "#90caf9" }} />, title: "Seguridad", desc: "Acceso exclusivo para residentes verificados." },
-    { icon: <ThumbUpAlt sx={{ color: "#90caf9" }} />, title: "Comunidad", desc: "Mantente informado de las novedades." },
+    {
+      icon: <SettingsSuggest sx={{ color: "#90caf9" }} />,
+      title: "Gestión eficiente",
+      desc: "Trámites y solicitudes en línea.",
+    },
+    {
+      icon: <Security sx={{ color: "#90caf9" }} />,
+      title: "Seguridad",
+      desc: "Acceso exclusivo para residentes verificados.",
+    },
+    {
+      icon: <ThumbUpAlt sx={{ color: "#90caf9" }} />,
+      title: "Comunidad",
+      desc: "Mantente informado de las novedades.",
+    },
   ];
 
   return (
@@ -175,7 +201,8 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
           <Box
             sx={{
               flex: 1,
-              background: "linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%)",
               display: { xs: "none", md: "flex" },
               flexDirection: "column",
               justifyContent: "center",
@@ -193,11 +220,31 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
 
             <List disablePadding>
               {features.map((feature, index) => (
-                <ListItem key={index} sx={{ px: 0, py: 1.5, alignItems: "flex-start" }}>
-                  <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>{feature.icon}</ListItemIcon>
+                <ListItem
+                  key={index}
+                  sx={{ px: 0, py: 1.5, alignItems: "flex-start" }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
+                    {feature.icon}
+                  </ListItemIcon>
                   <ListItemText
-                    primary={<Typography variant="subtitle2" fontWeight="bold" color="white">{feature.title}</Typography>}
-                    secondary={<Typography variant="caption" color="rgba(255,255,255,0.6)">{feature.desc}</Typography>}
+                    primary={
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight="bold"
+                        color="white"
+                      >
+                        {feature.title}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography
+                        variant="caption"
+                        color="rgba(255,255,255,0.6)"
+                      >
+                        {feature.desc}
+                      </Typography>
+                    }
                   />
                 </ListItem>
               ))}
@@ -218,10 +265,18 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
             }}
           >
             <Box sx={{ width: "100%" }}>
-              <Typography component="h1" variant="h5" fontWeight="bold" sx={{ color: "white", mb: 1 }}>
+              <Typography
+                component="h1"
+                variant="h5"
+                fontWeight="bold"
+                sx={{ color: "white", mb: 1 }}
+              >
                 Iniciar Sesión
               </Typography>
-              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)", mb: 3 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: "rgba(255,255,255,0.6)", mb: 3 }}
+              >
                 Ingrese sus credenciales para acceder.
               </Typography>
 

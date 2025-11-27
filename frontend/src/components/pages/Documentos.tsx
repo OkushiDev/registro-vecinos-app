@@ -24,6 +24,10 @@ import InputLabel from "@mui/material/InputLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import api from "../../api";
 
+import IconButton from "@mui/material/IconButton";
+import DownloadIcon from "@mui/icons-material/Download";
+import Tooltip from "@mui/material/Tooltip";
+
 interface Vecino {
   id: number;
   nombres: string;
@@ -185,6 +189,65 @@ export default function Documentos() {
     } finally {
       setLoadingDocumentos(false);
       console.log(`${"=".repeat(50)}\n`);
+    }
+  };
+
+  const handleDescargarDocumento = async (
+    documentoId: number,
+    nombreArchivo: string
+  ) => {
+    console.log(`Descargando documento ID: ${documentoId}`);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("Sesión expirada. Por favor, inicia sesión nuevamente.");
+        return;
+      }
+
+      // Hacer petición para descargar
+      const response = await fetch(
+        `http://localhost:8000/api/documentos/descargar/${documentoId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          alert("No tienes permiso para descargar este documento");
+        } else if (response.status === 404) {
+          alert("Documento no encontrado");
+        } else {
+          alert("Error al descargar el documento");
+        }
+        return;
+      }
+
+      // Convertir respuesta a blob
+      const blob = await response.blob();
+
+      // Crear URL temporal para el blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Crear elemento <a> temporal para descargar
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`Documento ${nombreArchivo} descargado exitosamente`);
+    } catch (error) {
+      console.error("Error al descargar documento:", error);
+      alert("Error al descargar el documento");
     }
   };
 
@@ -533,12 +596,23 @@ export default function Documentos() {
                     >
                       Fecha Subida
                     </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        backgroundColor: "background.paper",
+                        color: "text.primary",
+                        fontWeight: "bold",
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                      }}
+                    >
+                      Acciones
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loadingDocumentos ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Box
                           sx={{
                             display: "flex",
@@ -552,7 +626,7 @@ export default function Documentos() {
                     </TableRow>
                   ) : documentos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography sx={{ py: 4, color: "text.secondary" }}>
                           No hay documentos registrados para este vecino
                         </Typography>
@@ -611,6 +685,33 @@ export default function Documentos() {
                           }}
                         >
                           {doc.fecha_subida}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            color: "text.primary",
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                          }}
+                        >
+                          <Tooltip title="Descargar documento">
+                            <IconButton
+                              color="primary"
+                              size="small"
+                              onClick={() =>
+                                handleDescargarDocumento(
+                                  doc.id,
+                                  doc.nombre_archivo
+                                )
+                              }
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                },
+                              }}
+                            >
+                              <DownloadIcon />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))

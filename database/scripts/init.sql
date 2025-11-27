@@ -123,7 +123,7 @@ INSERT INTO usuarios (vecino_id, username, hashed_password, rol) VALUES
 (33, '14456789-1', crypt('Flores1445', gen_salt('bf', 8)), 'vecino'),
 (34, '13345678-k', crypt('Lagos1334', gen_salt('bf', 8)), 'vecino'),
 (35, '14306046-2', crypt('Benavides1430', gen_salt('bf', 8)), 'presidente');
-(36, 'admintest', crypt('admintest', gen_salt('bf', 8)), 'presidente');
+(36, '21437513-3', crypt('Galaz2143', gen_salt('bf', 8)), 'presidente');
 
 
 

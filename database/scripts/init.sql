@@ -48,6 +48,18 @@ CREATE TABLE historial (
     fecha_accion TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE solicitudes (
+    id SERIAL PRIMARY KEY,
+    vecino_id INTEGER NOT NULL REFERENCES vecinos(id),
+    tipo_solicitud VARCHAR(100) NOT NULL DEFAULT 'certificado_residencia',
+    fecha_solicitud TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    estado VARCHAR(50) DEFAULT 'pendiente',
+    visibilidad VARCHAR(50) DEFAULT 'mostrar'
+);
+
+
+
+
 INSERT INTO vecinos (nombres, apellido_paterno, apellido_materno, rut, numero_socio, nombre_calle, numero_casa, relacion_propiedad, fecha_registro, fecha_edicion, telefono, email, estado) VALUES
 ('Marcela Julia', 'Bolados', ' ', '13532259-8', 1, 'Rio loco', '1628', 'Propietario', '2004-10-21', '2004-10-21', '987654321', 'marcela.bolados@gmail.com', 0),
 ('Juan Jose', 'Cornejo', 'O.', '13572049-6', 2, 'Rio loco', '1628', 'Arrendatario', '2004-10-21', '2004-10-21', '998765432', 'juan.cornejo@outlook.com', 0),

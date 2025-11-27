@@ -13,6 +13,8 @@ from pathlib import Path
 import uuid
 from app.api import certificados
 from datetime import datetime
+from fastapi.responses import FileResponse
+import os
 
 # --- NUEVO IMPORT PARA SERVIR ARCHIVOS ---
 from fastapi.staticfiles import StaticFiles
@@ -1185,4 +1187,79 @@ async def obtener_documentos_vecino(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener documentos: {str(e)}",
+        )
+
+
+@app.get("/api/documentos/descargar/{documento_id}")
+async def descargar_documento(
+    documento_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Descarga un documento específico.
+    Solo accesible para presidentes o el vecino dueño del documento.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"DESCARGAR DOCUMENTO - ID: {documento_id}")
+        print(f"Usuario solicitante: {current_user}")
+
+        # Buscar el documento
+        documento = (
+            db.query(models.Documento)
+            .filter(models.Documento.id == documento_id, models.Documento.estado == 1)
+            .first()
+        )
+
+        if not documento:
+            print(f"Documento {documento_id} no encontrado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Documento no encontrado"
+            )
+
+        # Verificar permisos: solo presidente o el dueño del documento
+        if (
+            current_user["rol"] != "presidente"
+            and current_user.get("vecino_id") != documento.vecino_id
+        ):
+            print(
+                f"Acceso denegado - Rol: {current_user['rol']}, Vecino solicitante: {current_user.get('vecino_id')}, Dueño: {documento.vecino_id}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para descargar este documento",
+            )
+
+        print(f"Permisos verificados OK")
+        print(f"Ruta del archivo: {documento.ruta_archivo}")
+
+        # Verificar que el archivo existe
+        if not os.path.exists(documento.ruta_archivo):
+            print(f"ERROR: Archivo no encontrado en {documento.ruta_archivo}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Archivo no encontrado en el servidor",
+            )
+
+        print(f"Archivo encontrado, iniciando descarga...")
+        print(f"{'=' * 50}\n")
+
+        # Retornar el archivo para descarga
+        return FileResponse(
+            path=documento.ruta_archivo,
+            filename=documento.nombre_archivo,
+            media_type="application/octet-stream",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al descargar documento: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al descargar documento: {str(e)}",
         )

@@ -16,21 +16,21 @@ import HomeIcon from "@mui/icons-material/Home";
 import PeopleIcon from "@mui/icons-material/People";
 import HistoryIcon from "@mui/icons-material/History";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import CertificateIcon from "@mui/icons-material/Assignment";
 import PersonIcon from "@mui/icons-material/Person";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
-// 1. IMPORTAMOS LOS ICONOS DE TEMA
-import Brightness4Icon from "@mui/icons-material/Brightness4"; // Luna
-import Brightness7Icon from "@mui/icons-material/Brightness7"; // Sol
+// IMPORTAR EL COMPONENTE DE NOTIFICACIONES
+import NotificationMenu from "./NotificationMenu";
 
 export type UserProfile = "presidente" | "vecino";
 
 interface NavbarProps {
   userProfile: UserProfile;
   onLogout: () => void;
-  // 2. AGREGAMOS LAS PROPS PARA EL TEMA
   isDarkMode: boolean;
   onToggleTheme: () => void;
+  onViewChange?: (view: string) => void; // AGREGAR ESTA PROP OPCIONAL
 }
 
 interface NavItem {
@@ -75,8 +75,9 @@ const settings = ["Cerrar Sesión"];
 export default function Navbar({
   userProfile,
   onLogout,
-  isDarkMode, // Recibimos prop
-  onToggleTheme, // Recibimos prop
+  isDarkMode,
+  onToggleTheme,
+  onViewChange, // RECIBIR LA PROP
 }: NavbarProps): React.ReactElement {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
     null
@@ -121,7 +122,6 @@ export default function Navbar({
     return userProfile === "presidente" ? "Panel Presidente" : "Panel Vecino";
   };
 
-  // Definimos colores dinámicos basados en el tema para el Navbar flotante
   const navBgColor = isDarkMode
     ? "rgba(3, 14, 29, 0.85)"
     : "rgba(255, 255, 255, 0.85)";
@@ -277,7 +277,12 @@ export default function Navbar({
               ))}
             </Box>
 
-            {/* === 3. BOTÓN DE CAMBIO DE TEMA === */}
+            {/* === BOTÓN DE NOTIFICACIONES (SOLO PRESIDENTE) === */}
+            {userProfile === "presidente" && (
+              <NotificationMenu onViewChange={onViewChange} />
+            )}
+
+            {/* BOTÓN DE CAMBIO DE TEMA */}
             <Tooltip
               title={
                 isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"

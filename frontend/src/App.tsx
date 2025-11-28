@@ -132,6 +132,8 @@ export default function App(): React.ReactElement {
                     element={<Documentos />}
                   />
                   <Route path="/presidente/historial" element={<Historial />} />
+                  <Route path="/presidente/subir-archivo" element={<SubirDocumento />} />
+                  <Route path="/presidente/antecedentes-vecino" element={<AntecedentesVecino />} />
                   <Route
                     path="*"
                     element={<Navigate to="/presidente/vecinos" replace />}

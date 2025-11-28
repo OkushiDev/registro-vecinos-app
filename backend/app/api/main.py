@@ -100,6 +100,8 @@ app.include_router(certificados.router, prefix="/api", tags=["certificados"])
 # ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
 # Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."
 # FastAPI busque el archivo en la carpeta física "uploads" y lo entregue.
+UPLOAD_DIR = "uploads"
+Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # =============================================================
 

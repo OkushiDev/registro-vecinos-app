@@ -386,7 +386,7 @@ async def login(
             db=db,
             usuario_id=usuario.id,
             descripcion="Inicio de sesión exitoso",
-            tipo="LOGIN",
+            tipo="Login",
         )
         # ---------------------------
 
@@ -481,6 +481,10 @@ async def hash_password(password: str):
 
 # ============ ENDPOINTS DE HISTORIAL ============
 
+class HistorialSchema(BaseModel):
+    usuario: str  # React envia esto, aunque usaremos el ID del token
+    tipo_accion: str
+    descripcion_accion: str
 
 @app.get("/historial/")
 async def obtener_historial(
@@ -518,6 +522,30 @@ async def obtener_historial(
         print(f"Error al obtener historial: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# 2. El Endpoint POST que te faltaba
+@app.post("/historial/", status_code=201)
+async def crear_registro_historial(
+    item: HistorialSchema,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user) # Obtenemos el usuario real del token
+):
+    """
+    Recibe la petición del Frontend y guarda el historial
+    vinculándolo al usuario autenticado.
+    """
+    try:
+        # Usamos tu función auxiliar 'registrar_accion' que ya tienes definida arriba
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"], # Usamos el ID real de la base de datos
+            descripcion=item.descripcion_accion,
+            tipo=item.tipo_accion
+        )
+        return {"message": "Historial registrado exitosamente"}
+        
+    except Exception as e:
+        print(f"Error al crear historial desde API: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============ ENDPOINTS DE CRUD ============
 
@@ -596,7 +624,11 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/agregar-vecino/")
-async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
+async def agregar_vecino(
+    vecino: VecinoCreate, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user) # <--- 1. AGREGADO: Obtenemos al Presidente logueado
+):
     try:
         # Verificar si el RUT ya existe
         existing_vecino = (
@@ -638,14 +670,15 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         # Crear usuario automáticamente
         nuevo_usuario = crear_usuario_para_vecino(db, nuevo_vecino)
 
-        # --- LOG: REGISTRAR CREACIÓN ---
+        # --- LOG: REGISTRAR CREACIÓN (CORREGIDO) ---
+        # Ahora usamos current_user["user_id"] (El Presidente) en vez de nuevo_usuario.id
         registrar_accion(
             db=db,
-            usuario_id=nuevo_usuario.id,  # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
-            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}",
-            tipo="CREACION",
+            usuario_id=current_user["user_id"], 
+            descripcion=f"Registró al nuevo vecino: {nuevo_vecino.nombres} {nuevo_vecino.apellido_paterno} (RUT: {nuevo_vecino.rut})",
+            tipo="Creacion",
         )
-        # ------------------------------
+        # ------------------------------------------
 
         return {
             "message": "Vecino y usuario registrados exitosamente",
@@ -769,7 +802,6 @@ async def editar_vecino(
         db.commit()
         db.refresh(vecino_existente)
 
-        # --- LOG: REGISTRAR EDICIÓN ---
         # Como este endpoint es público (no usa current_user), registramos en nombre del usuario editado
         usuario_responsable = usuario_asociado.id if usuario_asociado else None
 
@@ -808,7 +840,11 @@ async def editar_vecino(
 
 
 @app.patch("/cambiar-estado-vecino/{vecino_id}")
-async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
+async def cambiar_estado_vecino(
+    vecino_id: int, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user) # <--- 1. AGREGADO: Obtenemos al Presidente
+):
     try:
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
@@ -822,27 +858,27 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
         vecino_existente.estado = nuevo_estado
 
         # También cambiar el estado del usuario asociado
-        usuario = (
+        usuario_asociado = (
             db.query(models.Usuario)
             .filter(models.Usuario.vecino_id == vecino_id)
             .first()
         )
-        if usuario:
-            usuario.estado = nuevo_estado
+        if usuario_asociado:
+            usuario_asociado.estado = nuevo_estado
 
         db.commit()
         db.refresh(vecino_existente)
 
-        print(f"✅ Estado cambiado exitosamente a {estado_texto}")
+        print(f"Estado cambiado exitosamente a {estado_texto}")
 
-        # --- LOG: REGISTRAR CAMBIO ESTADO ---
-        if usuario:
-            registrar_accion(
-                db=db,
-                usuario_id=usuario.id,
-                descripcion=f"Vecino {estado_texto}",
-                tipo="ESTADO",
-            )
+        # Antes usábamos 'usuario_asociado.id' (el vecino afectado).
+        # Ahora usamos 'current_user["user_id"]' (El Presidente).
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"], 
+            descripcion=f"Cambió estado de {vecino_existente.nombres} {vecino_existente.apellido_paterno} a {estado_texto}",
+            tipo="Estado",
+        )
         # -----------------------------------
 
         return {

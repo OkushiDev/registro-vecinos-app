@@ -25,7 +25,7 @@ const CALLES = [
   "Lourdes",
   "Miguel Angel",
   "Rio Loco",
-  "Tizano",
+  "Tiziano",
 ];
 
 // Lista de relaciones con la propiedad

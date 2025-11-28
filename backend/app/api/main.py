@@ -1,3 +1,4 @@
+from jose.exceptions import JWTError
 from fastapi import FastAPI, HTTPException, Depends, status, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -12,14 +13,21 @@ from pathlib import Path
 import uuid
 from app.api import certificados
 from datetime import datetime
+from fastapi.responses import FileResponse
+import os
+
+# --- NUEVO IMPORT PARA SERVIR ARCHIVOS ---
+from fastapi.staticfiles import StaticFiles
 
 # Importar funciones de seguridad
 from app.core.security import (
     verify_password,
     get_password_hash,
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     decode_token,
+    SECRET_KEY,
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
 
@@ -89,6 +97,12 @@ app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 app.include_router(certificados.router, prefix="/api", tags=["certificados"])
 
+# ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
+# Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."
+# FastAPI busque el archivo en la carpeta física "uploads" y lo entregue.
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# =============================================================
+
 db_dependency = Annotated[Session, Depends(get_db)]
 
 # ============ CONFIGURACIÓN DE ARCHIVOS ============
@@ -138,6 +152,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 # ============ UTILIDADES Y LOGS ============
@@ -218,28 +233,57 @@ def crear_usuario_para_vecino(db: Session, vecino: models.Vecino) -> models.Usua
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    print(f"\n=== VALIDANDO TOKEN ===")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = decode_token(token)
-    if payload is None:
+    try:
+        # Usar decode_token de security.py
+        payload = decode_token(token)
+        print(f"Payload decodificado: {payload}")
+
+        if payload is None:
+            print("ERROR: payload es None - Token inválido")
+            raise credentials_exception
+
+        user_id: int = payload.get("sub")
+        rol: str = payload.get("rol")
+
+        print(f"User ID: {user_id}, Rol: {rol}")
+
+        if user_id is None or rol is None:
+            print("ERROR: user_id o rol es None")
+            raise credentials_exception
+
+        # Verificar que el usuario existe y está activo
+        usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+
+        if not usuario:
+            print(f"ERROR: Usuario {user_id} no encontrado")
+            raise credentials_exception
+
+        if usuario.estado != 1:
+            print(f"ERROR: Usuario {user_id} deshabilitado")
+            raise credentials_exception
+
+        print(f"Usuario validado: {usuario.username}, vecino_id: {usuario.vecino_id}")
+        print("=== FIN VALIDACIÓN ===\n")
+
+        return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
+
+    except JWTError as e:
+        print(f"ERROR JWT: {e}")
         raise credentials_exception
+    except Exception as e:
+        print(f"ERROR: {e}")
+        import traceback
 
-    user_id: int = payload.get("sub")
-    rol: str = payload.get("rol")
-
-    if user_id is None or rol is None:
+        traceback.print_exc()
         raise credentials_exception
-
-    # Verificar que el usuario existe y está activo
-    usuario = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
-    if not usuario or usuario.estado != 1:
-        raise credentials_exception
-
-    return {"user_id": user_id, "rol": rol, "vecino_id": usuario.vecino_id}
 
 
 @app.get("/")
@@ -343,7 +387,7 @@ async def login(
             db=db,
             usuario_id=usuario.id,
             descripcion="Inicio de sesión exitoso",
-            tipo="LOGIN",
+            tipo="Login",
         )
         # ---------------------------
 
@@ -439,6 +483,12 @@ async def hash_password(password: str):
 # ============ ENDPOINTS DE HISTORIAL ============
 
 
+class HistorialSchema(BaseModel):
+    usuario: str  # React envia esto, aunque usaremos el ID del token
+    tipo_accion: str
+    descripcion_accion: str
+
+
 @app.get("/historial/")
 async def obtener_historial(
     db: Session = Depends(get_db),
@@ -473,6 +523,34 @@ async def obtener_historial(
 
     except Exception as e:
         print(f"Error al obtener historial: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2. El Endpoint POST que te faltaba
+@app.post("/historial/", status_code=201)
+async def crear_registro_historial(
+    item: HistorialSchema,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        get_current_user
+    ),  # Obtenemos el usuario real del token
+):
+    """
+    Recibe la petición del Frontend y guarda el historial
+    vinculándolo al usuario autenticado.
+    """
+    try:
+        # Usamos tu función auxiliar 'registrar_accion' que ya tienes definida arriba
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],  # Usamos el ID real de la base de datos
+            descripcion=item.descripcion_accion,
+            tipo=item.tipo_accion,
+        )
+        return {"message": "Historial registrado exitosamente"}
+
+    except Exception as e:
+        print(f"Error al crear historial desde API: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -553,7 +631,13 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/agregar-vecino/")
-async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
+async def agregar_vecino(
+    vecino: VecinoCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        get_current_user
+    ),  # <--- 1. AGREGADO: Obtenemos al Presidente logueado
+):
     try:
         # Verificar si el RUT ya existe
         existing_vecino = (
@@ -595,14 +679,15 @@ async def agregar_vecino(vecino: VecinoCreate, db: Session = Depends(get_db)):
         # Crear usuario automáticamente
         nuevo_usuario = crear_usuario_para_vecino(db, nuevo_vecino)
 
-        # --- LOG: REGISTRAR CREACIÓN ---
+        # --- LOG: REGISTRAR CREACIÓN (CORREGIDO) ---
+        # Ahora usamos current_user["user_id"] (El Presidente) en vez de nuevo_usuario.id
         registrar_accion(
             db=db,
-            usuario_id=nuevo_usuario.id,  # Asignamos la acción al nuevo usuario o al admin si tuvieramos current_user
-            descripcion=f"Se registró como nuevo vecino: {nuevo_vecino.rut}",
-            tipo="CREACION",
+            usuario_id=current_user["user_id"],
+            descripcion=f"Registró al nuevo vecino: {nuevo_vecino.nombres} {nuevo_vecino.apellido_paterno} (RUT: {nuevo_vecino.rut})",
+            tipo="Creacion",
         )
-        # ------------------------------
+        # ------------------------------------------
 
         return {
             "message": "Vecino y usuario registrados exitosamente",
@@ -726,7 +811,6 @@ async def editar_vecino(
         db.commit()
         db.refresh(vecino_existente)
 
-        # --- LOG: REGISTRAR EDICIÓN ---
         # Como este endpoint es público (no usa current_user), registramos en nombre del usuario editado
         usuario_responsable = usuario_asociado.id if usuario_asociado else None
 
@@ -765,7 +849,13 @@ async def editar_vecino(
 
 
 @app.patch("/cambiar-estado-vecino/{vecino_id}")
-async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
+async def cambiar_estado_vecino(
+    vecino_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        get_current_user
+    ),  # <--- 1. AGREGADO: Obtenemos al Presidente
+):
     try:
         vecino_existente = (
             db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
@@ -779,27 +869,27 @@ async def cambiar_estado_vecino(vecino_id: int, db: Session = Depends(get_db)):
         vecino_existente.estado = nuevo_estado
 
         # También cambiar el estado del usuario asociado
-        usuario = (
+        usuario_asociado = (
             db.query(models.Usuario)
             .filter(models.Usuario.vecino_id == vecino_id)
             .first()
         )
-        if usuario:
-            usuario.estado = nuevo_estado
+        if usuario_asociado:
+            usuario_asociado.estado = nuevo_estado
 
         db.commit()
         db.refresh(vecino_existente)
 
-        print(f"✅ Estado cambiado exitosamente a {estado_texto}")
+        print(f"Estado cambiado exitosamente a {estado_texto}")
 
-        # --- LOG: REGISTRAR CAMBIO ESTADO ---
-        if usuario:
-            registrar_accion(
-                db=db,
-                usuario_id=usuario.id,
-                descripcion=f"Vecino {estado_texto}",
-                tipo="ESTADO",
-            )
+        # Antes usábamos 'usuario_asociado.id' (el vecino afectado).
+        # Ahora usamos 'current_user["user_id"]' (El Presidente).
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Cambió estado de {vecino_existente.nombres} {vecino_existente.apellido_paterno} a {estado_texto}",
+            tipo="Estado",
+        )
         # -----------------------------------
 
         return {
@@ -1020,3 +1110,546 @@ async def eliminar_documento(
     # -----------------------------------
 
     return {"message": "Documento eliminado exitosamente"}
+
+
+@app.get("/api/documentos/vecino/{vecino_id}")
+async def obtener_documentos_vecino(
+    vecino_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene todos los documentos de un vecino específico.
+    Solo accesible para presidentes o el propio vecino.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER DOCUMENTOS - Vecino ID: {vecino_id}")
+        print(f"Usuario solicitante: {current_user}")
+        print(f"{'=' * 50}")
+
+        # Verificar permisos: solo presidente o el mismo vecino
+        if (
+            current_user["rol"] != "presidente"
+            and current_user.get("vecino_id") != vecino_id
+        ):
+            print(
+                f"ACCESO DENEGADO - Rol: {current_user['rol']}, Vecino ID solicitante: {current_user.get('vecino_id')}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para ver documentos de otros vecinos",
+            )
+
+        print(f"Permisos verificados OK - Rol: {current_user['rol']}")
+
+        # Verificar que el vecino existe
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        if not vecino:
+            print(f"ERROR: Vecino con ID {vecino_id} no encontrado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Vecino no encontrado"
+            )
+
+        print(f"Vecino encontrado: {vecino.nombres} {vecino.apellido_paterno}")
+
+        # Obtener documentos del vecino (solo activos)
+        documentos = (
+            db.query(models.Documento)
+            .filter(
+                models.Documento.vecino_id == vecino_id, models.Documento.estado == 1
+            )
+            .order_by(models.Documento.fecha_subida.desc())
+            .all()
+        )
+
+        print(f"Total documentos encontrados: {len(documentos)}")
+
+        # Función para formatear fechas
+        def formatear_fecha(fecha_obj):
+            if not fecha_obj:
+                return None
+            if isinstance(fecha_obj, str):
+                return fecha_obj
+            return fecha_obj.strftime("%d-%m-%Y %H:%M")
+
+        # Mapeo de tipos de documentos a nombres legibles
+        TIPOS_DOCUMENTO_LABELS = {
+            "cedula_identidad": "Cédula de Identidad",
+            "registro_social_hogares": "Registro Social de Hogares",
+            "avaluo_fiscal": "Avalúo Fiscal",
+            "boleta_agua": "Boleta de Agua",
+            "boleta_luz": "Boleta de Luz",
+            "escritura_casa": "Escritura de Casa",
+        }
+
+        # Construir respuesta
+        documentos_lista = []
+        for doc in documentos:
+            doc_data = {
+                "id": doc.id,
+                "vecino_id": doc.vecino_id,
+                "tipo_documento": TIPOS_DOCUMENTO_LABELS.get(
+                    doc.tipo_documento, doc.tipo_documento
+                ),
+                "tipo_documento_value": doc.tipo_documento,
+                "nombre_archivo": doc.nombre_archivo,
+                "descripcion": doc.descripcion if doc.descripcion else "",
+                "fecha_subida": formatear_fecha(doc.fecha_subida),
+                "ruta_archivo": doc.ruta_archivo,
+                "tipo_archivo": doc.tipo_archivo
+                if hasattr(doc, "tipo_archivo")
+                else None,
+                "tamanio": doc.tamanio if hasattr(doc, "tamanio") else None,
+            }
+            documentos_lista.append(doc_data)
+            print(f"  - Doc ID {doc.id}: {doc.tipo_documento} - {doc.nombre_archivo}")
+
+        respuesta = {
+            "success": True,
+            "vecino": {
+                "id": vecino.id,
+                "nombres": vecino.nombres,
+                "apellido_paterno": vecino.apellido_paterno,
+                "apellido_materno": vecino.apellido_materno,
+                "rut": vecino.rut,
+                "numero_socio": vecino.numero_socio,
+            },
+            "documentos": documentos_lista,
+            "total": len(documentos_lista),
+        }
+
+        print(f"Respuesta preparada - Total documentos: {len(documentos_lista)}")
+        print(f"{'=' * 50}\n")
+
+        return respuesta
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR INESPERADO: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener documentos: {str(e)}",
+        )
+
+
+@app.get("/api/documentos/descargar/{documento_id}")
+async def descargar_documento(
+    documento_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Descarga un documento específico.
+    Solo accesible para presidentes o el vecino dueño del documento.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"DESCARGAR DOCUMENTO - ID: {documento_id}")
+        print(f"Usuario solicitante: {current_user}")
+
+        # Buscar el documento
+        documento = (
+            db.query(models.Documento)
+            .filter(models.Documento.id == documento_id, models.Documento.estado == 1)
+            .first()
+        )
+
+        if not documento:
+            print(f"Documento {documento_id} no encontrado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Documento no encontrado"
+            )
+
+        # Verificar permisos: solo presidente o el dueño del documento
+        if (
+            current_user["rol"] != "presidente"
+            and current_user.get("vecino_id") != documento.vecino_id
+        ):
+            print(
+                f"Acceso denegado - Rol: {current_user['rol']}, Vecino solicitante: {current_user.get('vecino_id')}, Dueño: {documento.vecino_id}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para descargar este documento",
+            )
+
+        print(f"Permisos verificados OK")
+        print(f"Ruta del archivo: {documento.ruta_archivo}")
+
+        # Verificar que el archivo existe
+        if not os.path.exists(documento.ruta_archivo):
+            print(f"ERROR: Archivo no encontrado en {documento.ruta_archivo}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Archivo no encontrado en el servidor",
+            )
+
+        print(f"Archivo encontrado, iniciando descarga...")
+        print(f"{'=' * 50}\n")
+
+        # Retornar el archivo para descarga
+        return FileResponse(
+            path=documento.ruta_archivo,
+            filename=documento.nombre_archivo,
+            media_type="application/octet-stream",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al descargar documento: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al descargar documento: {str(e)}",
+        )
+
+
+# ============ ENDPOINTS DE SOLICITUDES ============
+
+
+@app.post("/api/solicitudes/crear")
+async def crear_solicitud(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Crea una nueva solicitud de certificado de residencia.
+    Solo vecinos pueden crear solicitudes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"CREAR SOLICITUD")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea un vecino
+        if current_user["rol"] != "vecino":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo vecinos pueden solicitar certificados",
+            )
+
+        vecino_id = current_user["vecino_id"]
+
+        # Verificar que no tenga una solicitud pendiente
+        solicitud_existente = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.vecino_id == vecino_id,
+                models.Solicitud.estado == "pendiente",
+            )
+            .first()
+        )
+
+        if solicitud_existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ya tienes una solicitud pendiente. Espera a que sea procesada.",
+            )
+
+        # Crear nueva solicitud
+        nueva_solicitud = models.Solicitud(
+            vecino_id=vecino_id,
+            tipo_solicitud="certificado_residencia",
+            estado="pendiente",
+            visibilidad="mostrar",
+        )
+
+        db.add(nueva_solicitud)
+        db.commit()
+        db.refresh(nueva_solicitud)
+
+        # Obtener datos del vecino para la respuesta
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+
+        print(f"Solicitud creada exitosamente:")
+        print(f"  - ID: {nueva_solicitud.id}")
+        print(f"  - Vecino: {vecino.nombres} {vecino.apellido_paterno}")
+        print(f"  - RUT: {vecino.rut}")
+        print(f"  - Fecha: {nueva_solicitud.fecha_solicitud}")
+        print(f"{'=' * 50}\n")
+
+        # Registrar en historial
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Solicitó certificado de residencia",
+            tipo="SOLICITUD",
+        )
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud creada exitosamente. El presidente será notificado.",
+            "solicitud": {
+                "id": nueva_solicitud.id,
+                "tipo_solicitud": nueva_solicitud.tipo_solicitud,
+                "estado": nueva_solicitud.estado,
+                "fecha_solicitud": nueva_solicitud.fecha_solicitud.isoformat(),
+                "vecino": {
+                    "rut": vecino.rut,
+                    "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno}",
+                },
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al crear solicitud: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear solicitud: {str(e)}",
+        )
+
+
+@app.get("/api/solicitudes/notificaciones")
+async def obtener_notificaciones(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene todas las solicitudes visibles para notificaciones del presidente.
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER NOTIFICACIONES")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ver notificaciones",
+            )
+
+        # Obtener solicitudes visibles, ordenadas por fecha (más recientes primero)
+        solicitudes = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.visibilidad == "mostrar")
+            .order_by(models.Solicitud.fecha_solicitud.desc())
+            .all()
+        )
+
+        print(f"Total solicitudes visibles: {len(solicitudes)}")
+
+        # Formatear respuesta con datos completos del vecino
+        notificaciones = []
+        for sol in solicitudes:
+            vecino = sol.vecino
+
+            notificacion = {
+                "id": sol.id,
+                "tipo_solicitud": sol.tipo_solicitud,
+                "rut": vecino.rut,
+                "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
+                "fecha_solicitud": sol.fecha_solicitud.isoformat(),
+                "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
+                    "%d-%m-%Y %H:%M"
+                ),
+                "estado": sol.estado,
+                "visibilidad": sol.visibilidad,
+                "vecino_id": vecino.id,
+                "numero_socio": vecino.numero_socio,
+            }
+
+            notificaciones.append(notificacion)
+            print(
+                f"  - Solicitud {sol.id}: {vecino.nombres} {vecino.apellido_paterno} - {sol.estado}"
+            )
+
+        # Contar pendientes
+        pendientes = sum(1 for n in notificaciones if n["estado"] == "pendiente")
+
+        print(f"Pendientes: {pendientes}/{len(notificaciones)}")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "total": len(notificaciones),
+            "pendientes": pendientes,
+            "notificaciones": notificaciones,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al obtener notificaciones: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener notificaciones: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/marcar-realizada")
+async def marcar_solicitud_realizada(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Marca una solicitud como 'realizado'.
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"MARCAR SOLICITUD COMO REALIZADA - ID: {solicitud_id}")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden marcar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Solicitud no encontrada"
+            )
+
+        # Cambiar estado
+        solicitud.estado = "realizado"
+        db.commit()
+        db.refresh(solicitud)
+
+        vecino = solicitud.vecino
+
+        print(f"Solicitud marcada como realizada:")
+        print(f"  - Vecino: {vecino.nombres} {vecino.apellido_paterno}")
+        print(f"  - Nuevo estado: {solicitud.estado}")
+        print(f"{'=' * 50}\n")
+
+        # Registrar en historial
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Marcó solicitud #{solicitud_id} como realizada (Vecino: {vecino.rut})",
+            tipo="SOLICITUD",
+        )
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud marcada como realizada",
+            "solicitud": {
+                "id": solicitud.id,
+                "estado": solicitud.estado,
+                "vecino": f"{vecino.nombres} {vecino.apellido_paterno}",
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al marcar solicitud: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al marcar solicitud: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/ocultar")
+async def ocultar_solicitud(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Oculta una solicitud de las notificaciones (cambia visibilidad a 'no_mostrar').
+    Solo accesible para presidentes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OCULTAR SOLICITUD - ID: {solicitud_id}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ocultar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Solicitud no encontrada"
+            )
+
+        # Cambiar visibilidad
+        solicitud.visibilidad = "no_mostrar"
+        db.commit()
+
+        print(f"Solicitud ocultada exitosamente")
+        print(f"{'=' * 50}\n")
+
+        return {"success": True, "mensaje": "Solicitud ocultada de las notificaciones"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al ocultar solicitud: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al ocultar solicitud: {str(e)}",
+        )
+
+
+@app.get("/api/solicitudes/contador-pendientes")
+async def contador_solicitudes_pendientes(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna solo el número de solicitudes pendientes y visibles.
+    Útil para el badge de notificaciones en el menú.
+    Solo accesible para presidentes.
+    """
+    try:
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            return {"pendientes": 0}
+
+        # Contar solicitudes pendientes y visibles
+        contador = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.estado == "pendiente",
+                models.Solicitud.visibilidad == "mostrar",
+            )
+            .count()
+        )
+
+        return {"success": True, "pendientes": contador}
+
+    except Exception as e:
+        print(f"ERROR al contar pendientes: {e}")
+        return {"pendientes": 0}

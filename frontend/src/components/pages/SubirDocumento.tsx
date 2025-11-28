@@ -213,7 +213,7 @@ const SubirDocumento: React.FC = () => {
 
         {/* Nombre del archivo seleccionado */}
         {selectedFile && (
-          <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+          <Box sx={{ mb: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
             <Typography variant="body2" sx={{ display: "flex", alignItems: "center" }}>
               {isPDF ? (
                 <PictureAsPdfIcon sx={{ mr: 1, color: "error.main" }} />

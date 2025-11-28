@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useTheme } from "@mui/material/styles"; // <--- IMPORTANTE: Hook para usar el tema
+import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -8,6 +8,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
+import TableSortLabel from "@mui/material/TableSortLabel"; // Importación para ordenar
+import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
 
 // Importación de XLSX
 import * as XLSX from "xlsx";
@@ -139,10 +141,13 @@ const RELACIONES_PROPIEDAD = [
 ];
 
 export default function ListaVecinos() {
-  const theme = useTheme(); // <--- ACCEDEMOS AL TEMA ACTUAL (Light/Dark)
+  const theme = useTheme();
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
+
+  // === ESTADO PARA EL ORDEN (ASC/DESC) ===
+  const [order, setOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -199,6 +204,7 @@ export default function ListaVecinos() {
     setPage(0);
   };
 
+  // === FILTRADO ===
   const filteredRows = React.useMemo(() => {
     let filtered = items;
     if (searchTerm) {
@@ -240,6 +246,25 @@ export default function ListaVecinos() {
     estadoFiltro,
   ]);
 
+  // === ORDENAMIENTO (ID) ===
+  const handleRequestSort = () => {
+    setOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+  };
+
+  const sortedRows = React.useMemo(() => {
+    const sorted = [...filteredRows];
+    
+    sorted.sort((a, b) => {
+      if (order === 'asc') {
+        return a.id - b.id; // Menor a Mayor
+      } else {
+        return b.id - a.id; // Mayor a Menor
+      }
+    });
+    
+    return sorted;
+  }, [filteredRows, order]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setPage(0);
@@ -252,7 +277,8 @@ export default function ListaVecinos() {
 
   // === EXPORTAR A EXCEL ===
   const handleExportToExcel = () => {
-    const dataToExport = filteredRows.map((row) => ({
+    // Usamos sortedRows para exportar respetando el orden visual
+    const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
       Nombres: row.nombres,
       "Apellido Paterno": row.apellido_paterno,
@@ -275,13 +301,11 @@ export default function ListaVecinos() {
     XLSX.writeFile(workbook, `Reporte_Vecinos_${date}.xlsx`);
   };
 
-  // === ESTILOS DINÁMICOS BASADOS EN EL TEMA ===
-  // Movemos los estilos aquí dentro para usar 'theme'
   const commonFilterStyle = {
-    backgroundColor: "background.paper", // Automático: #1e293b (Dark) o #fff (Light)
+    backgroundColor: "background.paper",
     color: "text.primary",
     borderRadius: "4px",
-    border: `1px solid ${theme.palette.divider}`, // Borde sutil automático
+    border: `1px solid ${theme.palette.divider}`,
     "&:hover": {
       backgroundColor:
         theme.palette.mode === "dark"
@@ -292,12 +316,11 @@ export default function ListaVecinos() {
     minHeight: "56px",
     display: "flex",
     alignItems: "center",
-    // Fix para iconos en modo claro/oscuro
     "& .MuiSelect-icon, & .MuiAccordionSummary-expandIconWrapper .MuiSvgIcon-root":
       {
         color: "text.primary",
       },
-    "&:before": { display: "none" }, // Quitar linea de accordion
+    "&:before": { display: "none" },
   };
 
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -375,11 +398,14 @@ export default function ListaVecinos() {
     setVecinoToToggle(null);
   };
 
+  // === DESCARGA CERTIFICADO (Con registro en historial) ===
   const handleDescargarCertificado = async (
     vecinoId: number,
-    rutVecino: string
+    rutVecino: string,
+    nombreVecino: string 
   ) => {
     try {
+      // 1. Descarga del PDF
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
@@ -395,6 +421,19 @@ export default function ListaVecinos() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      // 2. Registro en el Historial
+      try {
+        await api.post("/historial/", {
+          usuario: "Presidente", 
+          tipo_accion: "Generar Certificado",
+          descripcion_accion: `Se generó certificado de residencia a ${nombreVecino} (RUT: ${rutVecino})`,
+        });
+        console.log("Historial actualizado correctamente.");
+      } catch (historialError) {
+        console.error("Error al registrar en historial:", historialError);
+      }
+
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
       alert(error.response?.data?.detail || "Error al generar el certificado");
@@ -409,12 +448,11 @@ export default function ListaVecinos() {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        // Aquí usamos las variables del sistema en lugar de colores fijos
         backgroundColor: "background.default",
         color: "text.primary",
         borderRadius: 0,
         backgroundImage: "none",
-        transition: "background-color 0.3s ease", // Suavizar transición
+        transition: "background-color 0.3s ease",
       }}
       elevation={0}
     >
@@ -548,7 +586,7 @@ export default function ListaVecinos() {
                   top: "100%",
                   left: 0,
                   width: "100%",
-                  backgroundColor: "background.paper", // Dinámico
+                  backgroundColor: "background.paper",
                   color: "text.primary",
                   maxHeight: "300px",
                   overflowY: "auto",
@@ -647,7 +685,7 @@ export default function ListaVecinos() {
               sx={{
                 height: "56px",
                 background: "linear-gradient(to right, #059669, #10b981)",
-                color: "white", // Mantener texto blanco para contraste con el verde
+                color: "white",
                 fontWeight: "bold",
                 boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
                 "&:hover": {
@@ -719,14 +757,30 @@ export default function ListaVecinos() {
                     fontWeight: "bold",
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
+                  // === AGREGADO: Dirección del orden solo en ID ===
+                  sortDirection={column.id === 'id' ? order : false}
                 >
-                  {column.label}
+                   {/* === AGREGADO: Lógica del botón de orden solo en ID === */}
+                   {column.id === 'id' ? (
+                    <TableSortLabel
+                      active={true}
+                      direction={order}
+                      onClick={handleRequestSort}
+                    >
+                      {column.label}
+                      <Box component="span" sx={visuallyHidden}>
+                        {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                      </Box>
+                    </TableSortLabel>
+                  ) : (
+                    column.label
+                  )}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredRows
+            {sortedRows // <--- USAMOS sortedRows AQUÍ
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row, index) => {
                 return (
@@ -787,7 +841,11 @@ export default function ListaVecinos() {
                           >
                             <IconButton
                               onClick={() =>
-                                handleDescargarCertificado(row.id, row.rut)
+                                handleDescargarCertificado(
+                                  row.id,
+                                  row.rut,
+                                  `${row.nombres} ${row.apellido_paterno}`
+                                )
                               }
                               size="small"
                               title="Generar certificado de residencia"

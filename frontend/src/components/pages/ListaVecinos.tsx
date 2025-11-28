@@ -147,7 +147,7 @@ export default function ListaVecinos() {
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
   // === ESTADO PARA EL ORDEN (ASC/DESC) ===
-  const [order, setOrder] = React.useState<'asc' | 'desc'>('asc');
+  const [order, setOrder] = React.useState<"asc" | "desc">("asc");
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -248,20 +248,20 @@ export default function ListaVecinos() {
 
   // === ORDENAMIENTO (ID) ===
   const handleRequestSort = () => {
-    setOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+    setOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"));
   };
 
   const sortedRows = React.useMemo(() => {
     const sorted = [...filteredRows];
-    
+
     sorted.sort((a, b) => {
-      if (order === 'asc') {
+      if (order === "asc") {
         return a.id - b.id; // Menor a Mayor
       } else {
         return b.id - a.id; // Mayor a Menor
       }
     });
-    
+
     return sorted;
   }, [filteredRows, order]);
 
@@ -402,38 +402,50 @@ export default function ListaVecinos() {
   const handleDescargarCertificado = async (
     vecinoId: number,
     rutVecino: string,
-    nombreVecino: string 
+    nombreVecino: string
   ) => {
     try {
-      // 1. Descarga del PDF
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
 
+      // Extraer el nombre del archivo del header Content-Disposition
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "Certificado_Residencia.pdf"; // Nombre por defecto
+
+      console.log("Headers completos:", response.headers); // Debug
+      console.log("Content-Disposition:", contentDisposition); // Debug
+
+      if (contentDisposition) {
+        // Buscar filename="nombre.pdf" o filename=nombre.pdf
+        const matches = contentDisposition.match(
+          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
+        );
+        if (matches && matches[1]) {
+          fileName = matches[1].trim();
+          console.log("Nombre extraído:", fileName); // Debug
+        }
+      }
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `Certificado_Residencia_${rutVecino.replace(/-/g, "_")}.pdf`
-      );
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      // 2. Registro en el Historial
+      // Registro en el Historial
       try {
         await api.post("/historial/", {
-          usuario: "Presidente", 
+          usuario: "Presidente",
           tipo_accion: "Generar Certificado",
           descripcion_accion: `Se generó certificado de residencia a ${nombreVecino} (RUT: ${rutVecino})`,
         });
-        console.log("Historial actualizado correctamente.");
       } catch (historialError) {
         console.error("Error al registrar en historial:", historialError);
       }
-
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
       alert(error.response?.data?.detail || "Error al generar el certificado");
@@ -758,10 +770,10 @@ export default function ListaVecinos() {
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
                   // === AGREGADO: Dirección del orden solo en ID ===
-                  sortDirection={column.id === 'id' ? order : false}
+                  sortDirection={column.id === "id" ? order : false}
                 >
-                   {/* === AGREGADO: Lógica del botón de orden solo en ID === */}
-                   {column.id === 'id' ? (
+                  {/* === AGREGADO: Lógica del botón de orden solo en ID === */}
+                  {column.id === "id" ? (
                     <TableSortLabel
                       active={true}
                       direction={order}
@@ -769,7 +781,9 @@ export default function ListaVecinos() {
                     >
                       {column.label}
                       <Box component="span" sx={visuallyHidden}>
-                        {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                        {order === "desc"
+                          ? "sorted descending"
+                          : "sorted ascending"}
                       </Box>
                     </TableSortLabel>
                   ) : (

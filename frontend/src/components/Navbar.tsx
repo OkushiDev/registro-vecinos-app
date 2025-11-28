@@ -55,6 +55,16 @@ const presidentePages: NavItem[] = [
     path: "/presidente/historial",
     icon: <HistoryIcon fontSize="small" />,
   },
+  {
+    label: "Antecedentes",
+    path: "/presidente/antecedentes-vecino",
+    icon: <PersonIcon fontSize="small" />,
+  },
+  {
+    label: "Subir Archivo",
+    path: "/presidente/subir-archivo",
+    icon: <UploadFileIcon fontSize="small" />,
+  },
 ];
 
 const vecinoPages: NavItem[] = [

@@ -8,7 +8,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from PyPDF2 import PdfReader, PdfWriter
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 router = APIRouter()
@@ -53,11 +53,19 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     domicilio = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
     numero_socio = vecino.numero_socio
 
-    # Fecha SEPARADA: día, mes, año (2 dígitos)
-    fecha_actual = datetime.now()
-    dia = str(fecha_actual.day)
-    mes_nombre = MESES[fecha_actual.month]
-    anio_corto = str(fecha_actual.year)[-2:]
+    # Fecha actual (creación del certificado)
+    fecha_creacion = datetime.now()
+
+    # === FECHA DE CREACIÓN (SEPARADA) ===
+    dia_creacion = str(fecha_creacion.day)
+    mes_creacion = MESES[fecha_creacion.month]
+    anio_creacion_corto = str(fecha_creacion.year)[-2:]
+
+    # === FECHA DE VIGENCIA (30 días después) ===
+    fecha_vigencia = fecha_creacion + timedelta(days=30)
+    dia_vigencia = str(fecha_vigencia.day)
+    mes_vigencia = MESES[fecha_vigencia.month]
+    anio_vigencia_corto = str(fecha_vigencia.year)[-2:]
 
     # === CREAR CAPA DE TEXTO ===
     packet = BytesIO()
@@ -83,15 +91,24 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     # NÚMERO DE SOCIO
     can.drawString(9 * cm, 16.5 * cm, str(numero_socio))
 
-    # FECHA - DÍA
-    can.drawString(7 * cm, 12.2 * cm, dia)
+    # === FECHA DE CREACIÓN ===
+    # DÍA
+    can.drawString(7 * cm, 12.2 * cm, dia_creacion)
+    # MES
+    can.drawString(9 * cm, 12.2 * cm, mes_creacion)
+    # AÑO (2 dígitos)
+    can.drawString(14.1 * cm, 12.2 * cm, anio_creacion_corto)
 
-    # FECHA - MES
-    can.drawString(9 * cm, 12.2 * cm, mes_nombre)
+    # === FECHA DE VIGENCIA (30 días después) ===
+    # Ajusta estas coordenadas según donde quieras que aparezca en tu plantilla
+    # Por ejemplo, debajo de la fecha de creación:
 
-    # FECHA - AÑO (2 dígitos)
-    can.drawString(14.1 * cm, 12.2 * cm, anio_corto)
-
+    # DÍA VIGENCIA
+    can.drawString(4.5 * cm, 1.9 * cm, dia_vigencia)
+    # MES VIGENCIA
+    can.drawString(7.4 * cm, 1.9 * cm, mes_vigencia)
+    # AÑO VIGENCIA (2 dígitos)
+    can.drawString(11.55 * cm, 1.9 * cm, anio_vigencia_corto)
     can.save()
 
     # === COMBINAR PDF PLANTILLA CON DATOS ===
@@ -149,11 +166,26 @@ async def generar_certificado(vecino_id: int, db: Session = Depends(get_db)):
     # Generar el PDF
     pdf_buffer = generar_certificado_pdf(vecino)
 
-    # Nombre del archivo
-    nombre_archivo = f"Certificado_Residencia_{vecino.rut.replace('-', '_')}.pdf"
+    # === FORMATEAR NOMBRE DEL ARCHIVO ===
+    # Obtener fecha actual para el nombre del archivo
+    fecha_actual = datetime.now()
+
+    # Formato: DDMMAA (01 enero 2025 = 010125)
+    fecha_formateada = fecha_actual.strftime("%d%m%y")
+
+    # Limpiar el RUT (quitar puntos y guión)
+    rut_limpio = vecino.rut.replace(".", "").replace("-", "")
+
+    # Nombre del archivo: Certificado_Residencia_12345678_010125.pdf
+    nombre_archivo = f"C_Residencia_{rut_limpio}_{fecha_formateada}.pdf"
+
+    print(f"  Nombre archivo: {nombre_archivo}")
+    print(
+        f"  Fecha vigencia: {(fecha_actual + timedelta(days=30)).strftime('%d-%m-%Y')}"
+    )
 
     return StreamingResponse(
         pdf_buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"},
+        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo}"'},
     )

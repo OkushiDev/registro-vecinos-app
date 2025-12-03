@@ -19,6 +19,10 @@ import os
 # --- NUEVO IMPORT PARA SERVIR ARCHIVOS ---
 from fastapi.staticfiles import StaticFiles
 
+
+from app.services.chatbot_service import chatbot_service
+from pydantic import BaseModel
+
 # Importar funciones de seguridad
 from app.core.security import (
     verify_password,
@@ -91,6 +95,17 @@ class TokenData(BaseModel):
 class UserLogin(BaseModel):
     usuario: str
     password: str
+
+
+# ============ MODELOS PARA CHATBOT ============
+class ChatMessage(BaseModel):
+    mensaje: str
+
+
+class ChatResponse(BaseModel):
+    respuesta: str
+    intent: str
+    confianza: float
 
 
 app = FastAPI()
@@ -1655,3 +1670,62 @@ async def contador_solicitudes_pendientes(
     except Exception as e:
         print(f"ERROR al contar pendientes: {e}")
         return {"pendientes": 0}
+
+
+# ============ ENDPOINTS DE CHATBOT ============
+
+
+@app.post("/api/chatbot/mensaje", response_model=ChatResponse)
+async def procesar_mensaje_chatbot(
+    mensaje: ChatMessage,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Procesa un mensaje del chatbot y retorna la respuesta.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"CHATBOT - Usuario: {current_user['user_id']}")
+        print(f"Mensaje: {mensaje.mensaje}")
+
+        # Obtener respuesta del chatbot
+        resultado = chatbot_service.obtener_respuesta(mensaje.mensaje)
+
+        print(f"Intent detectado: {resultado['intent']} ({resultado['confianza']:.2%})")
+        print(f"Respuesta: {resultado['respuesta']}")
+        print(f"{'=' * 50}\n")
+
+        # Registrar interacción en historial
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Consultó al chatbot: '{mensaje.mensaje[:50]}...'",
+            tipo="CHATBOT",
+        )
+
+        return ChatResponse(**resultado)
+
+    except Exception as e:
+        print(f"ERROR en chatbot: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al procesar mensaje: {str(e)}",
+        )
+
+
+@app.get("/api/chatbot/estado")
+async def estado_chatbot():
+    """
+    Verifica si el modelo del chatbot está cargado y funcionando.
+    """
+    modelo_cargado = chatbot_service.model is not None
+
+    return {
+        "modelo_cargado": modelo_cargado,
+        "dispositivo": str(chatbot_service.device),
+        "intents_disponibles": list(chatbot_service.intents.values()),
+    }

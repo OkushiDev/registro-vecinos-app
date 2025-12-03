@@ -1,1 +1,41 @@
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Modelos de ML (IMPORTANTE)
+backend/app/ml_models/
+*.bin
+*.pth
+*.onnx
+*.h5
+*.pkl
+
+# Node
+node_modules/
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads
+backend/uploads/
+
+# Logs
+*.log

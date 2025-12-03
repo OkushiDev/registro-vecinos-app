@@ -16,6 +16,8 @@ import "./services/axiosConfig"; // Importar configuración de axios
 import SubirDocumento from "./components/pages/SubirDocumento.tsx";
 import "./services/axiosConfig";
 
+import Chatbot from "./components/Chatbot";
+
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -132,8 +134,14 @@ export default function App(): React.ReactElement {
                     element={<Documentos />}
                   />
                   <Route path="/presidente/historial" element={<Historial />} />
-                  <Route path="/presidente/subir-archivo" element={<SubirDocumento />} />
-                  <Route path="/presidente/antecedentes-vecino" element={<AntecedentesVecino />} />
+                  <Route
+                    path="/presidente/subir-archivo"
+                    element={<SubirDocumento />}
+                  />
+                  <Route
+                    path="/presidente/antecedentes-vecino"
+                    element={<AntecedentesVecino />}
+                  />
                   <Route
                     path="*"
                     element={<Navigate to="/presidente/vecinos" replace />}
@@ -164,6 +172,9 @@ export default function App(): React.ReactElement {
                 </>
               )}
             </Routes>
+
+            {/* Chatbot flotante - disponible en todas las páginas */}
+            <Chatbot />
           </>
         )}
       </BrowserRouter>

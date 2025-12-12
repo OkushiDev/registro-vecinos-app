@@ -26,6 +26,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
 import IconButton from "@mui/material/IconButton";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import BlockIcon from "@mui/icons-material/Block";
 import Chip from "@mui/material/Chip";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -61,7 +62,7 @@ const columns: readonly Column[] = [
   },
   { id: "estado", label: "Estado", minWidth: 110, align: "center" },
   { id: "visibilidad", label: "Visibilidad", minWidth: 120, align: "center" },
-  { id: "acciones", label: "Acción", minWidth: 100, align: "center" },
+  { id: "acciones", label: "Acciones", minWidth: 100, align: "center" },
 ];
 
 interface Data {
@@ -151,51 +152,93 @@ export default function ListaSolicitudes() {
   };
 
   // Generar certificado
-  const handleGenerarCertificado = async (vecinoId: number) => {
+  const handleGenerarCertificado = async (
+    vecinoId: number,
+    solicitudId: number,
+    nombreVecino: string
+  ) => {
+    // 1. CONFIRMACIÓN
+    if (
+      !confirm(
+        `¿Generar certificado de residencia para ${nombreVecino}?\n\nEsto marcará automáticamente la solicitud como realizada.`
+      )
+    ) {
+      return;
+    }
+
     try {
+      // 2. GENERAR CERTIFICADO
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
 
-      // Extraer el nombre del archivo del header Content-Disposition
+      // 3. EXTRAER NOMBRE DEL ARCHIVO
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = "Certificado_Residencia.pdf"; // Nombre por defecto
-
-      console.log("Headers completos:", response.headers); // Debug
-      console.log("Content-Disposition:", contentDisposition); // Debug
+      let fileName = "Certificado_Residencia.pdf";
 
       if (contentDisposition) {
-        // Buscar filename="nombre.pdf" o filename=nombre.pdf
         const matches = contentDisposition.match(
           /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
         );
         if (matches && matches[1]) {
           fileName = matches[1].trim();
-          console.log("Nombre extraído:", fileName); // Debug
         }
       }
 
-      // Crear URL del blob
+      // 4. DESCARGAR ARCHIVO
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-
-      // Crear link temporal y descargar con el nombre del backend
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", fileName); // Usar nombre del backend
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // Limpiar URL
       window.URL.revokeObjectURL(url);
 
-      alert("Certificado generado exitosamente");
+      console.log("Certificado generado exitosamente");
+
+      // 5. MARCAR COMO REALIZADA
+      await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
+
+      console.log("Solicitud marcada como realizada automáticamente");
+
+      // 6. RECARGAR SOLICITUDES (sin mensaje de éxito)
+      await fetchSolicitudes();
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
       alert(
         error.response?.data?.detail ||
           "Error al generar certificado. Intenta nuevamente."
+      );
+    }
+  };
+
+  // Rechazar solicitud
+  const handleRechazarSolicitud = async (
+    solicitudId: number,
+    nombreVecino: string
+  ) => {
+    if (
+      !confirm(
+        `¿Rechazar la solicitud de certificado para ${nombreVecino}?\n\nEsta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await api.patch(`/api/solicitudes/${solicitudId}/rechazar`);
+
+      console.log("Solicitud rechazada exitosamente");
+
+      // Recargar solicitudes
+      await fetchSolicitudes();
+    } catch (error: any) {
+      console.error("Error al rechazar solicitud:", error);
+      alert(
+        error.response?.data?.detail ||
+          "Error al rechazar solicitud. Intenta nuevamente."
       );
     }
   };
@@ -223,6 +266,8 @@ export default function ListaSolicitudes() {
       filtered = filtered.filter((row) => row.estado === "pendiente");
     } else if (estadoFiltro === "realizado") {
       filtered = filtered.filter((row) => row.estado === "realizado");
+    } else if (estadoFiltro === "rechazado") {
+      filtered = filtered.filter((row) => row.estado === "rechazado");
     }
 
     return filtered;
@@ -249,8 +294,11 @@ export default function ListaSolicitudes() {
     const realizadas = filteredRows.filter(
       (r) => r.estado === "realizado"
     ).length;
+    const rechazadas = filteredRows.filter(
+      (r) => r.estado === "rechazado"
+    ).length;
 
-    return { total, pendientes, realizadas };
+    return { total, pendientes, realizadas, rechazadas };
   }, [filteredRows]);
 
   // Exportar a Excel
@@ -503,6 +551,27 @@ export default function ListaSolicitudes() {
               </CardContent>
             </Card>
           </Grid>
+
+          {/* ESTADÍSTICA: RECHAZADAS */}
+          <Grid item xs={6} md={6}>
+            <Card
+              sx={{
+                ...cardStyle,
+                background: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+              }}
+            >
+              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" fontWeight="600">
+                    Rechazadas:
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {estadisticas.rechazadas}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         {/* Resumen de búsqueda */}
@@ -518,43 +587,7 @@ export default function ListaSolicitudes() {
       {/* TABLA */}
       <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
         <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  align={column.align}
-                  style={{ minWidth: column.minWidth }}
-                  sx={{
-                    backgroundColor: "background.paper",
-                    color: "text.primary",
-                    fontWeight: "bold",
-                    borderBottom: `1px solid ${theme.palette.divider}`,
-                  }}
-                  sortDirection={orderBy === column.id ? order : false}
-                >
-                  {column.sortable ? (
-                    <TableSortLabel
-                      active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : "asc"}
-                      onClick={() => handleRequestSort(column.id)}
-                    >
-                      {column.label}
-                      {orderBy === column.id ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === "desc"
-                            ? "sorted descending"
-                            : "sorted ascending"}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  ) : (
-                    column.label
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
+          <TableHead>{/* ...existing code... */}</TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
@@ -584,6 +617,10 @@ export default function ListaSolicitudes() {
                     color: "text.primary",
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   };
+
+                  // Determinar si los botones deben estar deshabilitados
+                  const isDisabled =
+                    row.estado === "realizado" || row.estado === "rechazado";
 
                   return (
                     <TableRow
@@ -620,10 +657,16 @@ export default function ListaSolicitudes() {
                           label={
                             row.estado === "pendiente"
                               ? "Pendiente"
-                              : "Realizado"
+                              : row.estado === "realizado"
+                              ? "Realizado"
+                              : "Rechazado"
                           }
                           color={
-                            row.estado === "pendiente" ? "warning" : "success"
+                            row.estado === "pendiente"
+                              ? "warning"
+                              : row.estado === "realizado"
+                              ? "success"
+                              : "error"
                           }
                           size="small"
                         />
@@ -643,21 +686,68 @@ export default function ListaSolicitudes() {
                         />
                       </TableCell>
                       <TableCell align="center" sx={cellStyle}>
-                        <IconButton
-                          onClick={() =>
-                            handleGenerarCertificado(row.vecino_id)
-                          }
-                          size="small"
-                          title="Generar Certificado PDF"
+                        <Box
                           sx={{
-                            color: "#ef4444",
-                            "&:hover": {
-                              backgroundColor: "rgba(239, 68, 68, 0.1)",
-                            },
+                            display: "flex",
+                            gap: 1,
+                            justifyContent: "center",
                           }}
                         >
-                          <PictureAsPdfIcon />
-                        </IconButton>
+                          {/* BOTÓN GENERAR CERTIFICADO */}
+                          <IconButton
+                            onClick={() =>
+                              handleGenerarCertificado(
+                                row.vecino_id,
+                                row.id,
+                                row.nombre_completo
+                              )
+                            }
+                            size="small"
+                            title={
+                              isDisabled
+                                ? "No disponible para solicitudes realizadas o rechazadas"
+                                : "Generar Certificado PDF"
+                            }
+                            disabled={isDisabled}
+                            sx={{
+                              color: isDisabled ? "text.disabled" : "#ef4444",
+                              "&:hover": {
+                                backgroundColor: isDisabled
+                                  ? "transparent"
+                                  : "rgba(239, 68, 68, 0.1)",
+                              },
+                            }}
+                          >
+                            <PictureAsPdfIcon />
+                          </IconButton>
+
+                          {/* BOTÓN RECHAZAR */}
+                          <IconButton
+                            onClick={() =>
+                              handleRechazarSolicitud(
+                                row.id,
+                                row.nombre_completo
+                              )
+                            }
+                            size="small"
+                            title={
+                              isDisabled
+                                ? "No disponible para solicitudes realizadas o rechazadas"
+                                : "Rechazar Solicitud"
+                            }
+                            disabled={isDisabled}
+                            sx={{
+                              color: isDisabled ? "text.disabled" : "#f59e0b",
+                              "&:hover": {
+                                backgroundColor: isDisabled
+                                  ? "transparent"
+                                  : "rgba(245, 158, 11, 0.1)",
+                              },
+                            }}
+                          >
+                            <BlockIcon />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   );

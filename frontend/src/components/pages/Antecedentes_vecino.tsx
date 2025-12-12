@@ -194,6 +194,15 @@ const AntecedentesVecino: React.FC = () => {
   };
 
   const handleSolicitarCertificado = async () => {
+    // CONFIRMACIÓN ANTES DE SOLICITAR
+    if (
+      !confirm(
+        "¿Está seguro de solicitar un certificado de residencia?\n\nEl presidente será notificado de su solicitud."
+      )
+    ) {
+      return;
+    }
+
     try {
       console.log("=== SOLICITANDO CERTIFICADO ===");
 

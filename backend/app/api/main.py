@@ -95,7 +95,7 @@ class UserLogin(BaseModel):
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
-#app.include_router(certificados.router, prefix="/api", tags=["certificados"]) se movio al final del arcuhivo y se modifico por temas de seguridad
+# app.include_router(certificados.router, prefix="/api", tags=["certificados"]) se movio al final del arcuhivo y se modifico por temas de seguridad
 
 # ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
 # Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."
@@ -1397,18 +1397,18 @@ async def crear_solicitud(
 ):
     """
     Crea una nueva solicitud de certificado de residencia.
-    Solo vecinos pueden crear solicitudes.
+    Tanto vecinos como presidentes pueden crear solicitudes para sí mismos.
     """
     try:
         print(f"\n{'=' * 50}")
         print(f"CREAR SOLICITUD")
         print(f"Usuario: {current_user}")
 
-        # Verificar que sea un vecino
-        if current_user["rol"] != "vecino":
+        # Verificar que sea vecino o presidente (ambos pueden crear solicitudes para sí mismos)
+        if current_user["rol"] not in ["vecino", "presidente"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Solo vecinos pueden solicitar certificados",
+                detail="No tienes permiso para solicitar certificados",
             )
 
         vecino_id = current_user["vecino_id"]
@@ -1448,6 +1448,7 @@ async def crear_solicitud(
         print(f"  - ID: {nueva_solicitud.id}")
         print(f"  - Vecino: {vecino.nombres} {vecino.apellido_paterno}")
         print(f"  - RUT: {vecino.rut}")
+        print(f"  - Rol solicitante: {current_user['rol']}")
         print(f"  - Fecha: {nueva_solicitud.fecha_solicitud}")
         print(f"{'=' * 50}\n")
 
@@ -1730,15 +1731,6 @@ async def contador_solicitudes_pendientes(
         return {"pendientes": 0}
 
 
-
-# ============ REGISTRO DE ROUTERS (Al final para tener dependencias listas) ============
-# Protegemos TODAS las rutas de certificados con get_current_user
-app.include_router(
-    certificados.router, 
-    prefix="/api", 
-    tags=["certificados"],
-    dependencies=[Depends(get_current_user)] 
-)
 @app.post("/api/solicitudes/crear-por-presidente")
 async def crear_solicitud_por_presidente(
     vecino_id: int,
@@ -1900,3 +1892,13 @@ async def rechazar_solicitud(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al rechazar solicitud: {str(e)}",
         )
+
+
+# ============ REGISTRO DE ROUTERS (Al final para tener dependencias listas) ============
+# Protegemos TODAS las rutas de certificados con get_current_user
+app.include_router(
+    certificados.router,
+    prefix="/api",
+    tags=["certificados"],
+    dependencies=[Depends(get_current_user)],
+)

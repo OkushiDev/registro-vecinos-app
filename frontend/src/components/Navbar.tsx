@@ -57,7 +57,7 @@ const presidentePages: NavItem[] = [
     icon: <AssignmentIcon fontSize="small" />,
   },
   {
-    label: "Historial",
+    label: "Auditoria",
     path: "/presidente/historial",
     icon: <HistoryIcon fontSize="small" />,
   },

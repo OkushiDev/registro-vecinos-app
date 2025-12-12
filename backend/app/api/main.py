@@ -95,7 +95,7 @@ class UserLogin(BaseModel):
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
-#app.include_router(certificados.router, prefix="/api", tags=["certificados"])
+#app.include_router(certificados.router, prefix="/api", tags=["certificados"]) se movio al final del arcuhivo y se modifico por temas de seguridad
 
 # ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
 # Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."

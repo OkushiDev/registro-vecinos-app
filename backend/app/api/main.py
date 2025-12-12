@@ -1317,6 +1317,79 @@ async def descargar_documento(
 # ============ ENDPOINTS DE SOLICITUDES ============
 
 
+@app.get("/api/solicitudes")
+async def obtener_todas_solicitudes(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene TODAS las solicitudes (sin filtro de visibilidad).
+    Solo accesible para presidentes.
+    Usado en el listado completo de solicitudes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER TODAS LAS SOLICITUDES")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ver todas las solicitudes",
+            )
+
+        # Obtener TODAS las solicitudes, ordenadas por fecha (más recientes primero)
+        solicitudes = (
+            db.query(models.Solicitud)
+            .order_by(models.Solicitud.fecha_solicitud.desc())
+            .all()
+        )
+
+        print(f"Total solicitudes: {len(solicitudes)}")
+
+        # Formatear respuesta con datos completos del vecino
+        solicitudes_lista = []
+        for sol in solicitudes:
+            vecino = sol.vecino
+
+            solicitud_data = {
+                "id": sol.id,
+                "tipo_solicitud": sol.tipo_solicitud,
+                "rut": vecino.rut,
+                "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
+                "fecha_solicitud": sol.fecha_solicitud.isoformat(),
+                "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
+                    "%d-%m-%Y %H:%M"
+                ),
+                "estado": sol.estado,
+                "visibilidad": sol.visibilidad,
+                "vecino_id": vecino.id,
+                "numero_socio": vecino.numero_socio,
+            }
+
+            solicitudes_lista.append(solicitud_data)
+            print(
+                f"  - Solicitud {sol.id}: {vecino.nombres} {vecino.apellido_paterno} - Estado: {sol.estado}, Visibilidad: {sol.visibilidad}"
+            )
+
+        print(f"{'=' * 50}\n")
+
+        return solicitudes_lista
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al obtener solicitudes: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener solicitudes: {str(e)}",
+        )
+
+
 @app.post("/api/solicitudes/crear")
 async def crear_solicitud(
     current_user: dict = Depends(get_current_user),
@@ -1666,3 +1739,164 @@ app.include_router(
     tags=["certificados"],
     dependencies=[Depends(get_current_user)] 
 )
+@app.post("/api/solicitudes/crear-por-presidente")
+async def crear_solicitud_por_presidente(
+    vecino_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permite al presidente crear una solicitud de certificado para un vecino.
+    Usado cuando el vecino no puede acceder a su cuenta.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"CREAR SOLICITUD POR PRESIDENTE")
+        print(f"Presidente RUT: {current_user.get('rut', 'N/A')}")  # Cambio aquí
+        print(f"Presidente Rol: {current_user.get('rol', 'N/A')}")  # Cambio aquí
+        print(f"Vecino ID: {vecino_id}")
+
+        # Verificar que sea presidente
+        if current_user.get("rol") != "presidente":  # Cambio aquí
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden crear solicitudes para vecinos",
+            )
+
+        # Verificar que el vecino existe y está activo
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        if not vecino:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Vecino no encontrado",
+            )
+
+        if vecino.estado != 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se puede crear solicitud para un vecino inactivo",
+            )
+
+        # Verificar si ya tiene una solicitud pendiente
+        solicitud_existente = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.vecino_id == vecino_id,
+                models.Solicitud.estado == "pendiente",
+            )
+            .first()
+        )
+
+        if solicitud_existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El vecino ya tiene una solicitud pendiente",
+            )
+
+        # Crear la solicitud
+        nueva_solicitud = models.Solicitud(
+            vecino_id=vecino_id,
+            tipo_solicitud="certificado_residencia",
+            estado="pendiente",
+            visibilidad="mostrar",
+            fecha_solicitud=datetime.now(),
+        )
+
+        db.add(nueva_solicitud)
+        db.commit()
+        db.refresh(nueva_solicitud)
+
+        print(f"Solicitud creada exitosamente: ID {nueva_solicitud.id}")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "mensaje": f"Solicitud creada exitosamente para {vecino.nombres} {vecino.apellido_paterno}",
+            "solicitud": {
+                "id": nueva_solicitud.id,
+                "vecino_id": vecino_id,
+                "tipo_solicitud": nueva_solicitud.tipo_solicitud,
+                "estado": nueva_solicitud.estado,
+                "fecha_solicitud": nueva_solicitud.fecha_solicitud.isoformat(),
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al crear solicitud: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear solicitud: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/rechazar")
+async def rechazar_solicitud(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permite al presidente rechazar una solicitud de certificado.
+    Cambia el estado a 'rechazado'.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"RECHAZAR SOLICITUD")
+        print(f"Solicitud ID: {solicitud_id}")
+        print(f"Usuario: {current_user.get('rut', 'N/A')}")
+
+        # Verificar que sea presidente
+        if current_user.get("rol") != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden rechazar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Solicitud no encontrada",
+            )
+
+        # Verificar que esté pendiente
+        if solicitud.estado != "pendiente":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No se puede rechazar una solicitud en estado '{solicitud.estado}'",
+            )
+
+        # Cambiar estado a rechazado
+        solicitud.estado = "rechazado"
+        db.commit()
+
+        print(f"Solicitud {solicitud_id} marcada como rechazada")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud rechazada exitosamente",
+            "solicitud_id": solicitud_id,
+            "nuevo_estado": "rechazado",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al rechazar solicitud: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al rechazar solicitud: {str(e)}",
+        )

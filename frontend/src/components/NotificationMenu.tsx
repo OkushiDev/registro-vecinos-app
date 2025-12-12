@@ -174,6 +174,7 @@ export default function NotificationMenu({
     solicitudId: number,
     nombreVecino: string
   ) => {
+    // 1. CONFIRMACIÓN
     if (!confirm(`¿Generar certificado de residencia para ${nombreVecino}?`)) {
       return;
     }
@@ -181,36 +182,52 @@ export default function NotificationMenu({
     try {
       setLoadingActions((prev) => ({ ...prev, [solicitudId]: "generando" }));
 
-      // 1. Generar el certificado
+      // 2. GENERAR CERTIFICADO
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
 
-      // 2. Descargar el archivo
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // 3. EXTRAER NOMBRE DEL ARCHIVO
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "Certificado_Residencia.pdf";
+
+      if (contentDisposition) {
+        const matches = contentDisposition.match(
+          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
+        );
+        if (matches && matches[1]) {
+          fileName = matches[1].trim();
+        }
+      }
+
+      // 4. DESCARGAR ARCHIVO
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `Certificado_Residencia_${rutVecino.replace(/-/g, "_")}.pdf`
-      );
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       console.log("Certificado generado exitosamente");
 
-      // 3. Marcar la solicitud como realizada
+      // 5. MARCAR COMO REALIZADA
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
 
       console.log("Solicitud marcada como realizada automáticamente");
 
-      // 4. Recargar notificaciones
+      // 6. RECARGAR NOTIFICACIONES
       await cargarNotificaciones();
+
+      alert("Certificado generado y solicitud marcada como realizada");
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
-      alert(error.response?.data?.detail || "Error al generar el certificado");
+      alert(
+        error.response?.data?.detail ||
+          "Error al generar certificado. Intenta nuevamente."
+      );
     } finally {
       setLoadingActions((prev) => {
         const newState = { ...prev };

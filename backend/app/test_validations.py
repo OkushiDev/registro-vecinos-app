@@ -44,7 +44,7 @@ def calcular_antiguedad(fecha_ingreso: str) -> str:
     return f"{anios} años"
 
 # ==========================================
-# 2. CASOS DE PRUEBA (Según tu Informe)
+# 2. CASOS DE PRUEBA
 # ==========================================
 
 def test_validacion_rut_valido():

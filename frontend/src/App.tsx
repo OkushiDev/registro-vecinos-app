@@ -23,7 +23,7 @@ export default function App(): React.ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // 1. ESTADO PARA EL TEMA (Inicia en Dark por defecto)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   // 2. CREACIÓN DINÁMICA DEL TEMA
   const theme = useMemo(

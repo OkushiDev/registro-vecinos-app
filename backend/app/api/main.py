@@ -1317,6 +1317,79 @@ async def descargar_documento(
 # ============ ENDPOINTS DE SOLICITUDES ============
 
 
+@app.get("/api/solicitudes")
+async def obtener_todas_solicitudes(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene TODAS las solicitudes (sin filtro de visibilidad).
+    Solo accesible para presidentes.
+    Usado en el listado completo de solicitudes.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"OBTENER TODAS LAS SOLICITUDES")
+        print(f"Usuario: {current_user}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden ver todas las solicitudes",
+            )
+
+        # Obtener TODAS las solicitudes, ordenadas por fecha (más recientes primero)
+        solicitudes = (
+            db.query(models.Solicitud)
+            .order_by(models.Solicitud.fecha_solicitud.desc())
+            .all()
+        )
+
+        print(f"Total solicitudes: {len(solicitudes)}")
+
+        # Formatear respuesta con datos completos del vecino
+        solicitudes_lista = []
+        for sol in solicitudes:
+            vecino = sol.vecino
+
+            solicitud_data = {
+                "id": sol.id,
+                "tipo_solicitud": sol.tipo_solicitud,
+                "rut": vecino.rut,
+                "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
+                "fecha_solicitud": sol.fecha_solicitud.isoformat(),
+                "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
+                    "%d-%m-%Y %H:%M"
+                ),
+                "estado": sol.estado,
+                "visibilidad": sol.visibilidad,
+                "vecino_id": vecino.id,
+                "numero_socio": vecino.numero_socio,
+            }
+
+            solicitudes_lista.append(solicitud_data)
+            print(
+                f"  - Solicitud {sol.id}: {vecino.nombres} {vecino.apellido_paterno} - Estado: {sol.estado}, Visibilidad: {sol.visibilidad}"
+            )
+
+        print(f"{'=' * 50}\n")
+
+        return solicitudes_lista
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al obtener solicitudes: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener solicitudes: {str(e)}",
+        )
+
+
 @app.post("/api/solicitudes/crear")
 async def crear_solicitud(
     current_user: dict = Depends(get_current_user),

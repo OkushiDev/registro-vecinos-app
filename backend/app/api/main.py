@@ -1728,3 +1728,97 @@ async def contador_solicitudes_pendientes(
     except Exception as e:
         print(f"ERROR al contar pendientes: {e}")
         return {"pendientes": 0}
+
+
+@app.post("/api/solicitudes/crear-por-presidente")
+async def crear_solicitud_por_presidente(
+    vecino_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permite al presidente crear una solicitud de certificado para un vecino.
+    Usado cuando el vecino no puede acceder a su cuenta.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"CREAR SOLICITUD POR PRESIDENTE")
+        print(f"Presidente: {current_user['username']}")
+        print(f"Vecino ID: {vecino_id}")
+
+        # Verificar que sea presidente
+        if current_user["rol"] != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden crear solicitudes para vecinos",
+            )
+
+        # Verificar que el vecino existe y está activo
+        vecino = db.query(models.Vecino).filter(models.Vecino.id == vecino_id).first()
+        if not vecino:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Vecino no encontrado",
+            )
+
+        if vecino.estado != 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se puede crear solicitud para un vecino inactivo",
+            )
+
+        # Verificar si ya tiene una solicitud pendiente
+        solicitud_existente = (
+            db.query(models.Solicitud)
+            .filter(
+                models.Solicitud.vecino_id == vecino_id,
+                models.Solicitud.estado == "pendiente",
+            )
+            .first()
+        )
+
+        if solicitud_existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El vecino ya tiene una solicitud pendiente",
+            )
+
+        # Crear la solicitud
+        nueva_solicitud = models.Solicitud(
+            vecino_id=vecino_id,
+            tipo_solicitud="certificado_residencia",
+            estado="pendiente",
+            visibilidad="mostrar",
+            fecha_solicitud=datetime.now(),
+        )
+
+        db.add(nueva_solicitud)
+        db.commit()
+        db.refresh(nueva_solicitud)
+
+        print(f"Solicitud creada exitosamente: ID {nueva_solicitud.id}")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "mensaje": f"Solicitud creada exitosamente para {vecino.nombres} {vecino.apellido_paterno}",
+            "solicitud": {
+                "id": nueva_solicitud.id,
+                "vecino_id": vecino_id,
+                "tipo_solicitud": nueva_solicitud.tipo_solicitud,
+                "estado": nueva_solicitud.estado,
+                "fecha_solicitud": nueva_solicitud.fecha_solicitud.isoformat(),
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al crear solicitud: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear solicitud: {str(e)}",
+        )

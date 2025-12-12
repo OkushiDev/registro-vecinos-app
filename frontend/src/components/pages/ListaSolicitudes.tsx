@@ -25,9 +25,10 @@ import Button from "@mui/material/Button";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
 import IconButton from "@mui/material/IconButton";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import Chip from "@mui/material/Chip";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 
 interface Column {
   id:
@@ -38,6 +39,7 @@ interface Column {
     | "tipo_solicitud"
     | "fecha_solicitud_formato"
     | "estado"
+    | "visibilidad"
     | "acciones";
   label: string;
   minWidth?: number;
@@ -47,18 +49,19 @@ interface Column {
 
 const columns: readonly Column[] = [
   { id: "id", label: "ID", minWidth: 50, sortable: true },
-  { id: "nombre_completo", label: "Vecino", minWidth: 200 },
-  { id: "rut", label: "RUT", minWidth: 120 },
-  { id: "numero_socio", label: "N° Socio", minWidth: 95, align: "center" },
-  { id: "tipo_solicitud", label: "Tipo", minWidth: 150 },
+  { id: "nombre_completo", label: "Vecino", minWidth: 180 },
+  { id: "rut", label: "RUT", minWidth: 110 },
+  { id: "numero_socio", label: "N° Socio", minWidth: 85, align: "center" },
+  { id: "tipo_solicitud", label: "Tipo", minWidth: 140 },
   {
     id: "fecha_solicitud_formato",
     label: "Fecha",
-    minWidth: 150,
+    minWidth: 130,
     align: "right",
   },
-  { id: "estado", label: "Estado", minWidth: 120, align: "center" },
-  { id: "acciones", label: "Acciones", minWidth: 150, align: "center" },
+  { id: "estado", label: "Estado", minWidth: 110, align: "center" },
+  { id: "visibilidad", label: "Visibilidad", minWidth: 120, align: "center" },
+  { id: "acciones", label: "Acción", minWidth: 100, align: "center" },
 ];
 
 interface Data {
@@ -91,18 +94,16 @@ export default function ListaSolicitudes() {
   const fetchSolicitudes = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/api/solicitudes/notificaciones");
+      // Traer TODAS las solicitudes (sin filtro de visibilidad)
+      const response = await api.get("/api/solicitudes");
 
-      // Formatear datos
-      const solicitudesFormateadas = response.data.notificaciones.map(
-        (sol: any) => ({
-          ...sol,
-          tipo_solicitud:
-            sol.tipo_solicitud === "certificado_residencia"
-              ? "Certificado de Residencia"
-              : sol.tipo_solicitud,
-        })
-      );
+      const solicitudesFormateadas = response.data.map((sol: any) => ({
+        ...sol,
+        tipo_solicitud:
+          sol.tipo_solicitud === "certificado_residencia"
+            ? "Certificado de Residencia"
+            : sol.tipo_solicitud,
+      }));
 
       setRows(solicitudesFormateadas || []);
     } catch (error) {
@@ -149,24 +150,53 @@ export default function ListaSolicitudes() {
     setPage(0);
   };
 
-  // Marcar como realizada
-  const handleMarcarRealizada = async (solicitudId: number) => {
+  // Generar certificado
+  const handleGenerarCertificado = async (vecinoId: number) => {
     try {
-      await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
-      alert("Solicitud marcada como realizada");
-      fetchSolicitudes();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || "Error al marcar solicitud");
-    }
-  };
+      const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
+        responseType: "blob",
+      });
 
-  // Ocultar solicitud
-  const handleOcultar = async (solicitudId: number) => {
-    try {
-      await api.patch(`/api/solicitudes/${solicitudId}/ocultar`);
-      fetchSolicitudes();
+      // Extraer el nombre del archivo del header Content-Disposition
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "Certificado_Residencia.pdf"; // Nombre por defecto
+
+      console.log("Headers completos:", response.headers); // Debug
+      console.log("Content-Disposition:", contentDisposition); // Debug
+
+      if (contentDisposition) {
+        // Buscar filename="nombre.pdf" o filename=nombre.pdf
+        const matches = contentDisposition.match(
+          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
+        );
+        if (matches && matches[1]) {
+          fileName = matches[1].trim();
+          console.log("Nombre extraído:", fileName); // Debug
+        }
+      }
+
+      // Crear URL del blob
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      // Crear link temporal y descargar con el nombre del backend
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName); // Usar nombre del backend
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Limpiar URL
+      window.URL.revokeObjectURL(url);
+
+      alert("Certificado generado exitosamente");
     } catch (error: any) {
-      alert(error.response?.data?.detail || "Error al ocultar solicitud");
+      console.error("Error al generar certificado:", error);
+      alert(
+        error.response?.data?.detail ||
+          "Error al generar certificado. Intenta nuevamente."
+      );
     }
   };
 
@@ -210,6 +240,19 @@ export default function ListaSolicitudes() {
     return sorted;
   }, [filteredRows, order, orderBy]);
 
+  // Estadísticas
+  const estadisticas = React.useMemo(() => {
+    const total = filteredRows.length;
+    const pendientes = filteredRows.filter(
+      (r) => r.estado === "pendiente"
+    ).length;
+    const realizadas = filteredRows.filter(
+      (r) => r.estado === "realizado"
+    ).length;
+
+    return { total, pendientes, realizadas };
+  }, [filteredRows]);
+
   // Exportar a Excel
   const handleExportToExcel = () => {
     const dataToExport = sortedRows.map((row) => ({
@@ -220,6 +263,7 @@ export default function ListaSolicitudes() {
       Tipo: row.tipo_solicitud,
       Fecha: row.fecha_solicitud_formato,
       Estado: row.estado === "pendiente" ? "Pendiente" : "Realizado",
+      Visibilidad: row.visibilidad === "mostrar" ? "Mostrar" : "No Mostrar",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -247,6 +291,15 @@ export default function ListaSolicitudes() {
     "& .MuiSelect-icon": { color: "text.primary" },
   };
 
+  const cardStyle = {
+    height: "56px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "4px",
+    color: "white",
+  };
+
   return (
     <Paper
       sx={{
@@ -263,9 +316,10 @@ export default function ListaSolicitudes() {
       elevation={0}
     >
       <Box sx={{ p: 2 }}>
+        {/* TODO EN UNA SOLA LÍNEA */}
         <Grid container spacing={2} alignItems="center">
           {/* BUSCADOR */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={2.5}>
             <TextField
               fullWidth
               variant="outlined"
@@ -305,7 +359,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* FILTRO COLUMNA */}
-          <Grid item xs={6} md={2}>
+          <Grid item xs={6} md={1.5}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>
                 Buscar en
@@ -337,7 +391,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* FILTRO ESTADO */}
-          <Grid item xs={6} md={2}>
+          <Grid item xs={6} md={1.5}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
               <Select
@@ -366,7 +420,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* BOTÓN EXCEL */}
-          <Grid item xs={6} md={2}>
+          <Grid item xs={6} md={1.5}>
             <Button
               fullWidth
               variant="contained"
@@ -387,29 +441,71 @@ export default function ListaSolicitudes() {
             </Button>
           </Grid>
 
-          {/* BOTÓN ACTUALIZAR */}
-          <Grid item xs={6} md={2}>
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={fetchSolicitudes}
+          {/* ESTADÍSTICA: TOTAL */}
+          <Grid item xs={6} md={1.5}>
+            <Card
               sx={{
-                height: "56px",
-                background: "linear-gradient(to right, #2563eb, #3b82f6)",
-                color: "white",
-                fontWeight: "bold",
-                boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.3)",
-                "&:hover": {
-                  background: "linear-gradient(to right, #1d4ed8, #2563eb)",
-                },
+                ...cardStyle,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               }}
             >
-              Actualizar
-            </Button>
+              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" fontWeight="600">
+                    Total:
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {estadisticas.total}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* ESTADÍSTICA: PENDIENTES */}
+          <Grid item xs={6} md={1.5}>
+            <Card
+              sx={{
+                ...cardStyle,
+                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              }}
+            >
+              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" fontWeight="600">
+                    Pendientes:
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {estadisticas.pendientes}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* ESTADÍSTICA: REALIZADAS */}
+          <Grid item xs={6} md={2}>
+            <Card
+              sx={{
+                ...cardStyle,
+                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+              }}
+            >
+              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" fontWeight="600">
+                    Realizadas:
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {estadisticas.realizadas}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
           </Grid>
         </Grid>
 
-        {/* Resumen */}
+        {/* Resumen de búsqueda */}
         {searchTerm && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -463,7 +559,7 @@ export default function ListaSolicitudes() {
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="center"
                   sx={{ color: "text.primary", py: 4 }}
                 >
@@ -473,7 +569,7 @@ export default function ListaSolicitudes() {
             ) : sortedRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="center"
                   sx={{ color: "text.secondary", py: 4 }}
                 >
@@ -533,22 +629,34 @@ export default function ListaSolicitudes() {
                         />
                       </TableCell>
                       <TableCell align="center" sx={cellStyle}>
-                        <IconButton
-                          onClick={() => handleMarcarRealizada(row.id)}
+                        <Chip
+                          label={
+                            row.visibilidad === "mostrar"
+                              ? "Mostrar"
+                              : "No Mostrar"
+                          }
+                          color={
+                            row.visibilidad === "mostrar" ? "info" : "default"
+                          }
                           size="small"
-                          title="Marcar como realizada"
-                          disabled={row.estado === "realizado"}
-                          sx={{ color: "#10b981", mr: 1 }}
-                        >
-                          <CheckCircleIcon />
-                        </IconButton>
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={cellStyle}>
                         <IconButton
-                          onClick={() => handleOcultar(row.id)}
+                          onClick={() =>
+                            handleGenerarCertificado(row.vecino_id)
+                          }
                           size="small"
-                          title="Ocultar de notificaciones"
-                          sx={{ color: "#64748b" }}
+                          title="Generar Certificado PDF"
+                          sx={{
+                            color: "#ef4444",
+                            "&:hover": {
+                              backgroundColor: "rgba(239, 68, 68, 0.1)",
+                            },
+                          }}
                         >
-                          <VisibilityOffIcon />
+                          <PictureAsPdfIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>

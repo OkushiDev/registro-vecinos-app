@@ -104,6 +104,7 @@ const AntecedentesVecino: React.FC = () => {
   const [listaDocumentos, setListaDocumentos] = useState<DocumentoBackend[]>(
     []
   );
+  const [tieneSolicitudPendiente, setTieneSolicitudPendiente] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
@@ -174,6 +175,18 @@ const AntecedentesVecino: React.FC = () => {
             docErr
           );
         }
+
+        // 3. VERIFICAR SI TIENE SOLICITUD PENDIENTE (NUEVO)
+        try {
+          const responseSolicitudes = await api.get("/api/solicitudes");
+          const solicitudPendiente = responseSolicitudes.data.some(
+            (sol: any) => sol.vecino_id === userId && sol.estado === "pendiente"
+          );
+          setTieneSolicitudPendiente(solicitudPendiente);
+          console.log("Tiene solicitud pendiente:", solicitudPendiente);
+        } catch (solErr) {
+          console.warn("No se pudo verificar solicitudes:", solErr);
+        }
       } catch (err: any) {
         console.error("Error al cargar:", err);
         setError(err.message || "Error al cargar información.");
@@ -183,7 +196,6 @@ const AntecedentesVecino: React.FC = () => {
     };
     fetchData();
   }, []);
-
   const handleClose = () => {
     if (isSubmitting) return;
     setOpenContactDialog(false);
@@ -232,6 +244,9 @@ const AntecedentesVecino: React.FC = () => {
             "Solicitud enviada exitosamente. El presidente será notificado.",
           severity: "success",
         });
+
+        // Actualizar estado para deshabilitar el botón
+        setTieneSolicitudPendiente(true);
 
         console.log("Solicitud creada:", {
           id: response.data.solicitud.id,
@@ -458,7 +473,7 @@ const AntecedentesVecino: React.FC = () => {
         gap={3}
         flexWrap="wrap"
       >
-        {/* TÍTULO: Ocupa solo el espacio necesario */}
+        {/* TÍTULO */}
         <Box>
           <Typography variant="h4" gutterBottom>
             Mis Antecedentes
@@ -471,13 +486,13 @@ const AntecedentesVecino: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* BOTONES: Ocupan TODO el espacio restante */}
+        {/* BOTONES */}
         <Box
           display="flex"
           gap={2}
           sx={{
-            flexGrow: 1, // Esto es clave: fuerza a este bloque a crecer y ocupar todo el espacio vacío
-            minWidth: "250px", // Evita que se colapsen demasiado en pantallas muy pequeñas
+            flexGrow: 1,
+            minWidth: "250px",
           }}
         >
           <Button
@@ -486,9 +501,12 @@ const AntecedentesVecino: React.FC = () => {
             color="success"
             startIcon={<PostAddIcon />}
             onClick={handleSolicitarCertificado}
-            sx={{ flex: 1, whiteSpace: "nowrap" }} // flex: 1 reparte el espacio equitativamente
+            disabled={tieneSolicitudPendiente} // DESHABILITAR SI YA TIENE SOLICITUD
+            sx={{ flex: 1, whiteSpace: "nowrap" }}
           >
-            Solicitar Certificado
+            {tieneSolicitudPendiente
+              ? "Solicitud Pendiente"
+              : "Solicitar Certificado"}
           </Button>
 
           <Button
@@ -513,6 +531,14 @@ const AntecedentesVecino: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Mostrar alerta si tiene solicitud pendiente */}
+      {tieneSolicitudPendiente && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Ya tienes una solicitud de certificado pendiente. Espera a que el
+          presidente la procese.
+        </Alert>
+      )}
 
       {/* --- DATOS PERSONALES --- */}
       <TableContainer

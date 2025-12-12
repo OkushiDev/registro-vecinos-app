@@ -95,7 +95,6 @@ export default function ListaSolicitudes() {
   const fetchSolicitudes = async () => {
     try {
       setLoading(true);
-      // Traer TODAS las solicitudes (sin filtro de visibilidad)
       const response = await api.get("/api/solicitudes");
 
       const solicitudesFormateadas = response.data.map((sol: any) => ({
@@ -107,6 +106,7 @@ export default function ListaSolicitudes() {
       }));
 
       setRows(solicitudesFormateadas || []);
+      console.log("Solicitudes actualizadas:", solicitudesFormateadas.length);
     } catch (error) {
       console.error("Error al obtener solicitudes:", error);
       setRows([]);
@@ -114,6 +114,23 @@ export default function ListaSolicitudes() {
       setLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    const handleActualizacion = () => {
+      console.log(
+        "Evento de actualización recibido - Recargando solicitudes..."
+      );
+      fetchSolicitudes();
+    };
+
+    // Agregar listener
+    window.addEventListener("actualizarSolicitudes", handleActualizacion);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("actualizarSolicitudes", handleActualizacion);
+    };
+  }, []);
 
   React.useEffect(() => {
     fetchSolicitudes();
@@ -151,13 +168,11 @@ export default function ListaSolicitudes() {
     setPage(0);
   };
 
-  // Generar certificado
   const handleGenerarCertificado = async (
     vecinoId: number,
     solicitudId: number,
     nombreVecino: string
   ) => {
-    // 1. CONFIRMACIÓN
     if (
       !confirm(
         `¿Generar certificado de residencia para ${nombreVecino}?\n\nEsto marcará automáticamente la solicitud como realizada.`
@@ -167,12 +182,10 @@ export default function ListaSolicitudes() {
     }
 
     try {
-      // 2. GENERAR CERTIFICADO
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
 
-      // 3. EXTRAER NOMBRE DEL ARCHIVO
       const contentDisposition = response.headers["content-disposition"];
       let fileName = "Certificado_Residencia.pdf";
 
@@ -185,7 +198,6 @@ export default function ListaSolicitudes() {
         }
       }
 
-      // 4. DESCARGAR ARCHIVO
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -198,12 +210,10 @@ export default function ListaSolicitudes() {
 
       console.log("Certificado generado exitosamente");
 
-      // 5. MARCAR COMO REALIZADA
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
 
       console.log("Solicitud marcada como realizada automáticamente");
 
-      // 6. RECARGAR SOLICITUDES (sin mensaje de éxito)
       await fetchSolicitudes();
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
@@ -232,7 +242,6 @@ export default function ListaSolicitudes() {
 
       console.log("Solicitud rechazada exitosamente");
 
-      // Recargar solicitudes
       await fetchSolicitudes();
     } catch (error: any) {
       console.error("Error al rechazar solicitud:", error);

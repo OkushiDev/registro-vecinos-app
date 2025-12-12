@@ -1,13 +1,13 @@
 from fastapi.testclient import TestClient
 from app.api.main import app
-import uuid
+import random
 
 client = TestClient(app)
 
 # Generamos datos aleatorios para no repetir RUT/Socio y que no falle el test al correrlo 2 veces
-random_id = str(uuid.uuid4())[:4]
+random_id = random.randint(1000, 9999)
 rut_prueba = f"99.999.{random_id}-K"
-socio_prueba = int(random_id) # Usamos el random como numero socio
+socio_prueba = random_id # Usamos el random como numero socio
 
 def test_root():
     """Prueba básica de conexión"""

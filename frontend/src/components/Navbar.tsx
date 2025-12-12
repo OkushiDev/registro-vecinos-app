@@ -19,6 +19,7 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import PersonIcon from "@mui/icons-material/Person";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
 // IMPORTAR EL COMPONENTE DE NOTIFICACIONES
 import NotificationMenu from "./NotificationMenu";
@@ -49,6 +50,11 @@ const presidentePages: NavItem[] = [
     label: "Documentos",
     path: "/presidente/documentos",
     icon: <PeopleIcon fontSize="small" />,
+  },
+  {
+    label: "Solicitudes",
+    path: "/presidente/solicitudes",
+    icon: <AssignmentIcon fontSize="small" />,
   },
   {
     label: "Historial",

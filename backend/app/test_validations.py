@@ -26,7 +26,6 @@ def validar_rut(rut: str) -> bool:
 def formatear_fecha_reporte(fecha_iso: str) -> str:
     """
     Transforma fecha YYYY-MM-DD a objeto date o string DD-MM-YYYY
-    según lo requerido en el informe.
     """
     fecha_obj = date.fromisoformat(fecha_iso)
     return fecha_obj.strftime("%d-%m-%Y")
@@ -84,5 +83,4 @@ def test_calculo_antiguedad():
     resultado = calcular_antiguedad(entrada)
     
     # Si estamos en 2025 (según tu contexto), 2020 a 2025 son 5 años
-    # Ajusta este assert según la fecha real de tu sistema
     assert "años" in resultado

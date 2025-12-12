@@ -1743,11 +1743,12 @@ async def crear_solicitud_por_presidente(
     try:
         print(f"\n{'=' * 50}")
         print(f"CREAR SOLICITUD POR PRESIDENTE")
-        print(f"Presidente: {current_user['username']}")
+        print(f"Presidente RUT: {current_user.get('rut', 'N/A')}")  # Cambio aquí
+        print(f"Presidente Rol: {current_user.get('rol', 'N/A')}")  # Cambio aquí
         print(f"Vecino ID: {vecino_id}")
 
         # Verificar que sea presidente
-        if current_user["rol"] != "presidente":
+        if current_user.get("rol") != "presidente":  # Cambio aquí
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Solo presidentes pueden crear solicitudes para vecinos",
@@ -1821,4 +1822,72 @@ async def crear_solicitud_por_presidente(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al crear solicitud: {str(e)}",
+        )
+
+
+@app.patch("/api/solicitudes/{solicitud_id}/rechazar")
+async def rechazar_solicitud(
+    solicitud_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permite al presidente rechazar una solicitud de certificado.
+    Cambia el estado a 'rechazado'.
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"RECHAZAR SOLICITUD")
+        print(f"Solicitud ID: {solicitud_id}")
+        print(f"Usuario: {current_user.get('rut', 'N/A')}")
+
+        # Verificar que sea presidente
+        if current_user.get("rol") != "presidente":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo presidentes pueden rechazar solicitudes",
+            )
+
+        # Buscar la solicitud
+        solicitud = (
+            db.query(models.Solicitud)
+            .filter(models.Solicitud.id == solicitud_id)
+            .first()
+        )
+
+        if not solicitud:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Solicitud no encontrada",
+            )
+
+        # Verificar que esté pendiente
+        if solicitud.estado != "pendiente":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No se puede rechazar una solicitud en estado '{solicitud.estado}'",
+            )
+
+        # Cambiar estado a rechazado
+        solicitud.estado = "rechazado"
+        db.commit()
+
+        print(f"Solicitud {solicitud_id} marcada como rechazada")
+        print(f"{'=' * 50}\n")
+
+        return {
+            "success": True,
+            "mensaje": "Solicitud rechazada exitosamente",
+            "solicitud_id": solicitud_id,
+            "nuevo_estado": "rechazado",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR al rechazar solicitud: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al rechazar solicitud: {str(e)}",
         )

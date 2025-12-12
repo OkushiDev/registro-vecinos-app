@@ -95,7 +95,7 @@ class UserLogin(BaseModel):
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
-app.include_router(certificados.router, prefix="/api", tags=["certificados"])
+#app.include_router(certificados.router, prefix="/api", tags=["certificados"])
 
 # ============ NUEVA LÍNEA: SERVIR CARPETA UPLOADS ============
 # Esto permite que cuando el frontend pida "http://localhost:8000/uploads/..."
@@ -1655,3 +1655,14 @@ async def contador_solicitudes_pendientes(
     except Exception as e:
         print(f"ERROR al contar pendientes: {e}")
         return {"pendientes": 0}
+
+
+
+# ============ REGISTRO DE ROUTERS (Al final para tener dependencias listas) ============
+# Protegemos TODAS las rutas de certificados con get_current_user
+app.include_router(
+    certificados.router, 
+    prefix="/api", 
+    tags=["certificados"],
+    dependencies=[Depends(get_current_user)] 
+)

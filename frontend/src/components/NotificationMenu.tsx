@@ -12,7 +12,7 @@ import Button from "@mui/material/Button";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DescriptionIcon from "@mui/icons-material/Description";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import BlockIcon from "@mui/icons-material/Block";
 import api from "../api";
 
 interface Notificacion {
@@ -31,6 +31,13 @@ interface Notificacion {
 interface NotificationMenuProps {
   onViewChange?: (view: string) => void;
 }
+
+// Función para emitir evento de actualización
+const emitirEventoActualizacion = () => {
+  const evento = new CustomEvent("actualizarSolicitudes");
+  window.dispatchEvent(evento);
+  console.log("📡 Evento de actualización emitido");
+};
 
 export default function NotificationMenu({
   onViewChange,
@@ -101,7 +108,7 @@ export default function NotificationMenu({
   ) => {
     if (estado === "pendiente") {
       alert(
-        "No puedes eliminar una solicitud pendiente. Márcala como realizada primero."
+        "No puedes eliminar una solicitud pendiente. Márcala como realizada o recházala primero."
       );
       return;
     }
@@ -120,6 +127,7 @@ export default function NotificationMenu({
       if (response.data.success) {
         console.log("Notificación ocultada exitosamente");
         await cargarNotificaciones();
+        emitirEventoActualizacion(); // ✅ EMITIR EVENTO
       }
     } catch (error: any) {
       console.error("Error al ocultar notificación:", error);
@@ -133,31 +141,34 @@ export default function NotificationMenu({
     }
   };
 
-  // === ACCIÓN: MARCAR REALIZADO ===
-  const handleMarcarRealizado = async (
+  // === ACCIÓN: RECHAZAR SOLICITUD ===
+  const handleRechazarSolicitud = async (
     solicitudId: number,
     nombreVecino: string
   ) => {
     if (
-      !confirm(`¿Confirmas que ya procesaste la solicitud de ${nombreVecino}?`)
+      !confirm(
+        `¿Rechazar la solicitud de certificado para ${nombreVecino}?\n\nEsta acción no se puede deshacer.`
+      )
     ) {
       return;
     }
 
     try {
-      setLoadingActions((prev) => ({ ...prev, [solicitudId]: "marcando" }));
+      setLoadingActions((prev) => ({ ...prev, [solicitudId]: "rechazando" }));
 
-      const response = await api.patch(
-        `/api/solicitudes/${solicitudId}/marcar-realizada`
-      );
+      await api.patch(`/api/solicitudes/${solicitudId}/rechazar`);
 
-      if (response.data.success) {
-        console.log("Solicitud marcada como realizada");
-        await cargarNotificaciones();
-      }
+      console.log("Solicitud rechazada exitosamente");
+
+      await cargarNotificaciones();
+      emitirEventoActualizacion(); // ✅ EMITIR EVENTO
     } catch (error: any) {
-      console.error("Error al marcar como realizada:", error);
-      alert(error.response?.data?.detail || "Error al marcar la solicitud");
+      console.error("Error al rechazar solicitud:", error);
+      alert(
+        error.response?.data?.detail ||
+          "Error al rechazar solicitud. Intenta nuevamente."
+      );
     } finally {
       setLoadingActions((prev) => {
         const newState = { ...prev };
@@ -181,36 +192,53 @@ export default function NotificationMenu({
     try {
       setLoadingActions((prev) => ({ ...prev, [solicitudId]: "generando" }));
 
-      // 1. Generar el certificado
+      // 1. GENERAR CERTIFICADO
       const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
         responseType: "blob",
       });
 
-      // 2. Descargar el archivo
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // 2. EXTRAER NOMBRE DEL ARCHIVO
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "Certificado_Residencia.pdf";
+
+      if (contentDisposition) {
+        const matches = contentDisposition.match(
+          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
+        );
+        if (matches && matches[1]) {
+          fileName = matches[1].trim();
+        }
+      }
+
+      // 3. DESCARGAR ARCHIVO
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `Certificado_Residencia_${rutVecino.replace(/-/g, "_")}.pdf`
-      );
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       console.log("Certificado generado exitosamente");
 
-      // 3. Marcar la solicitud como realizada
+      // 4. MARCAR COMO REALIZADA
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
 
       console.log("Solicitud marcada como realizada automáticamente");
 
-      // 4. Recargar notificaciones
+      // 5. RECARGAR NOTIFICACIONES
       await cargarNotificaciones();
+      emitirEventoActualizacion(); // ✅ EMITIR EVENTO
+
+      alert("Certificado generado y solicitud marcada como realizada");
     } catch (error: any) {
       console.error("Error al generar certificado:", error);
-      alert(error.response?.data?.detail || "Error al generar el certificado");
+      alert(
+        error.response?.data?.detail ||
+          "Error al generar certificado. Intenta nuevamente."
+      );
     } finally {
       setLoadingActions((prev) => {
         const newState = { ...prev };
@@ -223,17 +251,17 @@ export default function NotificationMenu({
   // === ACCIÓN: ELIMINAR TODAS LAS REALIZADAS ===
   const handleEliminarTodasRealizadas = async () => {
     const notificacionesRealizadas = notificaciones.filter(
-      (n) => n.estado === "realizado"
+      (n) => n.estado === "realizado" || n.estado === "rechazado"
     );
 
     if (notificacionesRealizadas.length === 0) {
-      alert("Quedan notificaciones pendientes");
+      alert("No hay notificaciones realizadas o rechazadas para eliminar");
       return;
     }
 
     if (
       !confirm(
-        `¿Estás seguro de que deseas ocultar ${notificacionesRealizadas.length} notificación(es) realizada(s)?`
+        `¿Estás seguro de que deseas ocultar ${notificacionesRealizadas.length} notificación(es)?`
       )
     ) {
       return;
@@ -243,7 +271,7 @@ export default function NotificationMenu({
       setLoadingActions((prev) => ({ ...prev, eliminarTodas: "eliminando" }));
 
       console.log(
-        `Eliminando ${notificacionesRealizadas.length} notificaciones realizadas...`
+        `Eliminando ${notificacionesRealizadas.length} notificaciones...`
       );
 
       const promesas = notificacionesRealizadas.map((notif) =>
@@ -252,9 +280,10 @@ export default function NotificationMenu({
 
       await Promise.all(promesas);
 
-      console.log("Todas las notificaciones realizadas fueron ocultadas");
+      console.log("Todas las notificaciones fueron ocultadas");
 
       await cargarNotificaciones();
+      emitirEventoActualizacion(); // ✅ EMITIR EVENTO
 
       alert(
         `${notificacionesRealizadas.length} notificación(es) eliminada(s) exitosamente`
@@ -416,7 +445,9 @@ export default function NotificationMenu({
                         bgcolor:
                           notif.estado === "pendiente"
                             ? "error.main"
-                            : "success.main",
+                            : notif.estado === "realizado"
+                            ? "success.main"
+                            : "warning.main",
                         width: 40,
                         height: 40,
                       }}
@@ -443,11 +474,17 @@ export default function NotificationMenu({
                           label={
                             notif.estado === "pendiente"
                               ? "Pendiente"
-                              : "Realizado"
+                              : notif.estado === "realizado"
+                              ? "Realizado"
+                              : "Rechazado"
                           }
                           size="small"
                           color={
-                            notif.estado === "pendiente" ? "error" : "success"
+                            notif.estado === "pendiente"
+                              ? "error"
+                              : notif.estado === "realizado"
+                              ? "success"
+                              : "warning"
                           }
                           sx={{ ml: 1 }}
                         />
@@ -480,6 +517,7 @@ export default function NotificationMenu({
                   <Box
                     sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}
                   >
+                    {/* BOTÓN ELIMINAR */}
                     <Tooltip
                       title={
                         notif.estado === "pendiente"
@@ -513,33 +551,36 @@ export default function NotificationMenu({
                       </span>
                     </Tooltip>
 
+                    {/* BOTONES SOLO PARA PENDIENTES */}
                     {notif.estado === "pendiente" && (
                       <>
-                        <Tooltip title="Marcar como realizado sin generar certificado">
+                        {/* BOTÓN RECHAZAR */}
+                        <Tooltip title="Rechazar solicitud">
                           <Button
                             size="small"
                             variant="outlined"
-                            color="success"
-                            startIcon={<CheckCircleIcon />}
+                            color="warning"
+                            startIcon={<BlockIcon />}
                             onClick={() =>
-                              handleMarcarRealizado(
+                              handleRechazarSolicitud(
                                 notif.id,
                                 notif.nombre_completo
                               )
                             }
                             disabled={!!isLoading}
                             sx={{
-                              minWidth: 140,
+                              minWidth: 120,
                               textTransform: "none",
                               fontSize: "0.75rem",
                             }}
                           >
-                            {isLoading === "marcando"
-                              ? "Marcando..."
-                              : "Marcar Realizado"}
+                            {isLoading === "rechazando"
+                              ? "Rechazando..."
+                              : "Rechazar"}
                           </Button>
                         </Tooltip>
 
+                        {/* BOTÓN GENERAR CERTIFICADO */}
                         <Tooltip title="Generar certificado y marcar como realizado">
                           <Button
                             size="small"

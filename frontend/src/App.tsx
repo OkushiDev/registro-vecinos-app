@@ -15,6 +15,7 @@ import authService from "./services/authService";
 import "./services/axiosConfig"; // Importar configuración de axios
 import SubirDocumento from "./components/pages/SubirDocumento.tsx";
 import "./services/axiosConfig";
+import ListaSolicitudes from "./components/pages/ListaSolicitudes";
 
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -22,7 +23,7 @@ export default function App(): React.ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // 1. ESTADO PARA EL TEMA (Inicia en Dark por defecto)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   // 2. CREACIÓN DINÁMICA DEL TEMA
   const theme = useMemo(
@@ -100,11 +101,11 @@ export default function App(): React.ReactElement {
             <CircularProgress />
           </Box>
         ) : !isAuthenticated || !userProfile ? (
-          /* CASO 2: LOGIN (Ahora recibe las props del tema) */
+          /* CASO 2: LOGIN */
           <Login
             onLogin={handleLogin}
-            isDarkMode={isDarkMode} // <--- AGREGADO
-            onToggleTheme={toggleTheme} // <--- AGREGADO
+            isDarkMode={isDarkMode}
+            onToggleTheme={toggleTheme}
           />
         ) : (
           /* CASO 3: APLICACIÓN PRINCIPAL */
@@ -132,8 +133,18 @@ export default function App(): React.ReactElement {
                     element={<Documentos />}
                   />
                   <Route path="/presidente/historial" element={<Historial />} />
-                  <Route path="/presidente/subir-archivo" element={<SubirDocumento />} />
-                  <Route path="/presidente/antecedentes-vecino" element={<AntecedentesVecino />} />
+                  <Route
+                    path="/presidente/solicitudes"
+                    element={<ListaSolicitudes />}
+                  />
+                  <Route
+                    path="/presidente/subir-archivo"
+                    element={<SubirDocumento />}
+                  />
+                  <Route
+                    path="/presidente/antecedentes-vecino"
+                    element={<AntecedentesVecino />}
+                  />
                   <Route
                     path="*"
                     element={<Navigate to="/presidente/vecinos" replace />}

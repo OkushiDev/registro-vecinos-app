@@ -50,7 +50,7 @@ import IconButton from "@mui/material/IconButton";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import DescriptionIcon from "@mui/icons-material/Description";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
 // Definición de Columnas
 interface Column {
@@ -91,7 +91,7 @@ const columns: readonly Column[] = [
   { id: "fecha_edicion", label: "F. Edición", minWidth: 120, align: "right" },
   { id: "telefono", label: "Teléfono", minWidth: 120 },
   { id: "email", label: "Email", minWidth: 200 },
-  { id: "acciones_certificado", label: "Certificado", minWidth: 100 },
+  { id: "acciones_certificado", label: "Solicitud", minWidth: 100 },
   { id: "acciones_editar", label: "Editar", minWidth: 80 },
   { id: "acciones_estado", label: "Estado", minWidth: 100 },
 ];
@@ -142,7 +142,6 @@ const RELACIONES_PROPIEDAD = [
 
 export default function ListaVecinos() {
   const theme = useTheme();
-
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
@@ -161,13 +160,34 @@ export default function ListaVecinos() {
 
   const [items, setItems] = React.useState<Data[]>([]);
 
+  const [vecinosConSolicitud, setVecinosConSolicitud] = React.useState<
+    Set<number>
+  >(new Set());
+
   const fetchItems = async () => {
     try {
       const response = await api.get("/lista-vecinos/");
       setItems(response.data.vecinos || []);
+
+      // Obtener solicitudes pendientes
+      await fetchSolicitudesPendientes();
     } catch (error) {
       console.error("Error al obtener los datos:", error);
       setItems([]);
+    }
+  };
+
+  // Función para obtener vecinos con solicitudes pendientes
+  const fetchSolicitudesPendientes = async () => {
+    try {
+      const response = await api.get("/api/solicitudes");
+      const pendientes = response.data
+        .filter((sol: any) => sol.estado === "pendiente")
+        .map((sol: any) => sol.vecino_id);
+
+      setVecinosConSolicitud(new Set(pendientes));
+    } catch (error) {
+      console.error("Error al obtener solicitudes:", error);
     }
   };
 
@@ -398,57 +418,49 @@ export default function ListaVecinos() {
     setVecinoToToggle(null);
   };
 
-  // === DESCARGA CERTIFICADO (Con registro en historial) ===
-  const handleDescargarCertificado = async (
+  // === CREAR SOLICITUD DE CERTIFICADO ===
+  const handleCrearSolicitud = async (
     vecinoId: number,
-    rutVecino: string,
     nombreVecino: string
   ) => {
+    if (
+      !confirm(
+        `¿Crear solicitud de certificado de residencia para ${nombreVecino}?\n\nEsta solicitud aparecerá en el panel de Solicitudes.`
+      )
+    ) {
+      return;
+    }
+
     try {
-      const response = await api.get(`/api/generar-certificado/${vecinoId}`, {
-        responseType: "blob",
-      });
-
-      // Extraer el nombre del archivo del header Content-Disposition
-      const contentDisposition = response.headers["content-disposition"];
-      let fileName = "Certificado_Residencia.pdf"; // Nombre por defecto
-
-      console.log("Headers completos:", response.headers); // Debug
-      console.log("Content-Disposition:", contentDisposition); // Debug
-
-      if (contentDisposition) {
-        // Buscar filename="nombre.pdf" o filename=nombre.pdf
-        const matches = contentDisposition.match(
-          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
-        );
-        if (matches && matches[1]) {
-          fileName = matches[1].trim();
-          console.log("Nombre extraído:", fileName); // Debug
+      const response = await api.post(
+        "/api/solicitudes/crear-por-presidente",
+        null,
+        {
+          params: { vecino_id: vecinoId },
         }
-      }
+      );
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      alert(response.data.mensaje || "Solicitud creada exitosamente");
 
-      // Registro en el Historial
+      // Registrar en el historial
       try {
         await api.post("/historial/", {
           usuario: "Presidente",
-          tipo_accion: "Generar Certificado",
-          descripcion_accion: `Se generó certificado de residencia a ${nombreVecino} (RUT: ${rutVecino})`,
+          tipo_accion: "Crear Solicitud",
+          descripcion_accion: `Se creó solicitud de certificado para ${nombreVecino}`,
         });
       } catch (historialError) {
         console.error("Error al registrar en historial:", historialError);
       }
+
+      // Actualizar la lista para reflejar el cambio
+      await fetchItems();
     } catch (error: any) {
-      console.error("Error al generar certificado:", error);
-      alert(error.response?.data?.detail || "Error al generar el certificado");
+      console.error("Error al crear solicitud:", error);
+      alert(
+        error.response?.data?.detail ||
+          "Error al crear la solicitud. Intenta nuevamente."
+      );
     }
   };
 
@@ -763,16 +775,13 @@ export default function ListaVecinos() {
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
                   sx={{
-                    // Headers adaptativos
                     backgroundColor: "background.paper",
                     color: "text.primary",
                     fontWeight: "bold",
                     borderBottom: `1px solid ${theme.palette.divider}`,
                   }}
-                  // === AGREGADO: Dirección del orden solo en ID ===
                   sortDirection={column.id === "id" ? order : false}
                 >
-                  {/* === AGREGADO: Lógica del botón de orden solo en ID === */}
                   {column.id === "id" ? (
                     <TableSortLabel
                       active={true}
@@ -794,9 +803,12 @@ export default function ListaVecinos() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedRows // <--- USAMOS sortedRows AQUÍ
+            {sortedRows
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row, index) => {
+                // Verificar si el vecino tiene solicitud pendiente
+                const tieneSolicitudPendiente = vecinosConSolicitud.has(row.id);
+
                 return (
                   <TableRow
                     hover
@@ -806,7 +818,6 @@ export default function ListaVecinos() {
                     sx={{
                       backgroundColor: "transparent",
                       "&:last-child td, &:last-child th": { border: 0 },
-                      // Hover dinámico
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
@@ -855,18 +866,25 @@ export default function ListaVecinos() {
                           >
                             <IconButton
                               onClick={() =>
-                                handleDescargarCertificado(
+                                handleCrearSolicitud(
                                   row.id,
-                                  row.rut,
                                   `${row.nombres} ${row.apellido_paterno}`
                                 )
                               }
                               size="small"
-                              title="Generar certificado de residencia"
+                              title={
+                                row.estado !== 1
+                                  ? "Vecino inactivo"
+                                  : tieneSolicitudPendiente
+                                  ? "Ya tiene una solicitud pendiente"
+                                  : "Crear solicitud de certificado"
+                              }
                               sx={{ color: "#9c27b0" }}
-                              disabled={row.estado !== 1}
+                              disabled={
+                                row.estado !== 1 || tieneSolicitudPendiente
+                              }
                             >
-                              <DescriptionIcon />
+                              <AssignmentIcon />
                             </IconButton>
                           </TableCell>
                         );

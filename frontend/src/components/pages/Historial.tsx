@@ -11,7 +11,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel";
 
 // Importación de XLSX para descargar historial
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 // Importación de la API
 import api from "../../api";
@@ -28,7 +28,7 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
 
 // Definición de Columnas (ORDEN ACTUALIZADO)
@@ -58,7 +58,7 @@ interface Data {
 }
 
 // Tipos para el ordenamiento
-type Order = 'asc' | 'desc';
+type Order = "asc" | "desc";
 
 export default function Historial() {
   const theme = useTheme();
@@ -68,14 +68,14 @@ export default function Historial() {
   const [loading, setLoading] = React.useState(true);
 
   // === ESTADOS PARA ORDENAMIENTO ===
-  const [order, setOrder] = React.useState<Order>('desc');
-  const [orderBy, setOrderBy] = React.useState<keyof Data>('id');
+  const [order, setOrder] = React.useState<Order>("desc");
+  const [orderBy, setOrderBy] = React.useState<keyof Data>("id");
 
   // === OBTENER DATOS ===
   const fetchHistorial = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/historial/"); 
+      const response = await api.get("/historial/");
       setRows(response.data || []);
     } catch (error) {
       console.error("Error al obtener el historial:", error);
@@ -92,15 +92,17 @@ export default function Historial() {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
   // === MANEJO DEL ORDENAMIENTO ===
   const handleRequestSort = (property: keyof Data) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
   };
 
@@ -114,11 +116,15 @@ export default function Historial() {
     return rows.filter((row) => {
       if (filterColumn === "all") {
         return Object.values(row).some((value) =>
-          value ? value.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false
+          value
+            ? value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+            : false
         );
       } else {
         const val = row[filterColumn as keyof Data];
-        return val ? val.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        return val
+          ? val.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          : false;
       }
     });
   }, [searchTerm, filterColumn, rows]);
@@ -126,12 +132,12 @@ export default function Historial() {
   // === APLICAR ORDENAMIENTO ===
   const sortedRows = React.useMemo(() => {
     const sorted = [...filteredRows];
-    
+
     sorted.sort((a, b) => {
-        if (orderBy === 'id') {
-            return order === 'asc' ? a.id - b.id : b.id - a.id;
-        }
-        return 0;
+      if (orderBy === "id") {
+        return order === "asc" ? a.id - b.id : b.id - a.id;
+      }
+      return 0;
     });
 
     return sorted;
@@ -151,8 +157,8 @@ export default function Historial() {
   const handleExportToExcel = () => {
     const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
-      Usuario: row.usuario,        // <--- Actualizado orden
-      Acción: row.tipo_accion,     // <--- Actualizado orden
+      Usuario: row.usuario, // <--- Actualizado orden
+      Acción: row.tipo_accion, // <--- Actualizado orden
       Descripción: row.descripcion_accion,
       Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
     }));
@@ -160,8 +166,8 @@ export default function Historial() {
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
-    
-    const date = new Date().toISOString().split('T')[0];
+
+    const date = new Date().toISOString().split("T")[0];
     XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
   };
 
@@ -169,8 +175,11 @@ export default function Historial() {
     if (!dateString) return "-";
     const date = new Date(dateString);
     return date.toLocaleString("es-CL", {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -180,7 +189,10 @@ export default function Historial() {
     borderRadius: "4px",
     border: `1px solid ${theme.palette.divider}`,
     "&:hover": {
-      backgroundColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
+      backgroundColor:
+        theme.palette.mode === "dark"
+          ? "rgba(255, 255, 255, 0.05)"
+          : "rgba(0, 0, 0, 0.04)",
       borderColor: "text.primary",
     },
     minHeight: "56px",
@@ -210,7 +222,7 @@ export default function Historial() {
             <TextField
               fullWidth
               variant="outlined"
-              placeholder="Buscar en historial..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={handleSearchChange}
               sx={{
@@ -222,7 +234,10 @@ export default function Historial() {
                   "& fieldset": { border: "none" },
                   "&:hover": {
                     borderColor: "text.primary",
-                    backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.05)"
+                        : "rgba(0,0,0,0.05)",
                   },
                   "&.Mui-focused": {
                     borderColor: "#3b82f6",
@@ -237,14 +252,16 @@ export default function Historial() {
                     <SearchIcon />
                   </InputAdornment>
                 ),
-                sx: { height: "56px" }
+                sx: { height: "56px" },
               }}
             />
           </Grid>
 
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: "text.secondary" }}>Buscar en</InputLabel>
+              <InputLabel sx={{ color: "text.secondary" }}>
+                Buscar en
+              </InputLabel>
               <Select
                 value={filterColumn}
                 label="Buscar en"
@@ -252,14 +269,18 @@ export default function Historial() {
                 displayEmpty
                 variant="outlined"
                 sx={{
-                    ...commonFilterStyle,
-                    "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                    width: "100%"
+                  ...commonFilterStyle,
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  width: "100%",
                 }}
                 MenuProps={{
-                  PaperProps: { 
-                      sx: { bgcolor: "background.paper", color: "text.primary", backgroundImage: "none" } 
+                  PaperProps: {
+                    sx: {
+                      bgcolor: "background.paper",
+                      color: "text.primary",
+                      backgroundImage: "none",
                     },
+                  },
                 }}
               >
                 <MenuItem value="all">Todo</MenuItem>
@@ -269,9 +290,9 @@ export default function Historial() {
               </Select>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={12} md={3}>
-             <Button
+            <Button
               fullWidth
               variant="contained"
               startIcon={<FileDownloadIcon />}
@@ -321,13 +342,15 @@ export default function Historial() {
                   {column.sortable ? (
                     <TableSortLabel
                       active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : 'asc'}
+                      direction={orderBy === column.id ? order : "asc"}
                       onClick={() => handleRequestSort(column.id)}
                     >
                       {column.label}
                       {orderBy === column.id ? (
                         <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          {order === "desc"
+                            ? "sorted descending"
+                            : "sorted ascending"}
                         </Box>
                       ) : null}
                     </TableSortLabel>
@@ -340,62 +363,75 @@ export default function Historial() {
           </TableHead>
           <TableBody>
             {loading ? (
-                <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "text.primary", py: 4 }}>
-                        Cargando historial...
-                    </TableCell>
-                </TableRow>
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  align="center"
+                  sx={{ color: "text.primary", py: 4 }}
+                >
+                  Cargando historial...
+                </TableCell>
+              </TableRow>
             ) : filteredRows.length === 0 ? (
-                <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ color: "text.secondary", py: 4 }}>
-                        No hay registros de acciones.
-                    </TableCell>
-                </TableRow>
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  align="center"
+                  sx={{ color: "text.secondary", py: 4 }}
+                >
+                  No hay registros de acciones.
+                </TableCell>
+              </TableRow>
             ) : (
-                sortedRows
+              sortedRows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
-                    return (
+                  return (
                     <TableRow
-                        hover
-                        role="checkbox"
-                        tabIndex={-1}
-                        key={row.id}
-                        sx={{
-                            backgroundColor: "transparent",
-                            "&:last-child td, &:last-child th": { border: 0 },
-                            "&:hover": { 
-                                backgroundColor: theme.palette.mode === 'dark' 
-                                ? "rgba(255,255,255,0.05) !important"
-                                : "rgba(0,0,0,0.04) !important" 
-                            },
-                        }}
+                      hover
+                      role="checkbox"
+                      tabIndex={-1}
+                      key={row.id}
+                      sx={{
+                        backgroundColor: "transparent",
+                        "&:last-child td, &:last-child th": { border: 0 },
+                        "&:hover": {
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.05) !important"
+                              : "rgba(0,0,0,0.04) !important",
+                        },
+                      }}
                     >
-                        {columns.map((column) => {
+                      {columns.map((column) => {
                         const cellStyle = {
-                            color: "text.primary",
-                            borderBottom: `1px solid ${theme.palette.divider}`,
+                          color: "text.primary",
+                          borderBottom: `1px solid ${theme.palette.divider}`,
                         };
-                        
+
                         let value = row[column.id];
-                        if (column.id === 'fecha_accion') {
-                            value = formatDate(row.fecha_accion);
+                        if (column.id === "fecha_accion") {
+                          value = formatDate(row.fecha_accion);
                         }
 
                         return (
-                            <TableCell key={column.id} align={column.align} sx={cellStyle}>
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={cellStyle}
+                          >
                             {value}
-                            </TableCell>
+                          </TableCell>
                         );
-                        })}
+                      })}
                     </TableRow>
-                    );
+                  );
                 })
             )}
           </TableBody>
         </Table>
       </TableContainer>
-      
+
       <TablePagination
         rowsPerPageOptions={[25, 50, 100]}
         component="div"

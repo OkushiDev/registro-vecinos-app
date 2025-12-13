@@ -15,12 +15,15 @@ import {
   ListItemText,
   CssBaseline,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import {
   Visibility,
   VisibilityOff,
   SettingsSuggest,
   Security,
   ThumbUpAlt,
+  Brightness4,
+  Brightness7,
 } from "@mui/icons-material";
 import authService from "../services/authService";
 import type { UserProfile } from "./Navbar";
@@ -50,9 +53,16 @@ const getErrorMessage = (error: any): string => {
 
 interface LoginProps {
   onLogin: (profile: UserProfile) => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
 }
 
-export default function Login({ onLogin }: LoginProps): React.ReactElement {
+export default function Login({
+  onLogin,
+  isDarkMode,
+  onToggleTheme,
+}: LoginProps): React.ReactElement {
+  const theme = useTheme();
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -152,19 +162,47 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
     },
   };
 
+  const inputStyles = {
+    "& .MuiOutlinedInput-root": {
+      color: theme.palette.text.primary,
+      backgroundColor:
+        theme.palette.mode === "dark"
+          ? "rgba(255, 255, 255, 0.05)"
+          : "rgba(0, 0, 0, 0.02)",
+      "& fieldset": {
+        borderColor:
+          theme.palette.mode === "dark"
+            ? "rgba(255, 255, 255, 0.23)"
+            : "rgba(0, 0, 0, 0.23)",
+      },
+      "&:hover fieldset": { borderColor: theme.palette.text.primary },
+      "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.palette.text.secondary,
+      "&.Mui-focused": { color: theme.palette.primary.main },
+    },
+    "& .MuiInputAdornment-root .MuiIconButton-root": {
+      color: theme.palette.text.secondary,
+    },
+    "& .MuiFormHelperText-root": {
+      color: theme.palette.text.secondary,
+    },
+  };
+
   const features = [
     {
-      icon: <SettingsSuggest sx={{ color: "#90caf9" }} />,
+      icon: <SettingsSuggest sx={{ color: theme.palette.primary.main }} />,
       title: "Gestión eficiente",
       desc: "Trámites y solicitudes en línea.",
     },
     {
-      icon: <Security sx={{ color: "#90caf9" }} />,
+      icon: <Security sx={{ color: theme.palette.primary.main }} />,
       title: "Seguridad",
       desc: "Acceso exclusivo para residentes verificados.",
     },
     {
-      icon: <ThumbUpAlt sx={{ color: "#90caf9" }} />,
+      icon: <ThumbUpAlt sx={{ color: theme.palette.primary.main }} />,
       title: "Comunidad",
       desc: "Mantente informado de las novedades.",
     },
@@ -177,13 +215,33 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
         sx={{
           minHeight: "100vh",
           width: "100vw",
-          bgcolor: "#0f172a",
+          bgcolor: theme.palette.background.default,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           p: 2,
         }}
       >
+        {/* Botón de cambio de tema - Esquina superior derecha */}
+        <IconButton
+          onClick={onToggleTheme}
+          sx={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            color: theme.palette.text.primary,
+            bgcolor: theme.palette.background.paper,
+            "&:hover": {
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.1)"
+                  : "rgba(0,0,0,0.05)",
+            },
+          }}
+        >
+          {isDarkMode ? <Brightness7 /> : <Brightness4 />}
+        </IconButton>
+
         <Paper
           elevation={10}
           sx={{
@@ -194,7 +252,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
             flexDirection: { xs: "column", md: "row" },
             borderRadius: 4,
             overflow: "hidden",
-            bgcolor: "#1e293b",
+            bgcolor: theme.palette.background.paper,
           }}
         >
           {/* SECCIÓN IZQUIERDA */}
@@ -202,17 +260,22 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
             sx={{
               flex: 1,
               background:
-                "linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%)",
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%)"
+                  : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
               display: { xs: "none", md: "flex" },
               flexDirection: "column",
               justifyContent: "center",
               p: 6,
               color: "white",
-              borderRight: "1px solid rgba(255,255,255,0.1)",
+              borderRight:
+                theme.palette.mode === "dark"
+                  ? "1px solid rgba(255,255,255,0.1)"
+                  : "none",
             }}
           >
             <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
-              <Security fontSize="large" sx={{ color: "#90caf9" }} />
+              <Security fontSize="large" sx={{ color: "white" }} />
               <Typography variant="h5" fontWeight="bold">
                 Junta de Vecinos
               </Typography>
@@ -225,7 +288,9 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                   sx={{ px: 0, py: 1.5, alignItems: "flex-start" }}
                 >
                   <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
-                    {feature.icon}
+                    {React.cloneElement(feature.icon, {
+                      sx: { color: "white" },
+                    })}
                   </ListItemIcon>
                   <ListItemText
                     primary={
@@ -240,7 +305,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                     secondary={
                       <Typography
                         variant="caption"
-                        color="rgba(255,255,255,0.6)"
+                        color="rgba(255,255,255,0.8)"
                       >
                         {feature.desc}
                       </Typography>
@@ -259,7 +324,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              bgcolor: "#1e293b",
+              bgcolor: theme.palette.background.paper,
               p: { xs: 4, md: 8 },
               width: "100%",
             }}
@@ -269,13 +334,13 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                 component="h1"
                 variant="h5"
                 fontWeight="bold"
-                sx={{ color: "white", mb: 1 }}
+                sx={{ color: theme.palette.text.primary, mb: 1 }}
               >
                 Iniciar Sesión
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ color: "rgba(255,255,255,0.6)", mb: 3 }}
+                sx={{ color: theme.palette.text.secondary, mb: 3 }}
               >
                 Ingrese sus credenciales para acceder.
               </Typography>
@@ -286,7 +351,6 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                 </Alert>
               )}
 
-              {/* HEMOS ELIMINADO LA ETIQUETA <form> */}
               <Box sx={{ width: "100%" }}>
                 <TextField
                   margin="normal"
@@ -296,12 +360,12 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                   placeholder="12345678-9"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={handleKeyDown} // Para que funcione el Enter
+                  onKeyDown={handleKeyDown}
                   autoComplete="username"
                   autoFocus
                   disabled={loading}
                   helperText="Sin puntos (ej: 12345678-9)"
-                  sx={darkInputStyles}
+                  sx={inputStyles}
                 />
 
                 <TextField
@@ -312,17 +376,17 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={handleKeyDown} // Para que funcione el Enter
+                  onKeyDown={handleKeyDown}
                   autoComplete="current-password"
                   disabled={loading}
-                  sx={darkInputStyles}
+                  sx={inputStyles}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
-                          sx={{ color: "rgba(255,255,255,0.7)" }}
+                          sx={{ color: theme.palette.text.secondary }}
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -332,7 +396,7 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                 />
 
                 <Button
-                  onClick={handleLoginClick} // Usamos onClick directo
+                  onClick={handleLoginClick}
                   fullWidth
                   variant="contained"
                   size="large"
@@ -340,18 +404,34 @@ export default function Login({ onLogin }: LoginProps): React.ReactElement {
                   sx={{
                     py: 1.5,
                     mt: 3,
-                    bgcolor: "white",
-                    color: "#0f172a",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "white"
+                        : theme.palette.primary.main,
+                    color: theme.palette.mode === "dark" ? "#0f172a" : "white",
                     fontWeight: "bold",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.9)" },
-                    "&.Mui-disabled": { bgcolor: "rgba(255,255,255,0.3)" },
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.9)"
+                          : theme.palette.primary.dark,
+                    },
+                    "&.Mui-disabled": {
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.3)"
+                          : "rgba(0,0,0,0.12)",
+                    },
                   }}
                 >
                   {loading ? "Ingresando..." : "INGRESAR"}
                 </Button>
 
                 <Box sx={{ mt: 2, textAlign: "center" }}>
-                  <Typography variant="caption" color="rgba(255,255,255,0.5)">
+                  <Typography
+                    variant="caption"
+                    color={theme.palette.text.secondary}
+                  >
                     ¿No tienes cuenta? Contacta a tu administrador.
                   </Typography>
                 </Box>

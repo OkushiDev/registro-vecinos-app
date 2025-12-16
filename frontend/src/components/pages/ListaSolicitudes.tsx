@@ -596,7 +596,51 @@ export default function ListaSolicitudes() {
       {/* TABLA */}
       <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
         <Table stickyHeader>
-          <TableHead>{/* ...existing code... */}</TableHead>
+          <TableHead>
+            <TableRow>
+              {columns.map((column) => (
+                <TableCell
+                  key={column.id}
+                  align={column.align}
+                  style={{ minWidth: column.minWidth }}
+                  sx={{
+                    backgroundColor: "background.paper",
+                    color: "text.primary",
+                    fontWeight: "bold",
+                    borderBottom: `2px solid ${theme.palette.divider}`,
+                  }}
+                >
+                  {column.sortable ? (
+                    <TableSortLabel
+                      active={orderBy === column.id}
+                      direction={orderBy === column.id ? order : "asc"}
+                      onClick={() => handleRequestSort(column.id as keyof Data)}
+                      sx={{
+                        color: "text.primary !important",
+                        "&.Mui-active": {
+                          color: "text.primary !important",
+                        },
+                        "& .MuiTableSortLabel-icon": {
+                          color: "text.primary !important",
+                        },
+                      }}
+                    >
+                      {column.label}
+                      {orderBy === column.id ? (
+                        <Box component="span" sx={visuallyHidden}>
+                          {order === "desc"
+                            ? "sorted descending"
+                            : "sorted ascending"}
+                        </Box>
+                      ) : null}
+                    </TableSortLabel>
+                  ) : (
+                    column.label
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>

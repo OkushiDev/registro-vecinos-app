@@ -230,14 +230,20 @@ export default function ListaVecinos() {
     if (searchTerm) {
       filtered = filtered.filter((item) => {
         if (filterColumn === "all") {
-          return Object.values(item).some((value) =>
-            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          return Object.values(item).some(
+            (value) =>
+              value != null &&
+              value.toString().toLowerCase().includes(searchTerm.toLowerCase())
           );
         } else {
-          return item[filterColumn as keyof Data]
-            .toString()
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase());
+          const columnValue = item[filterColumn as keyof Data];
+          return (
+            columnValue != null &&
+            columnValue
+              .toString()
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())
+          );
         }
       });
     }

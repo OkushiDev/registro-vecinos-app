@@ -570,7 +570,7 @@ async def lista_vecinos(db: Session = Depends(get_db)):
         def formatear_fecha(fecha_obj):
             """Convierte datetime a string DD-MM-YYYY"""
             if not fecha_obj:
-                return None
+                return "-"
             if isinstance(fecha_obj, str):
                 fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
             return fecha_obj.strftime("%d-%m-%Y")
@@ -1013,6 +1013,7 @@ async def subir_documento(
             tipo_archivo=file.content_type,
             tamanio=tamanio,
             descripcion=descripcion,
+            fecha_subida=datetime.now(),
         )
 
         db.add(nuevo_documento)
@@ -1435,6 +1436,7 @@ async def crear_solicitud(
             tipo_solicitud="certificado_residencia",
             estado="pendiente",
             visibilidad="mostrar",
+            fecha_solicitud=datetime.now(),
         )
 
         db.add(nueva_solicitud)

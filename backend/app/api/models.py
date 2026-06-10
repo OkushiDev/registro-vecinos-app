@@ -1,4 +1,3 @@
-from sqlalchemy.sql._elements_constructors import desc
 from app.api.database import Base
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, TIMESTAMP, text
 from sqlalchemy.orm import relationship

@@ -31,7 +31,6 @@ interface NavbarProps {
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onViewChange?: (view: string) => void; // AGREGAR ESTA PROP OPCIONAL
 }
 
 interface NavItem {
@@ -93,7 +92,6 @@ export default function Navbar({
   onLogout,
   isDarkMode,
   onToggleTheme,
-  onViewChange, // RECIBIR LA PROP
 }: NavbarProps): React.ReactElement {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
     null
@@ -295,7 +293,7 @@ export default function Navbar({
 
             {/* === BOTÓN DE NOTIFICACIONES (SOLO PRESIDENTE) === */}
             {userProfile === "presidente" && (
-              <NotificationMenu onViewChange={onViewChange} />
+              <NotificationMenu />
             )}
 
             {/* BOTÓN DE CAMBIO DE TEMA */}

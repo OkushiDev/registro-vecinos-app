@@ -35,17 +35,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import api from "../../api";
-
-// --- UTILIDADES ---
-const formatearRutConPuntos = (rut: string): string => {
-  if (!rut) return "-";
-  const rutLimpio = rut.replace(/\./g, "").replace(/-/g, "").trim();
-  if (rutLimpio.length < 2) return rut;
-  const cuerpo = rutLimpio.slice(0, -1);
-  const dv = rutLimpio.slice(-1);
-  const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${cuerpoFormateado}-${dv}`;
-};
+import { formatearRutConPuntos } from "../../utils/rut";
 
 const getErrorMessage = (error: any): string => {
   if (!error) return "Error desconocido";
@@ -644,20 +634,27 @@ const AntecedentesVecino: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        startIcon={<CloudDownloadIcon />}
-                        disabled={!existe}
-                        variant="text"
-                        href={
-                          existe
-                            ? getDownloadUrl(docEncontrado.ruta_archivo)
-                            : undefined
-                        }
-                        target="_blank"
-                      >
-                        Descargar
-                      </Button>
+                      {existe && docEncontrado ? (
+                        <Button
+                          size="small"
+                          startIcon={<CloudDownloadIcon />}
+                          variant="text"
+                          href={getDownloadUrl(docEncontrado.ruta_archivo)}
+                          target="_blank"
+                          component="a"
+                        >
+                          Descargar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          startIcon={<CloudDownloadIcon />}
+                          disabled
+                          variant="text"
+                        >
+                          Descargar
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

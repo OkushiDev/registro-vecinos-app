@@ -11,8 +11,9 @@ import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel"; // Importación para ordenar
 import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
 
-// Importación de XLSX
-import * as XLSX from "xlsx";
+// Importar utilerías compartidas
+import { exportarAExcel } from "../../utils/excel";
+import { formatearRutConPuntos } from "../../utils/rut";
 
 // Importación de la API
 import api from "../../api";
@@ -113,16 +114,6 @@ interface Data {
   estado: number;
 }
 
-const formatearRutConPuntos = (rut: string): string => {
-  if (!rut) return "-";
-  const rutLimpio = rut.replace(/\./g, "").replace(/-/g, "").trim();
-  if (rutLimpio.length < 2) return rut;
-  const cuerpo = rutLimpio.slice(0, -1);
-  const dv = rutLimpio.slice(-1);
-  const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${cuerpoFormateado}-${dv}`;
-};
-
 const CALLES = [
   "Boticelli",
   "Giovanni Bocaccio",
@@ -148,7 +139,7 @@ export default function ListaVecinos() {
   // === ESTADO PARA EL ORDEN (ASC/DESC) ===
   const [order, setOrder] = React.useState<"asc" | "desc">("asc");
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
   const handleChangeRowsPerPage = (
@@ -302,8 +293,7 @@ export default function ListaVecinos() {
   };
 
   // === EXPORTAR A EXCEL ===
-  const handleExportToExcel = () => {
-    // Usamos sortedRows para exportar respetando el orden visual
+  const handleExportToExcel = async () => {
     const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
       Nombres: row.nombres,
@@ -319,12 +309,7 @@ export default function ListaVecinos() {
       "Fecha Registro": row.fecha_registro,
       Estado: row.estado === 1 ? "Habilitado" : "Deshabilitado",
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Vecinos");
-    const date = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(workbook, `Reporte_Vecinos_${date}.xlsx`);
+    await exportarAExcel(dataToExport, "Vecinos", "Reporte_Vecinos");
   };
 
   const commonFilterStyle = {
@@ -489,7 +474,7 @@ export default function ListaVecinos() {
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
           {/* BUSCADOR */}
-          <Grid item xs={12} md={2.5}>
+          <Grid size={{ xs: 12, md: 2.5 }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -530,7 +515,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* FILTRO COLUMNA */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>
                 Buscar en
@@ -566,7 +551,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* FILTRO ESTADO */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
               <Select
@@ -596,7 +581,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* FILTRO CALLE */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
@@ -650,7 +635,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* FILTRO RELACIÓN */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
@@ -706,7 +691,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* BOTÓN EXCEL */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Button
               fullWidth
               variant="contained"
@@ -728,7 +713,7 @@ export default function ListaVecinos() {
           </Grid>
 
           {/* BOTÓN REGISTRAR */}
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <Button
               fullWidth
               variant="contained"

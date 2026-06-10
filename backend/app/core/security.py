@@ -1,9 +1,13 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import JWTError, jwt
+from jose import JWTError, ExpiredSignatureError, jwt
 import bcrypt
 
-SECRET_KEY = "tu-clave-secreta-super-segura-cambiar-en-produccion"
+SECRET_KEY = os.getenv(
+    "JWT_SECRET_KEY",
+    "DEV_ONLY_CHANGE_IN_PRODUCTION",  # default solo para desarrollo local
+)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
@@ -12,106 +16,68 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifica que la contraseña en texto plano coincida con el hash"""
     try:
         if not hashed_password or not plain_password:
-            print("Password o hash vacio")
             return False
 
-        # Convertir a bytes
-        password_bytes = plain_password.encode('utf-8')
-        
-        # Truncar a 72 bytes si es necesario
+        password_bytes = plain_password.encode("utf-8")
         if len(password_bytes) > 72:
-            print(f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72")
-
             password_bytes = password_bytes[:72]
 
-        # Convertir hash a bytes
-        hash_bytes = hashed_password.encode('utf-8')
-        
-        # Convertir $2a$ a $2b$ para compatibilidad con PostgreSQL
+        hash_bytes = hashed_password.encode("utf-8")
         if hash_bytes.startswith(b"$2a$"):
             hash_bytes = b"$2b$" + hash_bytes[4:]
 
-        # Verificar con bcrypt directamente
-        result = bcrypt.checkpw(password_bytes, hash_bytes)
-        print(f"Resultado de verificacion: {result}")
-        return result
-        
-    except ValueError as e:
-        print(f"Error de validacion: {e}")
-        return False
-    except Exception as e:
-        print(f"Error al verificar contraseña: {e}")
-        import traceback
-        traceback.print_exc()
+        return bcrypt.checkpw(password_bytes, hash_bytes)
+    except Exception:
         return False
 
 
 def get_password_hash(password: str) -> str:
     """Genera un hash bcrypt de la contraseña"""
-    try:
-        if not password:
-            raise ValueError("La contraseña no puede estar vacia")
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
 
-        # Convertir a bytes
-        password_bytes = password.encode('utf-8')
-        
-        # Truncar a 72 bytes si es necesario
-        if len(password_bytes) > 72:
-            print(f"Password demasiado largo ({len(password_bytes)} bytes), truncando a 72")
-            password_bytes = password_bytes[:72]
-
-        # Generar salt y hash con bcrypt directamente
-        salt = bcrypt.gensalt(rounds=10)
-        hashed = bcrypt.hashpw(password_bytes, salt)
-        
-        # Retornar como string
-        return hashed.decode('utf-8')
-        
-    except Exception as e:
-        print(f"Error al hashear contraseña: {e}")
-        raise
+    salt = bcrypt.gensalt(rounds=10)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(
+    data: dict, expires_delta: Optional[timedelta] = None
+) -> str:
     """Crea un token JWT"""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_token(token: str):
+def decode_token(token: str) -> Optional[dict]:
     """Decodifica y valida un token JWT"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
-        # Validar que tenga los campos necesarios
         sub = payload.get("sub")
         if not sub:
-            print("Token no tiene campo 'sub'")
             return None
-            
-        # Si sub es string, convertir a int
+
         if isinstance(sub, str):
             try:
                 user_id = int(sub)
             except ValueError:
-                print(f"No se pudo convertir 'sub' a int: {sub}")
                 return None
         else:
             user_id = sub
-        
-        # Retornar payload normalizado
+
         return {
             "sub": user_id,
             "rol": payload.get("rol"),
-            "vecino_id": payload.get("vecino_id")
+            "vecino_id": payload.get("vecino_id"),
         }
-        
+    except ExpiredSignatureError:
+        print("Token expirado")
+        return None
     except JWTError as e:
         print(f"Error al decodificar token: {e}")
         return None

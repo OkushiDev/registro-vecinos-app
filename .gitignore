@@ -1,2 +1,6 @@
 # Qwen Code - memoria persistente del asistente
 .qwen/
+
+# Cache de Python
+*.pyc
+__pycache__/

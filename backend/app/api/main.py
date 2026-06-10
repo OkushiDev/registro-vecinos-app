@@ -14,7 +14,15 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI()
-models.Base.metadata.create_all(bind=engine)
+
+
+@app.on_event("startup")
+def on_startup():
+    """Crea las tablas en la BD al iniciar (si hay conexion)."""
+    try:
+        models.Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"⚠ No se pudieron crear las tablas (BD caida?): {e}")
 
 # Servir archivos subidos como estáticos
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

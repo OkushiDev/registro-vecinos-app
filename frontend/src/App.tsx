@@ -12,9 +12,7 @@ import Historial from "./components/pages/Historial.tsx";
 import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
 import Documentos from "./components/pages/Documentos.tsx";
 import authService from "./services/authService";
-import "./services/axiosConfig"; // Importar configuración de axios
 import SubirDocumento from "./components/pages/SubirDocumento.tsx";
-import "./services/axiosConfig";
 import ListaSolicitudes from "./components/pages/ListaSolicitudes";
 
 export default function App(): React.ReactElement {

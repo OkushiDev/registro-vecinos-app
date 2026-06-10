@@ -1,6 +1,6 @@
-import axios from 'axios';
+import api from "../api";
 
-const API_URL = 'http://localhost:8000/api';
+const TOKEN_KEY = "access_token";
 
 export interface LoginCredentials {
   username: string;
@@ -40,50 +40,44 @@ export interface UserData {
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const formData = new FormData();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
+    formData.append("username", credentials.username);
+    formData.append("password", credentials.password);
 
-    const response = await axios.post<AuthResponse>(`${API_URL}/token`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await api.post<AuthResponse>("/api/token", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     if (response.data.access_token) {
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('rol', response.data.rol);
-      localStorage.setItem('user_id', response.data.user_id.toString());
-      localStorage.setItem('vecino_id', response.data.vecino_id.toString());
-      localStorage.setItem('nombre_completo', response.data.nombre_completo);
+      localStorage.setItem(TOKEN_KEY, response.data.access_token);
+      localStorage.setItem("rol", response.data.rol);
+      localStorage.setItem("user_id", response.data.user_id.toString());
+      localStorage.setItem("vecino_id", response.data.vecino_id.toString());
+      localStorage.setItem("nombre_completo", response.data.nombre_completo);
     }
 
     return response.data;
   }
 
   async getCurrentUser(): Promise<UserData> {
-    const token = this.getToken();
-    const response = await axios.get<UserData>(`${API_URL}/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get<UserData>("/api/me");
     return response.data;
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('rol');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('vecino_id');
-    localStorage.removeItem('nombre_completo');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("rol");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("vecino_id");
+    localStorage.removeItem("nombre_completo");
+    localStorage.removeItem("usuario");
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem(TOKEN_KEY);
   }
 
   getRol(): string | null {
-    return localStorage.getItem('rol');
+    return localStorage.getItem("rol");
   }
 
   isAuthenticated(): boolean {
@@ -91,11 +85,11 @@ class AuthService {
   }
 
   isPresidente(): boolean {
-    return this.getRol() === 'presidente';
+    return this.getRol() === "presidente";
   }
 
   isVecino(): boolean {
-    return this.getRol() === 'vecino';
+    return this.getRol() === "vecino";
   }
 }
 

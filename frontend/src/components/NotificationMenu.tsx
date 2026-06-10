@@ -14,6 +14,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DescriptionIcon from "@mui/icons-material/Description";
 import BlockIcon from "@mui/icons-material/Block";
 import api from "../api";
+import { formatearRutConPuntos } from "../utils/rut";
+import { descargarPDF } from "../utils/pdf";
 
 interface Notificacion {
   id: number;
@@ -29,7 +31,6 @@ interface Notificacion {
 }
 
 interface NotificationMenuProps {
-  onViewChange?: (view: string) => void;
 }
 
 // Función para emitir evento de actualización
@@ -39,9 +40,7 @@ const emitirEventoActualizacion = () => {
   console.log("📡 Evento de actualización emitido");
 };
 
-export default function NotificationMenu({
-  onViewChange,
-}: NotificationMenuProps) {
+export default function NotificationMenu({}: NotificationMenuProps) {
   const theme = useTheme();
 
   // Estados
@@ -91,15 +90,7 @@ export default function NotificationMenu({
     setAnchorEl(null);
   };
 
-  const formatearRut = (rut: string) => {
-    if (!rut) return "-";
-    const rutLimpio = rut.replace(/\./g, "").replace(/-/g, "").trim();
-    if (rutLimpio.length < 2) return rut;
-    const cuerpo = rutLimpio.slice(0, -1);
-    const dv = rutLimpio.slice(-1);
-    const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return `${cuerpoFormateado}-${dv}`;
-  };
+  const formatearRut = (rut: string) => formatearRutConPuntos(rut);
 
   // === ACCIÓN: ELIMINAR (OCULTAR) ===
   const handleEliminarNotificacion = async (
@@ -181,7 +172,7 @@ export default function NotificationMenu({
   // === ACCIÓN: GENERAR CERTIFICADO ===
   const handleGenerarCertificado = async (
     vecinoId: number,
-    rutVecino: string,
+    _rutVecino: string,
     solicitudId: number,
     nombreVecino: string
   ) => {
@@ -197,29 +188,9 @@ export default function NotificationMenu({
         responseType: "blob",
       });
 
-      // 2. EXTRAER NOMBRE DEL ARCHIVO
-      const contentDisposition = response.headers["content-disposition"];
-      let fileName = "Certificado_Residencia.pdf";
-
-      if (contentDisposition) {
-        const matches = contentDisposition.match(
-          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
-        );
-        if (matches && matches[1]) {
-          fileName = matches[1].trim();
-        }
-      }
-
-      // 3. DESCARGAR ARCHIVO
+      // 2. DESCARGAR ARCHIVO
       const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      descargarPDF(blob, response.headers["content-disposition"]);
 
       console.log("Certificado generado exitosamente");
 

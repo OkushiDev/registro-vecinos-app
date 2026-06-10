@@ -69,18 +69,16 @@ export default function Login({
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // CAMBIO: Ya no recibimos 'e: React.FormEvent' porque no usamos form
   const handleLoginClick = async () => {
     setError("");
     setLoading(true);
 
     try {
-      // 1. Validación básica
       if (!username.trim() || !password.trim()) {
         throw new Error("Por favor ingrese RUT y contraseña");
       }
 
-      // 2. Normalizar RUT
+      // Normalizar RUT
       let cleanUsername = username.replace(/\./g, "").trim();
       if (!cleanUsername.includes("-") && cleanUsername.length > 1) {
         const rut = cleanUsername.slice(0, -1);
@@ -88,46 +86,22 @@ export default function Login({
         cleanUsername = `${rut}-${dv}`;
       }
 
-      console.log("Enviando credenciales...");
-
-      // 3. Llamada al Backend
       const response = await authService.login({
         username: cleanUsername,
-        password: password,
+        password,
       });
 
-      // 4. VERIFICACIÓN DEFENSIVA (Esto evita el crash si authService falla silenciosamente)
-      if (!response) {
-        throw new Error(
-          "El servidor no devolvió respuesta (Posible error de conexión)."
-        );
-      }
-      if (!response.access_token && !response.token && !response.rol) {
-        // Si llegamos aquí sin token ni rol, algo salió mal en el servicio pero no lanzó error
+      if (!response?.access_token) {
         throw new Error("Credenciales inválidas.");
       }
 
-      console.log("Login exitoso:", response);
-
-      // 5. Guardar sesión
+      // Guardar sesión adicional para Antecedentes_vecino
       localStorage.setItem("usuario", JSON.stringify(response));
-      localStorage.setItem("access_token", response.access_token); // <-- IMPORTANTE
-      localStorage.setItem("user_role", response.rol);
-      localStorage.setItem("user_id", response.user_id?.toString() || "");
-      localStorage.setItem("vecino_id", response.vecino_id?.toString() || "");
 
-      console.log(
-        "Token guardado en localStorage:",
-        localStorage.getItem("access_token")
-      );
-
-      // 6. Redirigir
-      const userRole = response.rol || response.role || "vecino";
       const userProfile: UserProfile =
-        userRole === "presidente" ? "presidente" : "vecino";
+        response.rol === "presidente" ? "presidente" : "vecino";
       onLogin(userProfile);
     } catch (err: any) {
-      console.error("Error capturado en Login:", err);
       const msg = getErrorMessage(err);
       setError(msg);
     } finally {
@@ -140,26 +114,6 @@ export default function Login({
     if (e.key === "Enter") {
       handleLoginClick();
     }
-  };
-
-  const darkInputStyles = {
-    "& .MuiOutlinedInput-root": {
-      color: "white",
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      "& fieldset": { borderColor: "rgba(255, 255, 255, 0.23)" },
-      "&:hover fieldset": { borderColor: "white" },
-      "&.Mui-focused fieldset": { borderColor: "#90caf9" },
-    },
-    "& .MuiInputLabel-root": {
-      color: "rgba(255, 255, 255, 0.7)",
-      "&.Mui-focused": { color: "#90caf9" },
-    },
-    "& .MuiInputAdornment-root .MuiIconButton-root": {
-      color: "rgba(255, 255, 255, 0.7)",
-    },
-    "& .MuiFormHelperText-root": {
-      color: "rgba(255, 255, 255, 0.5)",
-    },
   };
 
   const inputStyles = {

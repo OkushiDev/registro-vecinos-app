@@ -9,8 +9,9 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel";
-import * as XLSX from "xlsx";
 import api from "../../api";
+import { exportarAExcel } from "../../utils/excel";
+import { descargarPDF } from "../../utils/pdf";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -92,7 +93,7 @@ export default function ListaSolicitudes() {
   const [filterColumn, setFilterColumn] = React.useState("all");
   const [estadoFiltro, setEstadoFiltro] = React.useState<string>("todos");
 
-  const fetchSolicitudes = async () => {
+  const fetchSolicitudes = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/api/solicitudes");
@@ -113,30 +114,24 @@ export default function ListaSolicitudes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   React.useEffect(() => {
     const handleActualizacion = () => {
-      console.log(
-        "Evento de actualización recibido - Recargando solicitudes..."
-      );
       fetchSolicitudes();
     };
 
-    // Agregar listener
     window.addEventListener("actualizarSolicitudes", handleActualizacion);
-
-    // Cleanup
     return () => {
       window.removeEventListener("actualizarSolicitudes", handleActualizacion);
     };
-  }, []);
+  }, [fetchSolicitudes]);
 
   React.useEffect(() => {
     fetchSolicitudes();
-  }, []);
+  }, [fetchSolicitudes]);
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -186,27 +181,8 @@ export default function ListaSolicitudes() {
         responseType: "blob",
       });
 
-      const contentDisposition = response.headers["content-disposition"];
-      let fileName = "Certificado_Residencia.pdf";
-
-      if (contentDisposition) {
-        const matches = contentDisposition.match(
-          /filename[^;=\n]*=["']?([^"'\n;]+)["']?/
-        );
-        if (matches && matches[1]) {
-          fileName = matches[1].trim();
-        }
-      }
-
       const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      descargarPDF(blob, response.headers["content-disposition"]);
 
       console.log("Certificado generado exitosamente");
 
@@ -311,7 +287,7 @@ export default function ListaSolicitudes() {
   }, [filteredRows]);
 
   // Exportar a Excel
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
       Vecino: row.nombre_completo,
@@ -319,15 +295,10 @@ export default function ListaSolicitudes() {
       "N° Socio": row.numero_socio,
       Tipo: row.tipo_solicitud,
       Fecha: row.fecha_solicitud_formato,
-      Estado: row.estado === "pendiente" ? "Pendiente" : "Realizado",
+      Estado: row.estado === "pendiente" ? "Pendiente" : row.estado === "realizado" ? "Realizado" : "Rechazado",
       Visibilidad: row.visibilidad === "mostrar" ? "Mostrar" : "No Mostrar",
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Solicitudes");
-    const date = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(workbook, `Solicitudes_Certificados_${date}.xlsx`);
+    await exportarAExcel(dataToExport, "Solicitudes", "Solicitudes_Certificados");
   };
 
   const commonFilterStyle = {
@@ -376,7 +347,7 @@ export default function ListaSolicitudes() {
         {/* TODO EN UNA SOLA LÍNEA */}
         <Grid container spacing={2} alignItems="center">
           {/* BUSCADOR */}
-          <Grid item xs={12} md={2.5}>
+          <Grid size={{ xs: 12, md: 2.5 }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -416,7 +387,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* FILTRO COLUMNA */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>
                 Buscar en
@@ -448,7 +419,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* FILTRO ESTADO */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
               <Select
@@ -477,7 +448,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* BOTÓN EXCEL */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Button
               fullWidth
               variant="contained"
@@ -499,7 +470,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* ESTADÍSTICA: TOTAL */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Card
               sx={{
                 ...cardStyle,
@@ -520,7 +491,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* ESTADÍSTICA: PENDIENTES */}
-          <Grid item xs={6} md={1.5}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Card
               sx={{
                 ...cardStyle,
@@ -541,7 +512,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* ESTADÍSTICA: REALIZADAS */}
-          <Grid item xs={6} md={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
             <Card
               sx={{
                 ...cardStyle,
@@ -562,7 +533,7 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* ESTADÍSTICA: RECHAZADAS */}
-          <Grid item xs={6} md={6}>
+          <Grid size={{ xs: 6, md: 1.5 }}>
             <Card
               sx={{
                 ...cardStyle,

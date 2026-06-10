@@ -11,6 +11,10 @@ import {
   Autocomplete,
 } from "@mui/material";
 import api from "../api";
+import {
+  formatearRut,
+  validarFormatoRut,
+} from "../utils/rut";
 
 interface EditarVecinoFormProps {
   vecinoId: number;
@@ -36,55 +40,6 @@ const RELACIONES_PROPIEDAD = [
   "Residente",
   "Otro",
 ];
-
-// Función para limpiar el RUT (quitar puntos y guiones)
-const limpiarRut = (rut: string): string => {
-  return rut.replace(/\./g, "").replace(/-/g, "").trim();
-};
-
-// Función para formatear el RUT (sin puntos, con guión)
-const formatearRut = (rut: string): string => {
-  const rutLimpio = limpiarRut(rut);
-
-  // Si está vacío, retornar vacío
-  if (!rutLimpio) return "";
-
-  // Separar número y dígito verificador
-  const cuerpo = rutLimpio.slice(0, -1);
-  const dv = rutLimpio.slice(-1).toUpperCase();
-
-  // Validar que el cuerpo tenga entre 7 y 8 dígitos
-  if (cuerpo.length < 7 || cuerpo.length > 8) {
-    return rut; // Retornar el original si no cumple
-  }
-
-  // Formatear: 12345678-9
-  return `${cuerpo}-${dv}`;
-};
-
-// Función para validar el formato del RUT
-const validarFormatoRut = (rut: string): boolean => {
-  const rutLimpio = limpiarRut(rut);
-
-  // Debe tener entre 8 y 9 caracteres (7-8 números + 1 dígito verificador)
-  if (rutLimpio.length < 8 || rutLimpio.length > 9) {
-    return false;
-  }
-
-  // El cuerpo debe ser solo números
-  const cuerpo = rutLimpio.slice(0, -1);
-  if (!/^\d+$/.test(cuerpo)) {
-    return false;
-  }
-
-  // El dígito verificador debe ser número o K
-  const dv = rutLimpio.slice(-1).toUpperCase();
-  if (!/^[0-9K]$/.test(dv)) {
-    return false;
-  }
-
-  return true;
-};
 
 const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
   vecinoId,
@@ -269,7 +224,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
       <Divider sx={{ mb: 2 }} />
 
       <Grid container spacing={2}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             required
             fullWidth
@@ -282,7 +237,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
             fullWidth
@@ -295,7 +250,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
             fullWidth
@@ -308,7 +263,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
             fullWidth
@@ -322,7 +277,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             required
             fullWidth
@@ -336,7 +291,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}></Grid>
+        <Grid size={{ xs: 12, sm: 6 }}></Grid>
 
         <Typography
           variant="h6"
@@ -347,11 +302,11 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
         </Typography>
         <Divider sx={{ mb: 2, width: "100%" }} />
 
-        <Grid item xs={12} sm={8}>
+        <Grid size={{ xs: 12, sm: 8 }}>
           <Autocomplete
             options={CALLES}
             value={formData.nombre_calle}
-            onChange={(event, newValue) => {
+            onChange={(_event, newValue) => {
               setFormData((prev) => ({
                 ...prev,
                 nombre_calle: newValue || "",
@@ -374,7 +329,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
             required
@@ -394,11 +349,11 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Autocomplete
             options={RELACIONES_PROPIEDAD}
             value={formData.relacion_propiedad}
-            onChange={(event, newValue) => {
+            onChange={(_event, newValue) => {
               setFormData((prev) => ({
                 ...prev,
                 relacion_propiedad: newValue || "",
@@ -430,7 +385,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
         </Typography>
         <Divider sx={{ mb: 2, width: "100%" }} />
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Teléfono"
@@ -443,7 +398,7 @@ const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Email"

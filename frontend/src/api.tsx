@@ -1,12 +1,14 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: API_URL,
   timeout: 30000,
   headers: { "Content-Type": "application/json" },
 });
 
-// INTERCEPTOR PARA AGREGAR EL TOKEN A TODAS LAS PETICIONES
+// Interceptor para agregar el token a todas las peticiones
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("access_token");
@@ -15,25 +17,16 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// INTERCEPTOR PARA MANEJAR ERRORES DE RESPUESTA
+// Interceptor para manejar errores de respuesta
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error);
-
-    // Manejo específico de errores de autenticación
     if (error.response?.status === 401) {
       console.error("Error 401: No autorizado - Token inválido o expirado");
-      // Opcional: redirigir a login automáticamente
-      // localStorage.removeItem("access_token");
-      // window.location.href = "/login";
     }
-
     return Promise.reject(error);
   }
 );

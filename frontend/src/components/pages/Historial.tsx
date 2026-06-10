@@ -10,9 +10,6 @@ import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel";
 
-// Importación de XLSX para descargar historial
-import * as XLSX from "xlsx";
-
 // Importación de la API
 import api from "../../api";
 
@@ -30,6 +27,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
+import { exportarAExcel } from "../../utils/excel";
 
 // Definición de Columnas (ORDEN ACTUALIZADO)
 interface Column {
@@ -88,7 +86,7 @@ export default function Historial() {
     fetchHistorial();
   }, []);
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -154,21 +152,15 @@ export default function Historial() {
   };
 
   // === EXPORTAR A EXCEL (Orden actualizado también aquí) ===
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     const dataToExport = sortedRows.map((row) => ({
       ID: row.id,
-      Usuario: row.usuario, // <--- Actualizado orden
-      Acción: row.tipo_accion, // <--- Actualizado orden
+      Usuario: row.usuario,
+      Acción: row.tipo_accion,
       Descripción: row.descripcion_accion,
       Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
-
-    const date = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(workbook, `Historial_Acciones_${date}.xlsx`);
+    await exportarAExcel(dataToExport, "Historial", "Historial_Acciones");
   };
 
   const formatDate = (dateString: string) => {
@@ -218,7 +210,7 @@ export default function Historial() {
     >
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -257,7 +249,7 @@ export default function Historial() {
             />
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: "text.secondary" }}>
                 Buscar en
@@ -291,7 +283,7 @@ export default function Historial() {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Button
               fullWidth
               variant="contained"

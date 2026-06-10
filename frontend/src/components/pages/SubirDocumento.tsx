@@ -1,4 +1,4 @@
-import React, { useState, useRef, type ChangeEvent, type FormEvent } from "react";
+import React, { useState, useRef, useEffect, type ChangeEvent, type FormEvent } from "react";
 import {
   Box,
   Button,
@@ -16,6 +16,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DescriptionIcon from "@mui/icons-material/Description";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageIcon from "@mui/icons-material/Image";
+import api from "../../api";
 
 interface TipoDocumento {
   value: string;
@@ -35,13 +36,11 @@ const SubirDocumento: React.FC = () => {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar tipos de documentos al montar el componente
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchTipos = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/documentos/tipos");
-        const data = await response.json();
-        setTiposDocumento(data.tipos);
+        const response = await api.get("/api/documentos/tipos");
+        setTiposDocumento(response.data.tipos);
       } catch (error) {
         console.error("Error al cargar tipos de documentos:", error);
       }
@@ -52,7 +51,6 @@ const SubirDocumento: React.FC = () => {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validar tipo de archivo
       const validTypes = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
       if (!validTypes.includes(file.type)) {
         setMessage({
@@ -62,7 +60,6 @@ const SubirDocumento: React.FC = () => {
         return;
       }
 
-      // Validar tamaño (5MB)
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         setMessage({
@@ -75,7 +72,6 @@ const SubirDocumento: React.FC = () => {
       setSelectedFile(file);
       setMessage(null);
 
-      // Generar preview solo para imágenes
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -105,11 +101,6 @@ const SubirDocumento: React.FC = () => {
     setMessage(null);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No hay sesión activa");
-      }
-
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("tipo_documento", tipoDocumento);
@@ -117,26 +108,15 @@ const SubirDocumento: React.FC = () => {
         formData.append("descripcion", descripcion.trim());
       }
 
-      const response = await fetch("http://localhost:8000/api/documentos/subir", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      const response = await api.post("/api/documentos/subir", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al subir el documento");
-      }
-
-      const data = await response.json();
       setMessage({
         type: "success",
-        text:data.message,
+        text: response.data.message,
       });
 
-      // Limpiar formulario
       setSelectedFile(null);
       setPreview(null);
       setTipoDocumento("");
@@ -145,10 +125,11 @@ const SubirDocumento: React.FC = () => {
         fileInputRef.current.value = "";
       }
     } catch (error: any) {
-      setMessage({
-        type: "error",
-        text: error.message || "Error al subir el documento",
-      });
+      const msg =
+        error.response?.data?.detail ||
+        error.message ||
+        "Error al subir el documento";
+      setMessage({ type: "error", text: msg });
     } finally {
       setUploading(false);
     }
@@ -164,7 +145,6 @@ const SubirDocumento: React.FC = () => {
       </Typography>
 
       <form onSubmit={handleSubmit}>
-        {/* Tipo de Documento */}
         <FormControl fullWidth required sx={{ mb: 2 }}>
           <InputLabel>Tipo de Documento</InputLabel>
           <Select
@@ -181,7 +161,6 @@ const SubirDocumento: React.FC = () => {
           <FormHelperText>Selecciona el tipo de documento *</FormHelperText>
         </FormControl>
 
-        {/* Descripción (Opcional) */}
         <TextField
           fullWidth
           label="Descripción (opcional)"
@@ -193,7 +172,6 @@ const SubirDocumento: React.FC = () => {
           sx={{ mb: 2 }}
         />
 
-        {/* Seleccionar archivo */}
         <Button
           variant="outlined"
           component="label"
@@ -211,7 +189,6 @@ const SubirDocumento: React.FC = () => {
           />
         </Button>
 
-        {/* Nombre del archivo seleccionado */}
         {selectedFile && (
           <Box sx={{ mb: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
             <Typography variant="body2" sx={{ display: "flex", alignItems: "center" }}>
@@ -228,7 +205,6 @@ const SubirDocumento: React.FC = () => {
           </Box>
         )}
 
-        {/* Preview de imagen */}
         {preview && (
           <Box sx={{ mb: 2, textAlign: "center" }}>
             <img
@@ -244,21 +220,18 @@ const SubirDocumento: React.FC = () => {
           </Box>
         )}
 
-        {/* Indicador PDF */}
         {isPDF && (
           <Alert severity="info" sx={{ mb: 2 }}>
             Archivo PDF seleccionado. Vista previa no disponible.
           </Alert>
         )}
 
-        {/* Mensajes */}
         {message && (
           <Alert severity={message.type} sx={{ mb: 2 }}>
             {message.text}
           </Alert>
         )}
 
-        {/* Botón subir */}
         <Button
           type="submit"
           variant="contained"

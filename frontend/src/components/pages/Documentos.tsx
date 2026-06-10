@@ -27,6 +27,7 @@ import api from "../../api";
 import IconButton from "@mui/material/IconButton";
 import DownloadIcon from "@mui/icons-material/Download";
 import Tooltip from "@mui/material/Tooltip";
+import { formatearRutConPuntos } from "../../utils/rut";
 
 interface Vecino {
   id: number;
@@ -57,16 +58,6 @@ type FiltroTipo =
   | "apellido_paterno"
   | "apellido_materno"
   | "numero_socio";
-
-const formatearRutConPuntos = (rut: string): string => {
-  if (!rut) return "-";
-  const rutLimpio = rut.replace(/\./g, "").replace(/-/g, "").trim();
-  if (rutLimpio.length < 2) return rut;
-  const cuerpo = rutLimpio.slice(0, -1);
-  const dv = rutLimpio.slice(-1);
-  const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${cuerpoFormateado}-${dv}`;
-};
 
 export default function Documentos() {
   const theme = useTheme();

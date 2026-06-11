@@ -1,6 +1,7 @@
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from pathlib import Path
+from datetime import datetime
 
 import app.api.models as models
 from app.core.security import get_password_hash
@@ -96,3 +97,15 @@ def crear_usuario_para_vecino(
     db.commit()
     db.refresh(nuevo_usuario)
     return nuevo_usuario
+
+
+def formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-"):
+    """Formatea una fecha de forma segura. Fuente única para vecinos y documentos."""
+    if not fecha_obj:
+        return default
+    if isinstance(fecha_obj, str):
+        try:
+            fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return fecha_obj  # ya está formateada
+    return fecha_obj.strftime(fmt)

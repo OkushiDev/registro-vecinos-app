@@ -9,19 +9,12 @@ from app.api.utils import (
     registrar_accion,
     generar_password_inicial,
     crear_usuario_para_vecino,
+    formatear_fecha,
 )
 from app.core.security import verify_password, get_password_hash
 import app.api.models as models
 
 router = APIRouter(tags=["vecinos"])
-
-
-def formatear_fecha(fecha_obj):
-    if not fecha_obj:
-        return "-"
-    if isinstance(fecha_obj, str):
-        fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
-    return fecha_obj.strftime("%d-%m-%Y")
 
 
 @router.get("/lista-vecinos/")

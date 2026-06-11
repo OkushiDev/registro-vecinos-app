@@ -15,6 +15,7 @@ from app.api.utils import (
     validate_file,
     MAX_FILE_SIZE,
     registrar_accion,
+    formatear_fecha,
 )
 import app.api.models as models
 
@@ -212,13 +213,6 @@ async def obtener_documentos_vecino(
             .all()
         )
 
-        def formatear_fecha(fecha_obj):
-            if not fecha_obj:
-                return None
-            if isinstance(fecha_obj, str):
-                return fecha_obj
-            return fecha_obj.strftime("%d-%m-%Y %H:%M")
-
         documentos_lista = [
             {
                 "id": doc.id,
@@ -229,7 +223,7 @@ async def obtener_documentos_vecino(
                 "tipo_documento_value": doc.tipo_documento,
                 "nombre_archivo": doc.nombre_archivo,
                 "descripcion": doc.descripcion or "",
-                "fecha_subida": formatear_fecha(doc.fecha_subida),
+                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=None),
                 "ruta_archivo": doc.ruta_archivo,
                 "tipo_archivo": doc.tipo_archivo or None,
                 "tamanio": doc.tamanio or None,

@@ -29,8 +29,7 @@ import IconButton from "@mui/material/IconButton";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import BlockIcon from "@mui/icons-material/Block";
 import Chip from "@mui/material/Chip";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
+import StatCard from "./StatCard";
 
 interface Column {
   id:
@@ -319,15 +318,6 @@ export default function ListaSolicitudes() {
     "& .MuiSelect-icon": { color: "text.primary" },
   };
 
-  const cardStyle = {
-    height: "56px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "4px",
-    color: "white",
-  };
-
   return (
     <Paper
       sx={{
@@ -469,89 +459,11 @@ export default function ListaSolicitudes() {
             </Button>
           </Grid>
 
-          {/* ESTADÍSTICA: TOTAL */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Card
-              sx={{
-                ...cardStyle,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              }}
-            >
-              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2" fontWeight="600">
-                    Total:
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {estadisticas.total}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* ESTADÍSTICA: PENDIENTES */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Card
-              sx={{
-                ...cardStyle,
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              }}
-            >
-              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2" fontWeight="600">
-                    Pendientes:
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {estadisticas.pendientes}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* ESTADÍSTICA: REALIZADAS */}
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Card
-              sx={{
-                ...cardStyle,
-                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-              }}
-            >
-              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2" fontWeight="600">
-                    Realizadas:
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {estadisticas.realizadas}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* ESTADÍSTICA: RECHAZADAS */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Card
-              sx={{
-                ...cardStyle,
-                background: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
-              }}
-            >
-              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2" fontWeight="600">
-                    Rechazadas:
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {estadisticas.rechazadas}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* ESTADÍSTICAS */}
+          <StatCard label="Total" value={estadisticas.total} gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" />
+          <StatCard label="Pendientes" value={estadisticas.pendientes} gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" />
+          <StatCard label="Realizadas" value={estadisticas.realizadas} gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" />
+          <StatCard label="Rechazadas" value={estadisticas.rechazadas} gradient="linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)" />
         </Grid>
 
         {/* Resumen de búsqueda */}

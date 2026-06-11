@@ -15,31 +15,13 @@ import {
   formatearRut,
   validarFormatoRut,
 } from "../utils/rut";
+import { CALLES, RELACIONES_PROPIEDAD } from "../constants/calles";
 
 interface EditarVecinoFormProps {
   vecinoId: number;
   onSuccess: () => void;
   onCancel: () => void;
 }
-
-// Lista de calles predefinidas
-const CALLES = [
-  "Boticelli",
-  "Giovanni Bocaccio",
-  "Leonardo da Vinci",
-  "Lourdes",
-  "Miguel Angel",
-  "Rio Loco",
-  "Tiziano",
-];
-
-// Lista de relaciones con la propiedad
-const RELACIONES_PROPIEDAD = [
-  "Propietario",
-  "Arrendatario",
-  "Residente",
-  "Otro",
-];
 
 const EditarVecinoForm: React.FC<EditarVecinoFormProps> = ({
   vecinoId,

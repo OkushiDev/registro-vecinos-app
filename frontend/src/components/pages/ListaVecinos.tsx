@@ -14,6 +14,7 @@ import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
 // Importar utilerías compartidas
 import { exportarAExcel } from "../../utils/excel";
 import { formatearRutConPuntos } from "../../utils/rut";
+import { CALLES, RELACIONES_PROPIEDAD } from "../../constants/calles";
 
 // Importación de la API
 import api from "../../api";
@@ -113,23 +114,6 @@ interface Data {
   email: string;
   estado: number;
 }
-
-const CALLES = [
-  "Boticelli",
-  "Giovanni Bocaccio",
-  "Leonardo da Vinci",
-  "Lourdes",
-  "Miguel Angel",
-  "Rio Loco",
-  "Tiziano",
-];
-
-const RELACIONES_PROPIEDAD = [
-  "Propietario",
-  "Arrendatario",
-  "Residente",
-  "Otro",
-];
 
 export default function ListaVecinos() {
   const theme = useTheme();

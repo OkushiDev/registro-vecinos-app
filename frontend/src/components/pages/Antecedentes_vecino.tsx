@@ -131,27 +131,20 @@ const AntecedentesVecino: React.FC = () => {
       try {
         setIsLoading(true);
         setError("");
-        const storedUser = localStorage.getItem("usuario");
+        const vecinoId = Number(localStorage.getItem("vecino_id"));
 
-        if (!storedUser) throw new Error("No hay sesión activa.");
+        if (!vecinoId) throw new Error("No hay sesión activa.");
 
-        const userSession = JSON.parse(storedUser);
-        let userId =
-          userSession.vecino_id ||
-          userSession.id ||
-          (userSession.user && userSession.user.id);
-
-        if (!userId) throw new Error("Error de sesión: ID no encontrado.");
-        setCurrentUserId(userId);
+        setCurrentUserId(vecinoId);
 
         // 1. CARGAR DATOS DEL VECINO
-        const responseVecino = await api.get(`/vecino/${userId}`);
+        const responseVecino = await api.get(`/vecino/${vecinoId}`);
         setVecinoData(responseVecino.data);
 
         // 2. CARGAR DOCUMENTOS DEL VECINO
         try {
           const responseDocs = await api.get(
-            `/api/documentos/vecino/${userId}`
+            `/api/documentos/vecino/${vecinoId}`
           );
           if (
             responseDocs.data &&
@@ -426,7 +419,8 @@ const AntecedentesVecino: React.FC = () => {
   );
 
   const getDownloadUrl = (rutaArchivo: string) => {
-    return `http://localhost:8000/${rutaArchivo.replace(/\\/g, "/")}`;
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    return `${baseUrl}/${rutaArchivo.replace(/\\/g, "/")}`;
   };
 
   if (isLoading)

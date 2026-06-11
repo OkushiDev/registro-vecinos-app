@@ -2,6 +2,13 @@
 
 Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar solicitudes de certificados de residencia, subir documentos y mantener un historial de auditoría.
 
+> 📚 Documentación completa en [`docs/`](./docs/):
+> - [Arquitectura](./docs/01-architecture.md) — Visión general del sistema
+> - [API Reference](./docs/02-api-reference.md) — Todos los endpoints
+> - [Base de Datos](./docs/03-database-schema.md) — Schema y seed data
+> - [Frontend](./docs/04-frontend.md) — Componentes, routing, utilidades
+> - [Lecciones Aprendidas](./docs/05-lessons-learned.md) — Para una futura V2
+
 ## Stack
 
 | Capa | Tecnología |

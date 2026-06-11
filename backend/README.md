@@ -4,12 +4,13 @@ FastAPI + SQLAlchemy + PostgreSQL. Gestionado con `uv`.
 
 ## Stack
 
-- **Framework:** FastAPI (con `fastapi[standard]`: incluye uvicorn, pydantic, python-multipart)
+- **Framework:** FastAPI 0.136 (con `fastapi[standard]`: incluye uvicorn, pydantic, python-multipart)
 - **ORM:** SQLAlchemy 2.0
 - **BD:** PostgreSQL via psycopg2-binary
 - **Auth:** JWT (python-jose + bcrypt)
+- **Validación:** Pydantic v2 con `field_validator` (RUT mod-11)
 - **PDF:** ReportLab + PyPDF2
-- **Tests:** pytest
+- **Tests:** pytest (28 tests con Mock + dependency_overrides)
 - **Gestor:** uv
 
 ## Setup rápido
@@ -28,6 +29,8 @@ docker compose -f ../database/docker-compose.yaml up -d
 uv run uvicorn app.api.main:app --reload --port 8000
 ```
 
+Documentación de la API en `http://localhost:8000/docs`.
+
 Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usuario `postgres` y contraseña `1234` (o configura `DATABASE_URL` en `.env`).
 
 ## Variables de entorno
@@ -35,7 +38,58 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 | Variable | Default | Descripción |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:1234@localhost:5432/postgres` | Conexión a BD |
-| `JWT_SECRET_KEY` | `DEV_ONLY_CHANGE_IN_PRODUCTION` | Clave para firmar tokens |
+| `JWT_SECRET_KEY` | `DEV_ONLY_CHANGE_IN_PRODUCTION` | ⚠️ Cambiar en producción |
+
+## Endpoints
+
+### Auth (públicos)
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/token` | POST | Login — retorna JWT |
+| `/api/documentos/tipos` | GET | Lista estática de tipos de documento |
+
+### Vecinos (auth requerido)
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/lista-vecinos/` | GET | Lista todos los vecinos |
+| `/vecino/{id}` | GET | Obtener vecino por ID |
+| `/agregar-vecino/` | POST | Crear vecino + usuario |
+| `/editar-vecino/{id}` | PUT | Editar vecino (con cambio de password opcional) |
+| `/cambiar-estado-vecino/{id}` | PATCH | Habilitar/deshabilitar vecino |
+| `/siguiente-numero-socio/` | GET | Próximo número de socio |
+
+### Documentos (auth requerido)
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/documentos/mis-documentos` | GET | Documentos del usuario actual |
+| `/api/documentos/subir` | POST | Subir archivo (PDF/PNG/JPG, max 5MB) |
+| `/api/documentos/vecino/{id}` | GET | Documentos de un vecino |
+| `/api/documentos/descargar/{id}` | GET | Descargar documento |
+| `/api/documentos/{id}` | DELETE | Eliminar documento |
+
+### Solicitudes (auth requerido)
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/solicitudes` | GET | Listar todas (presidente) |
+| `/api/solicitudes/mi-pendiente` | GET | ¿Tiene pendiente el usuario actual? |
+| `/api/solicitudes/crear` | POST | Crear solicitud (vecino) |
+| `/api/solicitudes/crear-por-presidente` | POST | Crear para otro vecino |
+| `/api/solicitudes/notificaciones` | GET | Notificaciones (presidente) |
+| `/api/solicitudes/{id}/ocultar` | PATCH | Ocultar notificación |
+| `/api/solicitudes/{id}/rechazar` | PATCH | Rechazar solicitud |
+| `/api/solicitudes/{id}/marcar-realizada` | PATCH | Marcar como realizada |
+
+### Otros (auth requerido)
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/historial/` | GET | Auditoría completa |
+| `/historial/` | POST | Crear entrada manual |
+| `/api/generar-certificado/{id}` | GET | Generar PDF certificado |
 
 ## Estructura del proyecto
 
@@ -43,25 +97,26 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 backend/
 ├── app/
 │   ├── api/
-│   │   ├── main.py              # Bootstrap: FastAPI app, CORS, monta routers
-│   │   ├── schemas.py           # Pydantic models (request/response)
+│   │   ├── main.py              # Bootstrap: FastAPI app, CORS, routers
+│   │   ├── schemas.py           # Pydantic + validación RUT mod-11
 │   │   ├── dependencies.py      # get_current_user, oauth2_scheme
-│   │   ├── utils.py             # Helpers: registrar_accion, validate_file, etc.
-│   │   ├── models.py            # SQLAlchemy models (Vecino, Usuario, Documento, etc.)
+│   │   ├── utils.py             # Helpers: registrar_accion, formatear_fecha, validate_file
+│   │   ├── models.py            # SQLAlchemy ORM (Vecino, Usuario, Documento, etc.)
 │   │   ├── database.py          # Engine, SessionLocal, get_db
-│   │   ├── certificados.py      # Router: generación de PDF (plantilla)
-│   │   ├── routers/
-│   │   │   ├── auth.py          # /api/token, /api/me
-│   │   │   ├── vecinos.py       # CRUD vecinos, estado, número socio
-│   │   │   ├── documentos.py    # Subida, descarga, listado de documentos
-│   │   │   ├── solicitudes.py   # Solicitudes de certificados
-│   │   │   └── historial.py     # Historial de acciones
-│   │   └── tool_posiciones.py   # Herramienta dev para coordenadas PDF
+│   │   ├── certificados.py      # Generación PDF con plantilla
+│   │   ├── tool_posiciones.py   # Dev tool: cuadrícula PDF (no producción)
+│   │   └── routers/
+│   │       ├── auth.py          # /api/token, /api/me
+│   │       ├── vecinos.py       # CRUD vecinos, estado, número socio
+│   │       ├── documentos.py    # Subida, descarga, listado de documentos
+│   │       ├── solicitudes.py   # Solicitudes de certificados
+│   │       └── historial.py     # Historial de acciones
 │   ├── core/
-│   │   └── security.py          # JWT: create/decode token, hash/verify password
+│   │   └── security.py          # JWT: create/decode token, bcrypt hash/verify
 │   └── resources/
 │       └── certificado_plantilla.pdf
-├── pyproject.toml               # Dependencias (única fuente)
+├── app/Test/                    # Tests pytest (28)
+├── pyproject.toml               # Dependencias
 ├── .env                         # Variables locales (no commiteado)
 └── .gitignore
 ```
@@ -78,14 +133,9 @@ from app.api.dependencies import get_db, get_current_user
 router = APIRouter(prefix="/api/mi-recurso", tags=["mi-recurso"])
 
 @router.get("/")
-async def listar(db: Session = Depends(get_db)):
-    ...
-
-@router.post("/")
-async def crear(
-    payload: MiSchema,
+async def listar(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),  # si requiere auth
+    current_user: dict = Depends(get_current_user),  # requerido por defecto
 ):
     ...
 
@@ -96,22 +146,27 @@ app.include_router(mi_recurso.router)
 
 ### Seguridad
 
-- Todos los endpoints que modifican datos **deben** incluir `current_user: dict = Depends(get_current_user)`
-- La contraseña se almacena hasheada con bcrypt (nunca en texto plano)
-- El token JWT expira en 480 minutos (8 horas)
-- `SECRET_KEY` debe cambiarse en producción vía variable de entorno
+- **Todos los endpoints requieren auth por defecto**. Solo 2 son públicos: `/api/token` (login) y `/api/documentos/tipos` (lista estática).
+- La contraseña se almacena hasheada con bcrypt (nunca en texto plano).
+- El token JWT expira en 480 minutos (8 horas).
+- `SECRET_KEY` **debe** cambiarse en producción vía variable de entorno (el default es solo para desarrollo).
+- El RUT se valida con algoritmo mod-11 en `schemas.py` (`field_validator`).
 
 ### Historial
 
-Usar `registrar_accion(db, usuario_id, descripcion, tipo)` para auditar operaciones importantes. Los tipos comunes: `"Login"`, `"Creacion"`, `"EDICION"`, `"Estado"`, `"DOCUMENTO"`, `"SOLICITUD"`.
+Usar `registrar_accion(db, usuario_id, descripcion, tipo)` para auditar todas las mutaciones. Tipos: `"Login"`, `"Creacion"`, `"EDICION"`, `"Estado"`, `"DOCUMENTO"`, `"SOLICITUD"`, `"CERTIFICADO"`.
+
+### Fechas
+
+Usar `formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-")` de `utils.py` para formateo consistente.
 
 ## Tests
 
 ```bash
-uv run pytest
+uv run pytest app/Test/
 ```
 
-Los tests de integración (`test_crud.py`) se conectan a la BD real. Para aislarlos, sobrescribe la dependencia `get_db`:
+28 tests con `Mock` + `dependency_overrides`. No requieren PostgreSQL real. Para correr tests de integración contra BD:
 
 ```python
 from app.api.dependencies import get_db

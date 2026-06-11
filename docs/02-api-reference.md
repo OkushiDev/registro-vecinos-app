@@ -168,6 +168,15 @@ Descarga un archivo.
 
 ## Solicitudes
 
+### `GET /api/solicitudes/mi-pendiente`
+Verifica si el vecino autenticado tiene una solicitud pendiente.
+
+**Auth:** Requiere token (cualquier rol)
+
+**Response (200):** `{ "tiene_pendiente": true|false }`
+
+---
+
 ### `GET /api/solicitudes`
 Lista todas las solicitudes (solo presidente).
 

@@ -26,6 +26,7 @@ import {
   Brightness7,
 } from "@mui/icons-material";
 import authService from "../services/authService";
+import { limpiarRut, formatearRut } from "../utils/rut";
 import type { UserProfile } from "./Navbar";
 
 // --- UTILIDAD DE SEGURIDAD ---
@@ -78,13 +79,8 @@ export default function Login({
         throw new Error("Por favor ingrese RUT y contraseña");
       }
 
-      // Normalizar RUT
-      let cleanUsername = username.replace(/\./g, "").trim();
-      if (!cleanUsername.includes("-") && cleanUsername.length > 1) {
-        const rut = cleanUsername.slice(0, -1);
-        const dv = cleanUsername.slice(-1);
-        cleanUsername = `${rut}-${dv}`;
-      }
+      // Normalizar RUT usando utilidades compartidas
+      const cleanUsername = formatearRut(limpiarRut(username));
 
       const response = await authService.login({
         username: cleanUsername,

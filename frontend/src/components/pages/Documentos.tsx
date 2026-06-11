@@ -23,6 +23,7 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import api from "../../api";
+import { descargarPDF } from "../../utils/pdf";
 
 import IconButton from "@mui/material/IconButton";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -196,44 +197,23 @@ export default function Documentos() {
         return;
       }
 
-      // Hacer petición para descargar
-      const response = await fetch(
-        `http://localhost:8000/api/documentos/descargar/${documentoId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // Descargar usando axios y la utilidad compartida
+      const response = await api.get(`/api/documentos/descargar/${documentoId}`, {
+        responseType: "blob",
+      });
 
-      if (!response.ok) {
-        if (response.status === 403) {
-          alert("No tienes permiso para descargar este documento");
-        } else if (response.status === 404) {
-          alert("Documento no encontrado");
-        } else {
-          alert("Error al descargar el documento");
-        }
+      if (response.status === 403) {
+        alert("No tienes permiso para descargar este documento");
+        return;
+      }
+      if (response.status === 404) {
+        alert("Documento no encontrado");
         return;
       }
 
-      // Convertir respuesta a blob
-      const blob = await response.blob();
-
-      // Crear URL temporal para el blob
-      const url = window.URL.createObjectURL(blob);
-
-      // Crear elemento <a> temporal para descargar
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nombreArchivo;
-      document.body.appendChild(link);
-      link.click();
-
-      // Limpiar
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const blob = response.data;
+      const contentDisposition = response.headers["content-disposition"] as string | null;
+      descargarPDF(blob, contentDisposition, nombreArchivo);
 
       console.log(`Documento ${nombreArchivo} descargado exitosamente`);
     } catch (error) {

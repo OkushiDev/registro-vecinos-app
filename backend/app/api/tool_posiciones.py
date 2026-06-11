@@ -1,3 +1,17 @@
+"""
+HERRAMIENTA DE DESARROLLO — NO USAR EN PRODUCCION
+
+Genera un PDF con una cuadricula superpuesta sobre la plantilla de certificado
+para determinar las coordenadas exactas (en centimetros) donde posicionar
+textos/campos en el certificado de residencia.
+
+Uso:
+    cd backend
+    uv run python -m app.api.tool_posiciones
+
+Esto genera 'test_coordenadas.pdf' en el directorio actual.
+"""
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm

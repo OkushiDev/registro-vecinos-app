@@ -229,7 +229,7 @@ export default function Login({
             </Box>
 
             <List disablePadding>
-              {features.map((feature, index) => (
+              {features.map((feature) => (
                 <ListItem
                   key={feature.title}
                   sx={{ px: 0, py: 1.5, alignItems: "flex-start" }}

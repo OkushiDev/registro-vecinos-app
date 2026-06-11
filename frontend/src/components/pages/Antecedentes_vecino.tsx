@@ -593,7 +593,7 @@ const AntecedentesVecino: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {DOCUMENTOS_REQUERIDOS.map((docConfig, index) => {
+              {DOCUMENTOS_REQUERIDOS.map((docConfig) => {
                 const docEncontrado = listaDocumentos.find(
                   (d) =>
                     d.tipo_documento_value === docConfig.value ||

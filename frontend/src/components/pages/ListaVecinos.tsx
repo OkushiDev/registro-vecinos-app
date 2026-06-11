@@ -780,7 +780,7 @@ export default function ListaVecinos() {
           <TableBody>
             {sortedRows
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, index) => {
+              .map((row) => {
                 // Verificar si el vecino tiene solicitud pendiente
                 const tieneSolicitudPendiente = vecinosConSolicitud.has(row.id);
 

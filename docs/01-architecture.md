@@ -97,11 +97,13 @@ registro-vecinos-app/
 ├── frontend/
 │   └── src/
 │       ├── api.tsx                 # Axios instance + interceptors
-│       ├── App.tsx                 # Root: theme, routing, auth gate
+│       ├── App.tsx                 # Root: theme, routing, auth gate, React.lazy()
 │       ├── services/authService.ts # Token management
 │       ├── components/             # UI components (7)
-│       ├── components/pages/       # Pages (6)
-│       ├── utils/                  # rut.ts, pdf.ts, excel.ts
+│       ├── components/pages/       # Pages (6, lazy-loaded)
+│       │   └── StatCard.tsx        # Reusable stat card
+│       ├── utils/                  # rut.ts, pdf.ts, excel.ts (exceljs lazy)
+│       ├── constants/              # calles.ts (CALLES, RELACIONES)
 │       └── test/                   # Tests vitest (21 tests)
 └── database/
     ├── docker-compose.yaml         # PostgreSQL container
@@ -119,3 +121,7 @@ registro-vecinos-app/
 4. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
 
 5. **Seed data hardcodeada**: El `init.sql` contiene 35 vecinos de prueba con contraseñas generadas con pgcrypto (`crypt()`). El vecino #35 es el presidente.
+
+6. **Lazy loading de páginas**: Las 6 páginas usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~661 kB (-62%).
+
+7. **ExcelJS dinámico**: Se importa solo al hacer click en "Exportar" (~937 kB lazy, no en bundle inicial).

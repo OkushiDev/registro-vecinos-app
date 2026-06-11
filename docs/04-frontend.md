@@ -121,7 +121,22 @@ const api = axios.create({
 |---------|-----------|
 | `rut.ts` | `limpiarRut`, `formatearRut`, `formatearRutConPuntos`, `validarFormatoRut` |
 | `pdf.ts` | `descargarPDF(blob, contentDisposition, defaultName?)` |
-| `excel.ts` | `exportarAExcel(data, sheetName, fileName)` — usa ExcelJS |
+| `excel.ts` | `exportarAExcel(data, sheetName, fileName)` — importa ExcelJS dinámicamente (~1MB, solo al exportar) |
+
+### src/constants/
+
+| Archivo | Contenido |
+|---------|-----------|
+| `calles.ts` | `CALLES`, `RELACIONES_PROPIEDAD` — arrays compartidos en formularios y filtros |
+
+## Optimizaciones de Performance (2026-06-10)
+
+| Optimización | Impacto |
+|-------------|---------|
+| `React.lazy()` en 6 páginas | Bundle inicial reducido **62%** (~1732 kB → ~661 kB) |
+| `import("exceljs")` dinámico | 937 kB fuera del bundle inicial, solo al exportar |
+| `StatCard` componente reutilizable | 4 tarjetas de estadísticas → 1 componente, -78 líneas |
+| `CALLES`/`RELACIONES` a `constants/` | Fuente única, -58 líneas de duplicación |
 
 ## Estado y Comunicación entre Componentes
 

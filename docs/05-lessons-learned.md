@@ -123,3 +123,7 @@ Documentos.tsx tenía su propia implementación de blob download duplicando `src
 | 🟢 Media | Unificar paths en una sola fuente de verdad |
 | 🟢 Media | Scripts de desarrollo en `scripts/` |
 | 🟢 Media | URLs dinámicas via env var, nunca hardcodeadas |
+| 🟢 Media | `React.lazy()` + `Suspense` para todas las páginas desde el día 1 |
+| 🟢 Media | Dependencias pesadas (ExcelJS) con `import()` dinámico, no en bundle inicial |
+| 🟢 Media | Constantes compartidas (calles, relaciones) en `src/constants/` desde el inicio |
+| 🟢 Media | `formatear_fecha` y otras utilidades de formato centralizadas en `utils/` |

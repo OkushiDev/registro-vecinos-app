@@ -27,6 +27,17 @@ class VecinoCreate(BaseModel):
             raise ValueError("El RUT solo puede contener digitos en el cuerpo")
         if not re.match(r"^[\dK]$", dv):
             raise ValueError("El digito verificador debe ser un numero o K")
+
+        # Algoritmo modulo 11
+        suma = 0
+        multiplicador = 2
+        for digito in reversed(cuerpo):
+            suma += int(digito) * multiplicador
+            multiplicador = multiplicador + 1 if multiplicador < 7 else 2
+        dv_esperado = 11 - (suma % 11)
+        dv_calculado = "K" if dv_esperado == 10 else "0" if dv_esperado == 11 else str(dv_esperado)
+        if dv != dv_calculado:
+            raise ValueError(f"El digito verificador del RUT es invalido (esperado: {dv_calculado})")
         return v
 
     class Config:
@@ -60,6 +71,17 @@ class VecinoEdicionSchema(BaseModel):
             raise ValueError("El RUT solo puede contener digitos en el cuerpo")
         if not re.match(r"^[\dK]$", dv):
             raise ValueError("El digito verificador debe ser un numero o K")
+
+        # Algoritmo modulo 11
+        suma = 0
+        multiplicador = 2
+        for digito in reversed(cuerpo):
+            suma += int(digito) * multiplicador
+            multiplicador = multiplicador + 1 if multiplicador < 7 else 2
+        dv_esperado = 11 - (suma % 11)
+        dv_calculado = "K" if dv_esperado == 10 else "0" if dv_esperado == 11 else str(dv_esperado)
+        if dv != dv_calculado:
+            raise ValueError(f"El digito verificador del RUT es invalido (esperado: {dv_calculado})")
         return v
 
     class Config:

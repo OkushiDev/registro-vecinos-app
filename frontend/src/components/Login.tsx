@@ -91,9 +91,6 @@ export default function Login({
         throw new Error("Credenciales inválidas.");
       }
 
-      // Guardar sesión adicional para Antecedentes_vecino
-      localStorage.setItem("usuario", JSON.stringify(response));
-
       const userProfile: UserProfile =
         response.rol === "presidente" ? "presidente" : "vecino";
       onLogin(userProfile);

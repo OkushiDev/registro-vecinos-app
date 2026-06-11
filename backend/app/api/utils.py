@@ -8,7 +8,10 @@ from app.core.security import get_password_hash
 
 # === CONFIGURACIÓN DE ARCHIVOS ===
 
-UPLOAD_DIR = Path("uploads/documentos")
+UPLOAD_BASE = Path("uploads")
+UPLOAD_BASE.mkdir(parents=True, exist_ok=True)
+
+UPLOAD_DIR = UPLOAD_BASE / "documentos"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}

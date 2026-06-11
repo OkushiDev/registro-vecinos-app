@@ -133,10 +133,18 @@ const api = axios.create({
 
 | Optimización | Impacto |
 |-------------|---------|
-| `React.lazy()` en 6 páginas | Bundle inicial reducido **62%** (~1732 kB → ~661 kB) |
+| `React.lazy()` en 6 páginas + NotFound | Bundle inicial reducido **62%** (~1732 kB → ~661 kB) |
 | `import("exceljs")` dinámico | 937 kB fuera del bundle inicial, solo al exportar |
 | `StatCard` componente reutilizable | 4 tarjetas de estadísticas → 1 componente, -78 líneas |
 | `CALLES`/`RELACIONES` a `constants/` | Fuente única, -58 líneas de duplicación |
+
+## Robustez (2026-06-10)
+
+| Feature | Descripción |
+|---------|-------------|
+| `ErrorBoundary` | Captura errores de renderizado, muestra mensaje amigable + botón recargar |
+| `NotFound` (404) | Página para rutas inexistentes, reemplaza redirects silenciosos |
+| `AuthContext` | Store global vía React Context (infraestructura lista, migración pendiente) |
 
 ## Estado y Comunicación entre Componentes
 

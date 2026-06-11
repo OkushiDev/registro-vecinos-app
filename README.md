@@ -26,8 +26,11 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 |-----------|-------|
 | Tests backend | 28 ✅ |
 | Tests frontend | 21 ✅ |
-| Bundle inicial | 661 kB (optimizado -62%) |
-| Issues pendientes | [12](./TODO.md) |
+| Bundle inicial | 661 kB (-62%) |
+| Endpoints públicos | 2 (token, tipos) |
+| Error Boundary | ✅ |
+| 404 page | ✅ |
+| Issues pendientes | [4](./TODO.md) |
 
 ## Requisitos previos
 

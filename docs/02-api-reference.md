@@ -56,7 +56,9 @@ Perfil del usuario autenticado.
 ## Vecinos
 
 ### `GET /lista-vecinos/`
-Lista todos los vecinos (sin autenticación).
+Lista todos los vecinos.
+
+**Auth:** Requiere token
 
 **Response (200):** `{ "vecinos": [ { id, nombres, rut, ... }, ... ] }`
 
@@ -64,6 +66,8 @@ Lista todos los vecinos (sin autenticación).
 
 ### `GET /vecino/{id}`
 Obtiene un vecino por ID.
+
+**Auth:** Requiere token
 
 ---
 
@@ -112,6 +116,8 @@ Toggle activo/inactivo del vecino (y su usuario asociado).
 
 ### `GET /siguiente-numero-socio/`
 Obtiene el próximo número de socio disponible.
+
+**Auth:** Requiere token
 
 **Response:** `{ "siguiente_numero_socio": 36 }`
 
@@ -207,6 +213,8 @@ Actualiza el estado de una solicitud.
 ### `GET /historial/`
 Lista todo el historial de acciones (orden descendente).
 
+**Auth:** Requiere token
+
 **Response:** Array de `{ id, descripcion_accion, tipo_accion, fecha_accion, usuario }`
 
 ---
@@ -223,7 +231,7 @@ Crea un registro en el historial.
 ### `GET /api/generar-certificado/{vecino_id}`
 Genera y descarga un PDF de certificado de residencia.
 
-**Sin autenticación.** Usa plantilla PDF + superposición de datos con ReportLab.
+**Auth:** Requiere token
 
 **Response:** `application/pdf` con `Content-Disposition: attachment`.
 
@@ -242,12 +250,9 @@ Genera y descarga un PDF de certificado de residencia.
 
 ## Endpoints sin autenticación
 
-Estos endpoints NO requieren token (considerar para V2):
+Solo 2 endpoints públicos (bajo riesgo):
 
 | Endpoint | Riesgo |
 |----------|--------|
-| `GET /lista-vecinos/` | Expone datos personales de todos los vecinos |
-| `GET /vecino/{id}` | Expone datos de un vecino específico |
-| `GET /siguiente-numero-socio/` | Bajo (solo un número) |
-| `GET /api/generar-certificado/{id}` | Permite generar certificados sin autenticación |
-| `GET /historial/` | Expone auditoría completa |
+| `POST /api/token` | Login (intencional) |
+| `GET /api/documentos/tipos` | Lista estática de tipos de documento |

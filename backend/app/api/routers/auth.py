@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import Token
 from app.api.dependencies import get_db, get_current_user
-from app.api.utils import registrar_accion
+from app.api.utils import registrar_accion, formatear_fecha
 from app.core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 import app.api.models as models
 
@@ -140,7 +140,7 @@ async def get_me(
                 "relacion_propiedad": vecino.relacion_propiedad,
                 "telefono": vecino.telefono,
                 "email": vecino.email,
-                "fecha_registro": str(vecino.fecha_registro),
+                "fecha_registro": formatear_fecha(vecino.fecha_registro),
                 "estado": vecino.estado,
             },
         }

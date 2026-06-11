@@ -3,14 +3,17 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import HistorialSchema
 from app.api.dependencies import get_db, get_current_user
-from app.api.utils import registrar_accion
+from app.api.utils import registrar_accion, formatear_fecha
 import app.api.models as models
 
 router = APIRouter(prefix="/historial", tags=["historial"])
 
 
 @router.get("/")
-async def obtener_historial(db: Session = Depends(get_db)):
+async def obtener_historial(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         resultados = (
             db.query(models.Historial, models.Vecino)
@@ -27,7 +30,7 @@ async def obtener_historial(db: Session = Depends(get_db)):
                     "id": accion.id,
                     "descripcion_accion": accion.descripcion,
                     "tipo_accion": accion.tipo_accion,
-                    "fecha_accion": str(accion.fecha_accion),
+                    "fecha_accion": formatear_fecha(accion.fecha_accion, fmt="%d-%m-%Y %H:%M"),
                     "usuario": f"{vecino.nombres} {vecino.apellido_paterno}",
                 }
             )

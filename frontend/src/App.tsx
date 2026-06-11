@@ -7,6 +7,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 
 import Navbar, { type UserProfile } from "./components/Navbar";
 import Login from "./components/Login.tsx";
+import ErrorBoundary from "./components/ErrorBoundary";
 import authService from "./services/authService";
 
 // Lazy-loaded pages — reduce initial bundle ~60%
@@ -16,6 +17,7 @@ const AntecedentesVecino = React.lazy(() => import("./components/pages/Anteceden
 const Documentos = React.lazy(() => import("./components/pages/Documentos.tsx"));
 const SubirDocumento = React.lazy(() => import("./components/pages/SubirDocumento.tsx"));
 const ListaSolicitudes = React.lazy(() => import("./components/pages/ListaSolicitudes"));
+const NotFound = React.lazy(() => import("./components/pages/NotFound"));
 
 const PageLoader = () => (
   <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -91,6 +93,7 @@ export default function App(): React.ReactElement {
   // === ESTRUCTURA CORREGIDA ===
   // Envolvemos todo en ThemeProvider y BrowserRouter desde el inicio
   return (
+    <ErrorBoundary>
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
@@ -154,7 +157,7 @@ export default function App(): React.ReactElement {
                   />
                   <Route
                     path="*"
-                    element={<Navigate to="/presidente/vecinos" replace />}
+                    element={<NotFound />}
                   />
                 </>
               ) : (
@@ -175,9 +178,7 @@ export default function App(): React.ReactElement {
                   />
                   <Route
                     path="*"
-                    element={
-                      <Navigate to="/vecino/antecedentes-vecino" replace />
-                    }
+                    element={<NotFound />}
                   />
                 </>
               )}
@@ -187,5 +188,6 @@ export default function App(): React.ReactElement {
         )}
       </BrowserRouter>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }

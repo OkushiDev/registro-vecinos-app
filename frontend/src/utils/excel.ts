@@ -1,8 +1,7 @@
-import ExcelJS from "exceljs";
-
 /**
  * Exporta un arreglo de objetos a un archivo Excel (.xlsx).
  * La función es asíncrona porque ExcelJS genera el buffer de forma asíncrona.
+ * ExcelJS se importa dinámicamente (~1.2MB) solo al ejecutar la exportación.
  */
 export const exportarAExcel = async <T extends Record<string, unknown>>(
   data: T[],
@@ -10,6 +9,8 @@ export const exportarAExcel = async <T extends Record<string, unknown>>(
   fileName: string
 ): Promise<void> => {
   if (data.length === 0) return;
+
+  const ExcelJS = (await import("exceljs")).default;
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName, {

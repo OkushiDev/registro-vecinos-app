@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -7,13 +7,21 @@ import CssBaseline from "@mui/material/CssBaseline";
 
 import Navbar, { type UserProfile } from "./components/Navbar";
 import Login from "./components/Login.tsx";
-import ListaVecinos from "./components/pages/ListaVecinos.tsx";
-import Historial from "./components/pages/Historial.tsx";
-import AntecedentesVecino from "./components/pages/Antecedentes_vecino.tsx";
-import Documentos from "./components/pages/Documentos.tsx";
 import authService from "./services/authService";
-import SubirDocumento from "./components/pages/SubirDocumento.tsx";
-import ListaSolicitudes from "./components/pages/ListaSolicitudes";
+
+// Lazy-loaded pages — reduce initial bundle ~60%
+const ListaVecinos = React.lazy(() => import("./components/pages/ListaVecinos.tsx"));
+const Historial = React.lazy(() => import("./components/pages/Historial.tsx"));
+const AntecedentesVecino = React.lazy(() => import("./components/pages/Antecedentes_vecino.tsx"));
+const Documentos = React.lazy(() => import("./components/pages/Documentos.tsx"));
+const SubirDocumento = React.lazy(() => import("./components/pages/SubirDocumento.tsx"));
+const ListaSolicitudes = React.lazy(() => import("./components/pages/ListaSolicitudes"));
+
+const PageLoader = () => (
+  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+    <CircularProgress />
+  </Box>
+);
 
 export default function App(): React.ReactElement {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -115,6 +123,7 @@ export default function App(): React.ReactElement {
               onToggleTheme={toggleTheme}
             />
 
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               {userProfile === "presidente" ? (
                 <>
@@ -173,6 +182,7 @@ export default function App(): React.ReactElement {
                 </>
               )}
             </Routes>
+            </Suspense>
           </>
         )}
       </BrowserRouter>

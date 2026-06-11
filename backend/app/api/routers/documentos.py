@@ -138,7 +138,7 @@ async def listar_mis_documentos(
                 "tipo_archivo": doc.tipo_archivo,
                 "tamanio": doc.tamanio,
                 "descripcion": doc.descripcion,
-                "fecha_subida": str(doc.fecha_subida),
+                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=""),
             }
             for doc in documentos
         ]

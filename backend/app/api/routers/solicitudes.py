@@ -137,6 +137,23 @@ async def crear_solicitud(
         )
 
 
+@router.get("/mi-pendiente")
+async def mi_solicitud_pendiente(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna si el vecino autenticado tiene una solicitud pendiente."""
+    solicitud = (
+        db.query(models.Solicitud)
+        .filter(
+            models.Solicitud.vecino_id == current_user["vecino_id"],
+            models.Solicitud.estado == "pendiente",
+        )
+        .first()
+    )
+    return {"tiene_pendiente": solicitud is not None}
+
+
 @router.get("/notificaciones")
 async def obtener_notificaciones(
     current_user: dict = Depends(get_current_user),
@@ -234,6 +251,13 @@ async def crear_solicitud_presidente(
         db.commit()
         db.refresh(nueva_solicitud)
 
+        registrar_accion(
+            db=db,
+            usuario_id=current_user["user_id"],
+            descripcion=f"Creó solicitud de certificado para vecino ID {vecino_id}",
+            tipo="SOLICITUD",
+        )
+
         return {
             "success": True,
             "mensaje": "Solicitud creada exitosamente",
@@ -273,6 +297,13 @@ async def ocultar_solicitud(
     solicitud.visibilidad = "oculto"
     db.commit()
 
+    registrar_accion(
+        db=db,
+        usuario_id=current_user["user_id"],
+        descripcion=f"Ocultó solicitud ID {solicitud_id}",
+        tipo="SOLICITUD",
+    )
+
     return {"success": True, "message": "Notificación ocultada exitosamente"}
 
 
@@ -299,6 +330,13 @@ async def rechazar_solicitud(
     solicitud.estado = "rechazado"
     db.commit()
 
+    registrar_accion(
+        db=db,
+        usuario_id=current_user["user_id"],
+        descripcion=f"Rechazó solicitud ID {solicitud_id}",
+        tipo="SOLICITUD",
+    )
+
     return {"success": True, "message": "Solicitud rechazada exitosamente"}
 
 
@@ -324,5 +362,12 @@ async def marcar_realizada(
 
     solicitud.estado = "realizado"
     db.commit()
+
+    registrar_accion(
+        db=db,
+        usuario_id=current_user["user_id"],
+        descripcion=f"Marcó como realizada solicitud ID {solicitud_id}",
+        tipo="SOLICITUD",
+    )
 
     return {"success": True, "message": "Solicitud marcada como realizada"}

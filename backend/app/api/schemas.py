@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
+import re
 
 
 class VecinoCreate(BaseModel):
@@ -13,6 +14,20 @@ class VecinoCreate(BaseModel):
     relacion_propiedad: Optional[str] = None
     telefono: Optional[str] = None
     email: Optional[str] = None
+
+    @field_validator("rut")
+    @classmethod
+    def validar_rut(cls, v: str) -> str:
+        rut_limpio = re.sub(r"[.\-]", "", v).upper()
+        if len(rut_limpio) < 8 or len(rut_limpio) > 9:
+            raise ValueError("El RUT debe tener 8 o 9 caracteres")
+        cuerpo = rut_limpio[:-1]
+        dv = rut_limpio[-1]
+        if not cuerpo.isdigit():
+            raise ValueError("El RUT solo puede contener digitos en el cuerpo")
+        if not re.match(r"^[\dK]$", dv):
+            raise ValueError("El digito verificador debe ser un numero o K")
+        return v
 
     class Config:
         from_attributes = True
@@ -32,6 +47,20 @@ class VecinoEdicionSchema(BaseModel):
     currentPassword: Optional[str] = None
     newPassword: Optional[str] = None
     password: Optional[str] = None
+
+    @field_validator("rut")
+    @classmethod
+    def validar_rut(cls, v: str) -> str:
+        rut_limpio = re.sub(r"[.\-]", "", v).upper()
+        if len(rut_limpio) < 8 or len(rut_limpio) > 9:
+            raise ValueError("El RUT debe tener 8 o 9 caracteres")
+        cuerpo = rut_limpio[:-1]
+        dv = rut_limpio[-1]
+        if not cuerpo.isdigit():
+            raise ValueError("El RUT solo puede contener digitos en el cuerpo")
+        if not re.match(r"^[\dK]$", dv):
+            raise ValueError("El digito verificador debe ser un numero o K")
+        return v
 
     class Config:
         from_attributes = True

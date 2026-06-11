@@ -170,14 +170,14 @@ export default function App(): React.ReactElement {
                     element={<AntecedentesVecino />}
                   />
                   <Route
+                    path="/vecino/subir-archivo"
+                    element={<SubirDocumento />}
+                  />
+                  <Route
                     path="*"
                     element={
                       <Navigate to="/vecino/antecedentes-vecino" replace />
                     }
-                  />
-                  <Route
-                    path="/vecino/subir-archivo"
-                    element={<SubirDocumento />}
                   />
                 </>
               )}

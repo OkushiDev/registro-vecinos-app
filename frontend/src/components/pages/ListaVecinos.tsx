@@ -787,9 +787,7 @@ export default function ListaVecinos() {
                 return (
                   <TableRow
                     hover
-                    role="checkbox"
-                    tabIndex={-1}
-                    key={`${row.id}-${index}`}
+                    key={row.id}
                     sx={{
                       backgroundColor: "transparent",
                       "&:last-child td, &:last-child th": { border: 0 },

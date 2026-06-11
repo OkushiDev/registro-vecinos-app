@@ -40,10 +40,10 @@ interface Column {
 
 const columns: readonly Column[] = [
   { id: "id", label: "ID", minWidth: 50, sortable: true },
-  { id: "usuario", label: "Usuario", minWidth: 120 }, // Movidó aquí
-  { id: "tipo_accion", label: "Acción", minWidth: 120 }, // Movidó aquí
-  { id: "descripcion_accion", label: "Descripción", minWidth: 250 }, // Movidó aquí y aumentado ancho
-  { id: "fecha_accion", label: "Fecha y Hora", minWidth: 170, align: "right" },
+  { id: "usuario", label: "Usuario", minWidth: 120, sortable: true },
+  { id: "tipo_accion", label: "Acción", minWidth: 120, sortable: true },
+  { id: "descripcion_accion", label: "Descripción", minWidth: 250 },
+  { id: "fecha_accion", label: "Fecha y Hora", minWidth: 170, align: "right", sortable: true },
 ];
 
 // Interfaz de Datos
@@ -130,14 +130,16 @@ export default function Historial() {
   // === APLICAR ORDENAMIENTO ===
   const sortedRows = React.useMemo(() => {
     const sorted = [...filteredRows];
-
     sorted.sort((a, b) => {
-      if (orderBy === "id") {
-        return order === "asc" ? a.id - b.id : b.id - a.id;
+      const aVal = a[orderBy];
+      const bVal = b[orderBy];
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return order === "asc" ? aVal - bVal : bVal - aVal;
       }
-      return 0;
+      const aStr = String(aVal ?? "");
+      const bStr = String(bVal ?? "");
+      return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
     });
-
     return sorted;
   }, [filteredRows, order, orderBy]);
 
@@ -381,8 +383,6 @@ export default function Historial() {
                   return (
                     <TableRow
                       hover
-                      role="checkbox"
-                      tabIndex={-1}
                       key={row.id}
                       sx={{
                         backgroundColor: "transparent",

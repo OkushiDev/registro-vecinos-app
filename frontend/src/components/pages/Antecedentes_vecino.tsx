@@ -166,14 +166,10 @@ const AntecedentesVecino: React.FC = () => {
           );
         }
 
-        // 3. VERIFICAR SI TIENE SOLICITUD PENDIENTE (NUEVO)
+        // 3. VERIFICAR SI TIENE SOLICITUD PENDIENTE
         try {
-          const responseSolicitudes = await api.get("/api/solicitudes");
-          const solicitudPendiente = responseSolicitudes.data.some(
-            (sol: any) => sol.vecino_id === userId && sol.estado === "pendiente"
-          );
-          setTieneSolicitudPendiente(solicitudPendiente);
-          console.log("Tiene solicitud pendiente:", solicitudPendiente);
+          const response = await api.get("/api/solicitudes/mi-pendiente");
+          setTieneSolicitudPendiente(response.data.tiene_pendiente);
         } catch (solErr) {
           console.warn("No se pudo verificar solicitudes:", solErr);
         }
@@ -612,7 +608,7 @@ const AntecedentesVecino: React.FC = () => {
                 const existe = !!docEncontrado;
 
                 return (
-                  <TableRow key={index} hover>
+                  <TableRow key={docConfig.value} hover>
                     <TableCell>
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -641,6 +637,7 @@ const AntecedentesVecino: React.FC = () => {
                           variant="text"
                           href={getDownloadUrl(docEncontrado.ruta_archivo)}
                           target="_blank"
+                          rel="noopener noreferrer"
                           component="a"
                         >
                           Descargar

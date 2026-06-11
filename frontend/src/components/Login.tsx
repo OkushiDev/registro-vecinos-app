@@ -234,7 +234,7 @@ export default function Login({
             <List disablePadding>
               {features.map((feature, index) => (
                 <ListItem
-                  key={index}
+                  key={feature.title}
                   sx={{ px: 0, py: 1.5, alignItems: "flex-start" }}
                 >
                   <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>

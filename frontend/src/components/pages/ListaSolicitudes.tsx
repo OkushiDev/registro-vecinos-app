@@ -50,17 +50,18 @@ interface Column {
 
 const columns: readonly Column[] = [
   { id: "id", label: "ID", minWidth: 50, sortable: true },
-  { id: "nombre_completo", label: "Vecino", minWidth: 180 },
-  { id: "rut", label: "RUT", minWidth: 110 },
-  { id: "numero_socio", label: "N° Socio", minWidth: 85, align: "center" },
+  { id: "nombre_completo", label: "Vecino", minWidth: 180, sortable: true },
+  { id: "rut", label: "RUT", minWidth: 110, sortable: true },
+  { id: "numero_socio", label: "N° Socio", minWidth: 85, align: "center", sortable: true },
   { id: "tipo_solicitud", label: "Tipo", minWidth: 140 },
   {
     id: "fecha_solicitud_formato",
     label: "Fecha",
     minWidth: 130,
     align: "right",
+    sortable: true,
   },
-  { id: "estado", label: "Estado", minWidth: 110, align: "center" },
+  { id: "estado", label: "Estado", minWidth: 110, align: "center", sortable: true },
   { id: "visibilidad", label: "Visibilidad", minWidth: 120, align: "center" },
   { id: "acciones", label: "Acciones", minWidth: 100, align: "center" },
 ];
@@ -261,10 +262,14 @@ export default function ListaSolicitudes() {
   const sortedRows = React.useMemo(() => {
     const sorted = [...filteredRows];
     sorted.sort((a, b) => {
-      if (orderBy === "id") {
-        return order === "asc" ? a.id - b.id : b.id - a.id;
+      const aVal = a[orderBy];
+      const bVal = b[orderBy];
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return order === "asc" ? aVal - bVal : bVal - aVal;
       }
-      return 0;
+      const aStr = String(aVal ?? "");
+      const bStr = String(bVal ?? "");
+      return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
     });
     return sorted;
   }, [filteredRows, order, orderBy]);

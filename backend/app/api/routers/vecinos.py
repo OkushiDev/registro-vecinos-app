@@ -68,8 +68,8 @@ async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
             "relacion_propiedad": vecino.relacion_propiedad,
             "telefono": vecino.telefono,
             "email": vecino.email,
-            "fecha_registro": str(vecino.fecha_registro),
-            "fecha_edicion": str(vecino.fecha_edicion),
+            "fecha_registro": formatear_fecha(vecino.fecha_registro),
+            "fecha_edicion": formatear_fecha(vecino.fecha_edicion),
             "estado": vecino.estado,
         }
     except HTTPException:

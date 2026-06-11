@@ -10,7 +10,10 @@ router = APIRouter(prefix="/historial", tags=["historial"])
 
 
 @router.get("/")
-async def obtener_historial(db: Session = Depends(get_db)):
+async def obtener_historial(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         resultados = (
             db.query(models.Historial, models.Vecino)

@@ -18,7 +18,10 @@ router = APIRouter(tags=["vecinos"])
 
 
 @router.get("/lista-vecinos/")
-async def lista_vecinos(db: Session = Depends(get_db)):
+async def lista_vecinos(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         vecinos = db.query(models.Vecino).all()
         vecinos_formateados = [
@@ -46,7 +49,11 @@ async def lista_vecinos(db: Session = Depends(get_db)):
 
 
 @router.get("/vecino/{vecino_id}")
-async def obtener_vecino(vecino_id: int, db: Session = Depends(get_db)):
+async def obtener_vecino(
+    vecino_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         vecino = (
             db.query(models.Vecino)
@@ -328,7 +335,10 @@ async def cambiar_estado_vecino(
 
 
 @router.get("/siguiente-numero-socio/")
-async def siguiente_numero_socio(db: Session = Depends(get_db)):
+async def siguiente_numero_socio(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         max_numero = (
             db.query(models.Vecino.numero_socio)

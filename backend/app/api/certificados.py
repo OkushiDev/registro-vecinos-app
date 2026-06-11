@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.database import get_db
+from app.api.dependencies import get_current_user
+from app.api.utils import registrar_accion
 from app.api import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
@@ -139,7 +141,11 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
 
 
 @router.get("/generar-certificado/{vecino_id}")
-async def generar_certificado(vecino_id: int, db: Session = Depends(get_db)):
+async def generar_certificado(
+    vecino_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Endpoint para generar un certificado de residencia en PDF
     """
@@ -182,6 +188,13 @@ async def generar_certificado(vecino_id: int, db: Session = Depends(get_db)):
     print(f"  Nombre archivo: {nombre_archivo}")
     print(
         f"  Fecha vigencia: {(fecha_actual + timedelta(days=30)).strftime('%d-%m-%Y')}"
+    )
+
+    registrar_accion(
+        db=db,
+        usuario_id=current_user["user_id"],
+        descripcion=f"Generó certificado de residencia para {vecino.nombres} {vecino.apellido_paterno}",
+        tipo="CERTIFICADO",
     )
 
     return StreamingResponse(

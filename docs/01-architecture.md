@@ -53,10 +53,11 @@ Sistema web para gestión de juntas de vecinos. Dos roles: **presidente** (admin
 | UI | MUI (Material-UI) + Emotion | 7 |
 | HTTP Client | Axios | 1.x |
 | Routing | react-router-dom | 7 |
-| Backend | Python + FastAPI | 3.11+ / 0.120+ |
+| Backend | Python + FastAPI | 3.11+ / 0.136 |
 | ORM | SQLAlchemy | 2.0 |
 | Auth | python-jose (JWT) + bcrypt | — |
 | PDF | ReportLab + PyPDF2 | — |
+| RUT | Pydantic field_validator (mod-11) | — |
 | Database | PostgreSQL | latest (Docker) |
 | Excel | ExcelJS (frontend) | 4.x |
 
@@ -99,9 +100,8 @@ registro-vecinos-app/
 │       ├── api.tsx                 # Axios instance + interceptors
 │       ├── App.tsx                 # Root: theme, routing, auth gate, React.lazy()
 │       ├── services/authService.ts # Token management
-│       ├── components/             # UI components (7)
-│       ├── components/pages/       # Pages (6, lazy-loaded)
-│       │   └── StatCard.tsx        # Reusable stat card
+│       ├── components/             # ErrorBoundary, Login, Navbar, forms (7)
+│       ├── components/pages/       # Pages (6, lazy-loaded) + NotFound + StatCard
 │       ├── utils/                  # rut.ts, pdf.ts, excel.ts (exceljs lazy)
 │       ├── constants/              # calles.ts (CALLES, RELACIONES)
 │       └── test/                   # Tests vitest (21 tests)
@@ -112,16 +112,22 @@ registro-vecinos-app/
 
 ## Decisiones de Arquitectura
 
-1. **Sin store global (Redux/Zustand)**: El estado se maneja con `useState`, `useEffect`, y eventos custom (`window.dispatchEvent`). Para una app de este tamaño es suficiente, pero en V2 convendría un store.
+1. **Auth obligatorio por defecto**: Solo 2 endpoints son públicos (`/api/token` y `/api/documentos/tipos`). Todos los demás requieren JWT.
 
 2. **JWT en localStorage**: Simple pero vulnerable a XSS. Alternativa para V2: httpOnly cookies.
 
-3. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + PyPDF2. Las coordenadas se ajustaron con `tool_posiciones.py`.
+3. **RUT con mod-11**: Validación de formato y dígito verificador en backend (Pydantic `field_validator`).
 
-4. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
+4. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + PyPDF2. Las coordenadas se ajustaron con `tool_posiciones.py`.
 
-5. **Seed data hardcodeada**: El `init.sql` contiene 35 vecinos de prueba con contraseñas generadas con pgcrypto (`crypt()`). El vecino #35 es el presidente.
+5. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
 
-6. **Lazy loading de páginas**: Las 6 páginas usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~661 kB (-62%).
+6. **Seed data hardcodeada**: El `init.sql` contiene 35 vecinos de prueba con contraseñas generadas con pgcrypto (`crypt()`). El vecino #35 es el presidente.
 
-7. **ExcelJS dinámico**: Se importa solo al hacer click en "Exportar" (~937 kB lazy, no en bundle inicial).
+7. **Lazy loading de páginas**: Las 6 páginas + NotFound usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~661 kB (-62%).
+
+8. **ExcelJS dinámico**: Se importa solo al hacer click en "Exportar" (~937 kB lazy, no en bundle inicial).
+
+9. **Error Boundary**: Captura errores de renderizado y muestra pantalla de recuperación con botón de recarga.
+
+10. **Auditoría completa**: Todas las mutaciones (CRUD vecinos, documentos, solicitudes, certificados, login) quedan registradas en el historial.

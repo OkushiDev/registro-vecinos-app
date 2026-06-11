@@ -112,18 +112,20 @@ Documentos.tsx tenía su propia implementación de blob download duplicando `src
 
 ## Resumen para V2
 
-| Prioridad | Acción |
-|-----------|--------|
-| 🔴 Crítica | Mover JWT + DB password a env vars, sin fallbacks |
-| 🔴 Crítica | Autenticar todos los endpoints por defecto |
-| 🔴 Crítica | Reemplazar localStorage JWT por httpOnly cookies |
-| 🟡 Alta | Agregar Error Boundary + ruta 404 |
-| 🟡 Alta | Store global (Zustand) para estado compartido |
-| 🟡 Alta | Configurar tests frontend desde el día 1 |
-| 🟢 Media | Unificar paths en una sola fuente de verdad |
-| 🟢 Media | Scripts de desarrollo en `scripts/` |
-| 🟢 Media | URLs dinámicas via env var, nunca hardcodeadas |
-| 🟢 Media | `React.lazy()` + `Suspense` para todas las páginas desde el día 1 |
-| 🟢 Media | Dependencias pesadas (ExcelJS) con `import()` dinámico, no en bundle inicial |
-| 🟢 Media | Constantes compartidas (calles, relaciones) en `src/constants/` desde el inicio |
-| 🟢 Media | `formatear_fecha` y otras utilidades de formato centralizadas en `utils/` |
+| Prioridad | Acción | Estado en proyecto actual |
+|-----------|--------|--------------------------|
+| 🔴 Crítica | Mover JWT + DB password a env vars, sin fallbacks | ❌ Pendiente |
+| 🔴 Crítica | Autenticar todos los endpoints por defecto | ✅ Resuelto (2 públicos) |
+| 🔴 Crítica | Reemplazar localStorage JWT por httpOnly cookies | ❌ Pendiente |
+| 🟡 Alta | Agregar Error Boundary + ruta 404 | ✅ Resuelto |
+| 🟡 Alta | Store global para estado compartido | 🟡 Infraestructura lista (AuthContext) |
+| 🟡 Alta | Configurar tests frontend desde el día 1 | ✅ Resuelto (21 tests) |
+| 🟡 Alta | RUT con validación mod-11 en backend | ✅ Resuelto |
+| 🟢 Media | Unificar paths en una sola fuente de verdad | ✅ Resuelto (UPLOAD_BASE) |
+| 🟢 Media | Scripts de desarrollo en `scripts/` | ✅ Resuelto (documentado) |
+| 🟢 Media | URLs dinámicas via env var, nunca hardcodeadas | ✅ Resuelto |
+| 🟢 Media | `React.lazy()` + `Suspense` desde el día 1 | ✅ Resuelto (-62% bundle) |
+| 🟢 Media | Dependencias pesadas con `import()` dinámico | ✅ Resuelto (exceljs) |
+| 🟢 Media | Constantes compartidas en `src/constants/` | ✅ Resuelto |
+| 🟢 Media | `formatear_fecha` centralizada en `utils/` | ✅ Resuelto |
+| 🟢 Media | Auditoría en todas las mutaciones | ✅ Resuelto |

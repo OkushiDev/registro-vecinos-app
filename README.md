@@ -20,6 +20,15 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 | **PDF** | ReportLab + PyPDF2 |
 | **Gestores** | uv (Python) / npm (Node) |
 
+## Estado
+
+| Indicador | Valor |
+|-----------|-------|
+| Tests backend | 28 ✅ |
+| Tests frontend | 21 ✅ |
+| Bundle inicial | 661 kB (optimizado -62%) |
+| Issues pendientes | [12](./TODO.md) |
+
 ## Requisitos previos
 
 - Python 3.11+

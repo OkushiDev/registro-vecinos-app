@@ -1,17 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
 import app.api.models as models
 from app.api.database import engine
 
 from app.api.routers import auth, vecinos, documentos, solicitudes, historial
 from app.api import certificados
-
-# Crear directorio de uploads
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+from app.api.utils import UPLOAD_BASE
 
 app = FastAPI()
 

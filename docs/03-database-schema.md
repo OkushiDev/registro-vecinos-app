@@ -125,7 +125,7 @@ Log de auditoría de acciones.
 | id | SERIAL PK | | |
 | usuario_id | INTEGER FK | NULL | References usuarios(id). NULL para acciones del sistema |
 | descripcion | TEXT | NULL | Descripción de la acción |
-| tipo_accion | VARCHAR(100) | NULL | `Login`, `Creacion`, `EDICION`, `Estado`, `DOCUMENTO`, `SOLICITUD` |
+| tipo_accion | VARCHAR(100) | NULL | `Login`, `Creacion`, `EDICION`, `Estado`, `DOCUMENTO`, `SOLICITUD`, `CERTIFICADO` |
 | fecha_accion | TIMESTAMPTZ | `now()` | |
 
 ## Seed Data
@@ -145,5 +145,6 @@ El archivo `database/scripts/init.sql` contiene:
 | `Creacion` | Registro de nuevo vecino |
 | `EDICION` | Actualización de datos de vecino |
 | `Estado` | Habilitar/deshabilitar vecino |
-| `DOCUMENTO` | Subida de documento |
+| `DOCUMENTO` | Subida/eliminación de documento |
 | `SOLICITUD` | Creación/cambio de estado de solicitud |
+| `CERTIFICADO` | Generación de certificado PDF |

@@ -4,3 +4,5 @@
 # Cache de Python
 *.pyc
 __pycache__/
+
+AGENTS.md

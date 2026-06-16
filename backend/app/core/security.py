@@ -4,10 +4,7 @@ from typing import Optional
 from jose import JWTError, ExpiredSignatureError, jwt
 import bcrypt
 
-SECRET_KEY = os.getenv(
-    "JWT_SECRET_KEY",
-    "DEV_ONLY_CHANGE_IN_PRODUCTION",  # default solo para desarrollo local
-)
+SECRET_KEY = os.environ["JWT_SECRET_KEY"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 

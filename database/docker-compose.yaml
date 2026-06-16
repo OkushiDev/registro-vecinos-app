@@ -2,7 +2,7 @@ services:
   database-app:
     image: postgres
     environment:
-      POSTGRES_PASSWORD: 1234
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1234}
     volumes:
       - ./scripts:/docker-entrypoint-initdb.d
       - db_data:/var/lib/postgresql

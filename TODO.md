@@ -24,9 +24,9 @@ Issues pendientes al cierre de sesión 2026-06-10 (branch `fix/remaining-issues`
 
 ## 🟡 Alta
 
-### 3. Migrar App.tsx a AuthContext
+### 3. Crear AuthContext
 
-La infraestructura de React Context está lista (`src/store/`), falta migrar `App.tsx` y `Navbar.tsx` para usar el store en vez de `useState` + props.
+Migrar `App.tsx` y `Navbar.tsx` a React Context para eliminar `useState` + paso de props con el estado de autenticación y tema.
 
 ---
 
@@ -58,4 +58,4 @@ ListaVecinos (1003L), Antecedentes (872L), ListaSolicitudes (726L), Documentos (
 - ~~Sin 404 route~~ → Componente `NotFound.tsx`
 - ~~6 endpoints sin auth~~ → Protegidos con `Depends(get_current_user)`
 - ~~Certificados sin auditoría~~ → `registrar_accion` agregado
-- ~~Store global inexistente~~ → AuthContext creado (infraestructura lista)
+- ~~Store global inexistente~~ → Evaluado (React Context elegido sobre Zustand)

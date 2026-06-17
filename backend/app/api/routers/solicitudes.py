@@ -14,6 +14,7 @@ async def obtener_todas_solicitudes(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Retorna todas las solicitudes. Solo para presidente."""
     try:
         if current_user["rol"] != "presidente":
             raise HTTPException(
@@ -63,6 +64,7 @@ async def crear_solicitud(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Crea una solicitud de certificado de residencia para el vecino autenticado. Solo permite una solicitud pendiente a la vez."""
     try:
         if current_user["rol"] not in ["vecino", "presidente"]:
             raise HTTPException(
@@ -159,6 +161,7 @@ async def obtener_notificaciones(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Retorna notificaciones (solicitudes visibles) para el presidente. Incluye conteo de pendientes."""
     try:
         if current_user["rol"] != "presidente":
             raise HTTPException(
@@ -217,6 +220,7 @@ async def crear_solicitud_presidente(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Crea una solicitud de certificado para un vecino especifico (solo presidente)."""
     try:
         if current_user["rol"] != "presidente":
             raise HTTPException(
@@ -280,6 +284,7 @@ async def ocultar_solicitud(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Oculta una notificacion de solicitud (visibilidad='oculto'). Solo presidente."""
     if current_user["rol"] != "presidente":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -313,6 +318,7 @@ async def rechazar_solicitud(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Rechaza una solicitud (estado='rechazado'). Solo presidente."""
     if current_user["rol"] != "presidente":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -346,6 +352,7 @@ async def marcar_realizada(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Marca una solicitud como realizada (estado='realizado'). Solo presidente."""
     if current_user["rol"] != "presidente":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

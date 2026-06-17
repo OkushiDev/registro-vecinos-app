@@ -36,8 +36,8 @@ class Usuario(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     vecino_id = Column(Integer, ForeignKey("vecinos.id"), unique=True)
-    rol = Column(String, default="vecino")
-    estado = Column(Integer, default=1)
+    rol = Column(String, default="vecino")   # "vecino" | "presidente"
+    estado = Column(Integer, default=1)      # 1: activo, 0: inactivo
     fecha_creacion = Column(TIMESTAMP(timezone=True), default=text("now()"))
 
     # Relación con Vecino
@@ -81,8 +81,8 @@ class Solicitud(Base):
         String(100), default="certificado_residencia", nullable=False
     )
     fecha_solicitud = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
-    estado = Column(String(50), default="pendiente")
-    visibilidad = Column(String(50), default="mostrar")
+    estado = Column(String(50), default="pendiente")   # "pendiente" | "realizado" | "rechazado"
+    visibilidad = Column(String(50), default="mostrar") # "mostrar" | "oculto"
 
     # Relación
     vecino = relationship("Vecino", back_populates="solicitudes")

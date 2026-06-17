@@ -6,7 +6,7 @@ import bcrypt
 
 SECRET_KEY = os.environ["JWT_SECRET_KEY"]
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
+ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 horas
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -17,11 +17,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
         password_bytes = plain_password.encode("utf-8")
         if len(password_bytes) > 72:
-            password_bytes = password_bytes[:72]
+            password_bytes = password_bytes[:72]  # bcrypt truncacion interna a 72 bytes; replicar para consistencia
 
         hash_bytes = hashed_password.encode("utf-8")
         if hash_bytes.startswith(b"$2a$"):
-            hash_bytes = b"$2b$" + hash_bytes[4:]
+            hash_bytes = b"$2b$" + hash_bytes[4:]  # seed data usa pgcrypto ($2a$); bcrypt espera $2b$
 
         return bcrypt.checkpw(password_bytes, hash_bytes)
     except Exception:

@@ -24,6 +24,7 @@ router = APIRouter(prefix="/api/documentos", tags=["documentos"])
 
 @router.get("/tipos")
 async def obtener_tipos_documento():
+    """Endpoint publico: retorna la lista estatica de tipos de documento disponibles."""
     return {
         "tipos": [
             {"value": "cedula_identidad", "label": "Cédula de Identidad"},
@@ -44,6 +45,7 @@ async def subir_documento(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Sube un documento (PDF/PNG/JPG, max 5MB) asociado al vecino autenticado. Lo guarda en disco y registra en BD."""
     try:
         if tipo_documento not in TIPOS_DOCUMENTO:
             raise HTTPException(
@@ -119,6 +121,7 @@ async def listar_mis_documentos(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Retorna los documentos del vecino autenticado que aun no han sido eliminados (estado=1)."""
     documentos = (
         db.query(models.Documento)
         .filter(
@@ -151,6 +154,7 @@ async def eliminar_documento(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Eliminacion logica (estado=0) de un documento del vecino autenticado. El archivo fisico no se borra del disco."""
     documento = (
         db.query(models.Documento)
         .filter(
@@ -182,6 +186,7 @@ async def obtener_documentos_vecino(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Retorna los documentos de un vecino especifico. Solo el presidente o el propio vecino pueden acceder."""
     try:
         if (
             current_user["rol"] != "presidente"
@@ -260,6 +265,7 @@ async def descargar_documento(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Descarga un archivo de documento por su ID. Solo el presidente o el dueno del documento pueden descargar."""
     try:
         documento = (
             db.query(models.Documento)

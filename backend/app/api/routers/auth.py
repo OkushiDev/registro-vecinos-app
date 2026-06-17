@@ -17,6 +17,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    """Autentica al usuario con username+password, valida estado del usuario y vecino, emite JWT y registra el inicio de sesion en el historial."""
     try:
         usuario = (
             db.query(models.Usuario)
@@ -106,6 +107,7 @@ async def get_me(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Retorna el perfil completo del usuario autenticado y sus datos como vecino."""
     try:
         vecino = (
             db.query(models.Vecino)

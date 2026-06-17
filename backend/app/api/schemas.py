@@ -4,6 +4,7 @@ import re
 
 
 class VecinoCreate(BaseModel):
+    """Schema para crear un nuevo vecino (request body de POST /agregar-vecino/)."""
     nombres: str
     apellido_paterno: str
     apellido_materno: str
@@ -45,6 +46,7 @@ class VecinoCreate(BaseModel):
 
 
 class VecinoEdicionSchema(BaseModel):
+    """Schema para editar un vecino (request body de PUT /editar-vecino/{id}). Incluye campos opcionales para cambio de password."""
     nombres: str
     apellido_paterno: str
     apellido_materno: str
@@ -89,6 +91,7 @@ class VecinoEdicionSchema(BaseModel):
 
 
 class Token(BaseModel):
+    """Schema de respuesta para POST /api/token (login exitoso)."""
     access_token: str
     token_type: str
     rol: str
@@ -98,16 +101,19 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
+    """Representacion del payload del JWT decodificado (uso interno)."""
     user_id: Optional[int] = None
     rol: Optional[str] = None
 
 
 class UserLogin(BaseModel):
+    """Schema de login (no usado actualmente; se usa OAuth2PasswordRequestForm en su lugar)."""
     usuario: str
     password: str
 
 
 class HistorialSchema(BaseModel):
+    """Schema para crear un registro de historial (POST /historial/)."""
     usuario: str
     tipo_accion: str
     descripcion_accion: str

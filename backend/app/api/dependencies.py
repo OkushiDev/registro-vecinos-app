@@ -13,6 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    """Dependencia de autenticacion: decodifica el JWT, busca el usuario en BD, verifica que este activo, y retorna un dict con user_id, rol y vecino_id."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
@@ -39,7 +40,7 @@ async def get_current_user(
         if not usuario:
             raise credentials_exception
 
-        if usuario.estado != 1:
+        if usuario.estado != 1:  # 1 = activo; rechazar usuarios deshabilitados
             raise credentials_exception
 
         return {

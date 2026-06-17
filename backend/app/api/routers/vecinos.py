@@ -22,6 +22,7 @@ async def lista_vecinos(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Retorna la lista completa de todos los vecinos con sus datos formateados."""
     try:
         vecinos = db.query(models.Vecino).all()
         vecinos_formateados = [
@@ -54,6 +55,7 @@ async def obtener_vecino(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Retorna los datos de un vecino especifico por su ID."""
     try:
         vecino = (
             db.query(models.Vecino)
@@ -91,6 +93,7 @@ async def agregar_vecino(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Crea un nuevo vecino y su usuario asociado. Valida que RUT y numero de socio no esten duplicados."""
     try:
         existing_vecino = (
             db.query(models.Vecino)
@@ -170,6 +173,7 @@ async def editar_vecino(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Actualiza los datos de un vecino existente. Si se proporciona currentPassword+newPassword, cambia la contrasena."""
     try:
         vecino_existente = (
             db.query(models.Vecino)
@@ -289,6 +293,7 @@ async def cambiar_estado_vecino(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Alterna el estado del vecino entre activo (1) e inactivo (0). Sincroniza el estado del usuario asociado."""
     try:
         vecino_existente = (
             db.query(models.Vecino)
@@ -339,6 +344,7 @@ async def siguiente_numero_socio(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Retorna el siguiente numero de socio disponible (maximo actual + 1)."""
     try:
         max_numero = (
             db.query(models.Vecino.numero_socio)

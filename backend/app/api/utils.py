@@ -37,7 +37,7 @@ TIPOS_DOCUMENTO_LABELS = {
 
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:
-    """Valida tipo y tamaño del archivo"""
+    """Valida extension y tipo MIME del archivo (no verifica tamano; eso se hace en el endpoint)."""
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         return False, f"Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
@@ -86,7 +86,7 @@ def crear_usuario_para_vecino(
     )
     hashed_password = get_password_hash(password_inicial)
 
-    rol = "presidente" if vecino.numero_socio == 35 else "vecino"
+    rol = "presidente" if vecino.numero_socio == 35 else "vecino"  # socio 35 = presidente (definido en seed data)
 
     nuevo_usuario = models.Usuario(
         username=username,

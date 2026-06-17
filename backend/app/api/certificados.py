@@ -34,7 +34,9 @@ MESES = {
 
 def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     """
-    Genera un PDF con el certificado de residencia usando un PDF como plantilla
+    Genera un PDF con el certificado de residencia sobreescribiendo datos sobre una plantilla PDF.
+    Retorna un BytesIO con el PDF generado.
+    Lanza HTTPException 500 si no se encuentra la plantilla.
     """
     # Ruta al PDF plantilla
     ruta_plantilla = os.path.join(
@@ -102,8 +104,8 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     can.drawString(14.1 * cm, 12.2 * cm, anio_creacion_corto)
 
     # === FECHA DE VIGENCIA (30 días después) ===
-    # Ajusta estas coordenadas según donde quieras que aparezca en tu plantilla
-    # Por ejemplo, debajo de la fecha de creación:
+    # Coordenadas en la plantilla PDF para la fecha de vigencia
+    # Ajustar si se modifica la plantilla
 
     # DÍA VIGENCIA
     can.drawString(4.5 * cm, 1.9 * cm, dia_vigencia)
@@ -162,6 +164,7 @@ async def generar_certificado(
             detail="No se puede generar certificado para un vecino inactivo",
         )
 
+    # debug: datos del certificado generado
     print(f"Generando certificado para:")
     print(f"  Nombres: {vecino.nombres}")
     print(f"  Apellidos: {vecino.apellido_paterno} {vecino.apellido_materno}")
@@ -185,6 +188,7 @@ async def generar_certificado(
     # Nombre del archivo: Certificado_Residencia_12345678_010125.pdf
     nombre_archivo = f"C_Residencia_{rut_limpio}_{fecha_formateada}.pdf"
 
+    # debug: nombre del archivo generado y fecha de vigencia
     print(f"  Nombre archivo: {nombre_archivo}")
     print(
         f"  Fecha vigencia: {(fecha_actual + timedelta(days=30)).strftime('%d-%m-%Y')}"

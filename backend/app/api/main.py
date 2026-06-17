@@ -14,7 +14,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 def on_startup():
-    """Crea las tablas en la BD al iniciar (si hay conexion)."""
+    """Intenta crear las tablas en la BD al iniciar. No interrumpe si la BD no esta disponible."""
     try:
         models.Base.metadata.create_all(bind=engine)
     except Exception as e:

@@ -14,6 +14,7 @@ async def obtener_historial(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Retorna el historial completo de acciones, con datos del vecino que realizo cada accion. Ordenado por fecha descendente."""
     try:
         resultados = (
             db.query(models.Historial, models.Vecino)
@@ -47,6 +48,7 @@ async def crear_registro_historial(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Crea un registro manual en el historial. Toma el usuario_id del token, no del body."""
     try:
         registrar_accion(
             db=db,

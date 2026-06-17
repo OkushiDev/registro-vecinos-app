@@ -55,7 +55,7 @@ Esto levanta PostgreSQL en `localhost:5432` con:
 cd backend
 cp .env.example .env            # Crear .env desde template
 uv sync --dev                   # Instalar dependencias + dev tools
-uv run uvicorn app.api.main:app --reload --port 8000
+uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 ```
 
 La API corre en `http://localhost:8000`. Documentación interactiva en [`/docs`](http://localhost:8000/docs).
@@ -137,7 +137,7 @@ cd backend
 uv sync --dev                   # Instalar dependencias
 uv run pytest app/Test/         # Tests (28)
 uv run ruff check .             # Linter
-uv run uvicorn app.api.main:app --reload
+uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 
 # ── Frontend ──
 cd frontend

@@ -26,7 +26,7 @@ cp .env.example .env
 docker compose -f ../database/docker-compose.yaml up -d
 
 # 4. Iniciar servidor
-uv run uvicorn app.api.main:app --reload --port 8000
+uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 ```
 
 Documentación de la API en `http://localhost:8000/docs`.

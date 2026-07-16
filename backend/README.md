@@ -91,6 +91,35 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 | `/historial/` | POST | Crear entrada manual |
 | `/api/generar-certificado/{id}` | GET | Generar PDF certificado |
 
+## Auth Flow
+
+```
+POST /api/token (username=RUT, password)
+  → bcrypt.verify(password, hash_de_BD)
+    → hash_de_BD usa prefijo $2a$ (pgcrypto)
+    → backend lo normaliza a $2b$ en security.py:23
+  → genera JWT con expiración 8h
+  → cliente almacena token en localStorage
+```
+
+### Seed — cómo funcionan las contraseñas
+
+El `init.sql` inserta contraseñas usando `pgcrypto`:
+
+```sql
+crypt('Bolados1353', gen_salt('bf', 8))  → $2a$...
+```
+
+Esto genera hashes con formato `$2a$`. El backend usa Python + bcrypt que espera `$2b$`. La compatibilidad se resuelve en `app/core/security.py:23`:
+
+```python
+stored_hash = stored_hash.replace("$2a$", "$2b$")
+```
+
+**Fórmula de contraseñas seed:** `ApellidoPaterno + primeros 4 dígitos del RUT`
+- Ej: `Bolados1353` para RUT `13532259-8`
+- Ej: `Benavides1430` para RUT `14306046-2` (presidente)
+
 ## Estructura del proyecto
 
 ```

@@ -32,7 +32,7 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 ### 1. Clonar e instalar
 
 ```bash
-git clone git@github.com:OkushiTamaru/registro-vecinos-app.git
+git clone git@github.com:OkushiDev/registro-vecinos-app.git
 cd registro-vecinos-app
 ```
 

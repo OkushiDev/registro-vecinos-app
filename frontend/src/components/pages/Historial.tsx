@@ -28,6 +28,7 @@ import Button from "@mui/material/Button";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
 import { exportarAExcel } from "../../utils/excel";
+import { displayedRowsLabel, usePagination } from "../../utils/pagination";
 
 // Definición de Columnas (ORDEN ACTUALIZADO)
 interface Column {
@@ -76,7 +77,6 @@ export default function Historial() {
       const response = await api.get("/historial/");
       setRows(response.data || []);
     } catch (error) {
-      console.error("Error al obtener el historial:", error);
     } finally {
       setLoading(false);
     }
@@ -86,16 +86,7 @@ export default function Historial() {
     fetchHistorial();
   }, []);
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
+  const { handleChangePage, handleChangeRowsPerPage } = usePagination(setPage, setRowsPerPage);
 
   // === MANEJO DEL ORDENAMIENTO ===
   const handleRequestSort = (property: keyof Data) => {
@@ -433,9 +424,7 @@ export default function Historial() {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
-        }
+        labelDisplayedRows={displayedRowsLabel}
         sx={{
           backgroundColor: "background.default",
           color: "text.primary",

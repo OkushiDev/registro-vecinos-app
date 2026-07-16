@@ -1,4 +1,3 @@
-from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -6,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.schemas import Token
 from app.api.dependencies import get_db, get_current_user
 from app.api.utils import registrar_accion, formatear_fecha
-from app.core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.security import verify_password, create_access_token
 import app.api.models as models
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -63,14 +62,12 @@ async def login(
                 detail="Vecino deshabilitado. Contacte al administrador.",
             )
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={
                 "sub": str(usuario.id),
                 "rol": usuario.rol,
                 "vecino_id": vecino.id,
             },
-            expires_delta=access_token_expires,
         )
 
         nombre_completo = (
@@ -93,12 +90,10 @@ async def login(
             "nombre_completo": nombre_completo,
         }
 
-    except HTTPException:
-        raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al procesar la solicitud: {str(e)}",
+            detail="Error al procesar la solicitud",
         )
 
 
@@ -147,9 +142,7 @@ async def get_me(
             },
         }
 
-    except HTTPException:
-        raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al obtener datos del usuario",

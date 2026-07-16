@@ -110,8 +110,6 @@ async def subir_documento(
             },
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -250,8 +248,6 @@ async def obtener_documentos_vecino(
             "total": len(documentos_lista),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -303,8 +299,6 @@ async def descargar_documento(
             media_type="application/octet-stream",
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

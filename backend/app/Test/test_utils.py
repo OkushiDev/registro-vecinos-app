@@ -2,9 +2,8 @@
 
 from fastapi import UploadFile
 from io import BytesIO
-import pytest
 
-from app.api.utils import validate_file, generar_password_inicial, MAX_FILE_SIZE
+from app.api.utils import validate_file, generar_password_inicial
 
 
 class TestValidateFile:

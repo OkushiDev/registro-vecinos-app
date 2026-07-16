@@ -7,7 +7,6 @@ from app.api.database import engine
 
 from app.api.routers import auth, vecinos, documentos, solicitudes, historial
 from app.api import certificados
-from app.api.utils import UPLOAD_BASE
 
 app = FastAPI()
 

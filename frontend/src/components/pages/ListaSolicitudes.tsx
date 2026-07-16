@@ -25,11 +25,13 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { visuallyHidden } from "@mui/utils";
+import { displayedRowsLabel, usePagination } from "../../utils/pagination";
 import IconButton from "@mui/material/IconButton";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import BlockIcon from "@mui/icons-material/Block";
 import Chip from "@mui/material/Chip";
-import StatCard from "./StatCard";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 
 interface Column {
   id:
@@ -107,9 +109,7 @@ export default function ListaSolicitudes() {
       }));
 
       setRows(solicitudesFormateadas || []);
-      console.log("Solicitudes actualizadas:", solicitudesFormateadas.length);
     } catch (error) {
-      console.error("Error al obtener solicitudes:", error);
       setRows([]);
     } finally {
       setLoading(false);
@@ -131,16 +131,7 @@ export default function ListaSolicitudes() {
     fetchSolicitudes();
   }, [fetchSolicitudes]);
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
+  const { handleChangePage, handleChangeRowsPerPage } = usePagination(setPage, setRowsPerPage);
 
   const handleRequestSort = (property: keyof Data) => {
     const isAsc = orderBy === property && order === "asc";
@@ -184,15 +175,10 @@ export default function ListaSolicitudes() {
       const blob = new Blob([response.data], { type: "application/pdf" });
       descargarPDF(blob, response.headers["content-disposition"]);
 
-      console.log("Certificado generado exitosamente");
-
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
-
-      console.log("Solicitud marcada como realizada automáticamente");
 
       await fetchSolicitudes();
     } catch (error: any) {
-      console.error("Error al generar certificado:", error);
       alert(
         error.response?.data?.detail ||
           "Error al generar certificado. Intenta nuevamente."
@@ -216,11 +202,8 @@ export default function ListaSolicitudes() {
     try {
       await api.patch(`/api/solicitudes/${solicitudId}/rechazar`);
 
-      console.log("Solicitud rechazada exitosamente");
-
       await fetchSolicitudes();
     } catch (error: any) {
-      console.error("Error al rechazar solicitud:", error);
       alert(
         error.response?.data?.detail ||
           "Error al rechazar solicitud. Intenta nuevamente."
@@ -339,7 +322,6 @@ export default function ListaSolicitudes() {
       elevation={0}
     >
       <Box sx={{ p: 2 }}>
-        {/* TODO EN UNA SOLA LÍNEA */}
         <Grid container spacing={2} alignItems="center">
           {/* BUSCADOR */}
           <Grid size={{ xs: 12, md: 2.5 }}>
@@ -465,10 +447,21 @@ export default function ListaSolicitudes() {
           </Grid>
 
           {/* ESTADÍSTICAS */}
-          <StatCard label="Total" value={estadisticas.total} gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" />
-          <StatCard label="Pendientes" value={estadisticas.pendientes} gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" />
-          <StatCard label="Realizadas" value={estadisticas.realizadas} gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" />
-          <StatCard label="Rechazadas" value={estadisticas.rechazadas} gradient="linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)" />
+          {[
+            ["Total", estadisticas.total, "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"],
+            ["Pendientes", estadisticas.pendientes, "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"],
+            ["Realizadas", estadisticas.realizadas, "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"],
+            ["Rechazadas", estadisticas.rechazadas, "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"],
+          ].map(([label, value, gradient]) => (
+            <Card key={label as string} sx={{ height: "56px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "white", background: gradient as string }}>
+              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" fontWeight="600">{label as string}:</Typography>
+                  <Typography variant="h6" fontWeight="bold">{value as number}</Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
         </Grid>
 
         {/* Resumen de búsqueda */}
@@ -707,9 +700,7 @@ export default function ListaSolicitudes() {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
-        }
+        labelDisplayedRows={displayedRowsLabel}
         sx={{
           backgroundColor: "background.default",
           color: "text.primary",

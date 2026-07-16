@@ -1,7 +1,5 @@
-/**
- * Descarga un blob como archivo PDF en el navegador.
- * Extrae el nombre del archivo del header Content-Disposition si está disponible.
- */
+import { descargarBlob } from "./download";
+
 export const descargarPDF = (
   blob: Blob,
   contentDisposition: string | null,
@@ -16,13 +14,5 @@ export const descargarPDF = (
       fileName = matches[1].trim();
     }
   }
-
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", fileName);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
+  descargarBlob(blob, fileName);
 };

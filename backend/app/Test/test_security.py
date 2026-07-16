@@ -2,7 +2,6 @@
 
 import time
 from datetime import timedelta
-import pytest
 from app.core.security import (
     verify_password,
     get_password_hash,

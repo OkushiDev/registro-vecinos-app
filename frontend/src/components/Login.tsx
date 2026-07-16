@@ -27,30 +27,8 @@ import {
 } from "@mui/icons-material";
 import authService from "../services/authService";
 import { limpiarRut, formatearRut } from "../utils/rut";
+import { getErrorMessage } from "../utils/error";
 import type { UserProfile } from "./Navbar";
-
-// --- UTILIDAD DE SEGURIDAD ---
-const getErrorMessage = (error: any): string => {
-  if (!error) return "Error desconocido";
-
-  if (error.response && error.response.data) {
-    const data = error.response.data;
-    if (data.detail && Array.isArray(data.detail)) {
-      return `Datos inválidos: ${data.detail
-        .map((e: any) => e.loc[1] || e.msg)
-        .join(", ")}`;
-    }
-    if (data.detail && typeof data.detail === "string") {
-      return data.detail;
-    }
-  }
-  if (error.response?.status === 401) return "RUT o contraseña incorrectos.";
-  if (error.response?.status === 403)
-    return "Usuario deshabilitado o sin permisos.";
-  if (error.message) return error.message;
-
-  return "Error de conexión. Intente nuevamente.";
-};
 
 interface LoginProps {
   onLogin: (profile: UserProfile) => void;

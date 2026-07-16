@@ -11,8 +11,8 @@ import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel"; // Importación para ordenar
 import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
 
-// Importar utilerías compartidas
 import { exportarAExcel } from "../../utils/excel";
+import { displayedRowsLabel, usePagination } from "../../utils/pagination";
 import { formatearRutConPuntos } from "../../utils/rut";
 import { CALLES, RELACIONES_PROPIEDAD } from "../../constants/calles";
 
@@ -20,10 +20,14 @@ import { CALLES, RELACIONES_PROPIEDAD } from "../../constants/calles";
 import api from "../../api";
 
 // Componentes propios
-import Modal from "../Modal";
 import RegistroVecinoForm from "../RegistroVecinoForm";
-import EditarVecinoForm from "../EditarVecinoForm";
-import ConfirmDialog from "../ConfirmDialog";
+
+// Material UI Dialogs
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContentText from "@mui/material/DialogContentText";
 
 // Material UI Components
 import TextField from "@mui/material/TextField";
@@ -53,6 +57,8 @@ import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import CloseIcon from "@mui/icons-material/Close";
+import WarningIcon from "@mui/icons-material/Warning";
 
 // Definición de Columnas
 interface Column {
@@ -123,15 +129,7 @@ export default function ListaVecinos() {
   // === ESTADO PARA EL ORDEN (ASC/DESC) ===
   const [order, setOrder] = React.useState<"asc" | "desc">("asc");
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
+  const { handleChangePage, handleChangeRowsPerPage } = usePagination(setPage, setRowsPerPage);
 
   const [items, setItems] = React.useState<Data[]>([]);
 
@@ -147,7 +145,6 @@ export default function ListaVecinos() {
       // Obtener solicitudes pendientes
       await fetchSolicitudesPendientes();
     } catch (error) {
-      console.error("Error al obtener los datos:", error);
       setItems([]);
     }
   };
@@ -162,7 +159,6 @@ export default function ListaVecinos() {
 
       setVecinosConSolicitud(new Set(pendientes));
     } catch (error) {
-      console.error("Error al obtener solicitudes:", error);
     }
   };
 
@@ -425,13 +421,11 @@ export default function ListaVecinos() {
           descripcion_accion: `Se creó solicitud de certificado para ${nombreVecino}`,
         });
       } catch (historialError) {
-        console.error("Error al registrar en historial:", historialError);
       }
 
       // Actualizar la lista para reflejar el cambio
       await fetchItems();
     } catch (error: any) {
-      console.error("Error al crear solicitud:", error);
       alert(
         error.response?.data?.detail ||
           "Error al crear la solicitud. Intenta nuevamente."
@@ -939,9 +933,7 @@ export default function ListaVecinos() {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
-        }
+        labelDisplayedRows={displayedRowsLabel}
         sx={{
           backgroundColor: "background.default",
           color: "text.primary",
@@ -955,49 +947,56 @@ export default function ListaVecinos() {
       />
 
       {/* Modales y Diálogos */}
-      <Modal
-        open={modalOpen}
-        onClose={handleCloseModal}
-        title="Registrar Nuevo Vecino"
-        maxWidth="md"
-      >
-        <RegistroVecinoForm
-          onSuccess={handleRegistroSuccess}
-          onCancel={handleCloseModal}
-        />
-      </Modal>
-      <Modal
-        open={editModalOpen}
-        onClose={handleCloseEditModal}
-        title="Editar Vecino"
-        maxWidth="md"
-      >
-        {selectedVecinoId && (
-          <EditarVecinoForm
-            vecinoId={selectedVecinoId}
-            onSuccess={handleEditSuccess}
-            onCancel={handleCloseEditModal}
-          />
-        )}
-      </Modal>
-      <ConfirmDialog
-        open={confirmDialogOpen}
-        title="Confirmar cambio de estado"
-        message={
-          vecinoToToggle
-            ? `¿Estás seguro de que deseas ${
-                vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"
-              } al vecino "${vecinoToToggle.nombre}"?`
-            : ""
-        }
-        confirmText={
-          vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar"
-        }
-        cancelText="Cancelar"
-        onConfirm={handleConfirmToggleEstado}
-        onCancel={handleCancelToggleEstado}
-        loading={loadingToggle}
-      />
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth
+        PaperProps={{ sx: { borderRadius: 2, minHeight: "200px" } }}>
+        <DialogTitle sx={{ m: 0, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>Registrar Nuevo Vecino</Typography>
+          <IconButton aria-label="close" onClick={handleCloseModal} sx={{ color: theme => theme.palette.grey[500], "&:hover": { backgroundColor: theme => theme.palette.grey[100] } }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <RegistroVecinoForm onSuccess={handleRegistroSuccess} onCancel={handleCloseModal} />
+          </Box>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth
+        PaperProps={{ sx: { borderRadius: 2, minHeight: "200px" } }}>
+        <DialogTitle sx={{ m: 0, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>Editar Vecino</Typography>
+          <IconButton aria-label="close" onClick={handleCloseEditModal} sx={{ color: theme => theme.palette.grey[500], "&:hover": { backgroundColor: theme => theme.palette.grey[100] } }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            {selectedVecinoId && (
+              <RegistroVecinoForm mode="edit" vecinoId={selectedVecinoId} onSuccess={handleEditSuccess} onCancel={handleCloseEditModal} />
+            )}
+          </Box>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmDialogOpen} onClose={handleCancelToggleEstado} maxWidth="xs" fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
+          <WarningIcon color="warning" />
+          <Typography variant="h6" component="div">Confirmar cambio de estado</Typography>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: "text.primary", fontSize: "1rem" }}>
+            {vecinoToToggle
+              ? `¿Estás seguro de que deseas ${vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"} al vecino "${vecinoToToggle.nombre}"?`
+              : ""}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button onClick={handleCancelToggleEstado} variant="outlined" disabled={loadingToggle}>Cancelar</Button>
+          <Button onClick={handleConfirmToggleEstado} variant="contained" color="warning" disabled={loadingToggle} autoFocus>
+            {loadingToggle ? "Procesando..." : (vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

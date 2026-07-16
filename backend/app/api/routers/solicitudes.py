@@ -50,8 +50,6 @@ async def obtener_todas_solicitudes(
 
         return solicitudes_lista
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -129,8 +127,6 @@ async def crear_solicitud(
             },
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -205,8 +201,6 @@ async def obtener_notificaciones(
             "total": len(notificaciones),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -268,8 +262,6 @@ async def crear_solicitud_presidente(
             "solicitud": {"id": nueva_solicitud.id},
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(

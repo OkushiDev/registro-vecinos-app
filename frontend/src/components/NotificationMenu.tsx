@@ -37,7 +37,7 @@ interface NotificationMenuProps {
 const emitirEventoActualizacion = () => {
   const evento = new CustomEvent("actualizarSolicitudes");
   window.dispatchEvent(evento);
-  console.log("📡 Evento de actualización emitido");
+
 };
 
 export default function NotificationMenu({}: NotificationMenuProps) {
@@ -63,13 +63,10 @@ export default function NotificationMenu({}: NotificationMenuProps) {
         setNotificaciones(response.data.notificaciones || []);
         setCantidadPendientes(response.data.pendientes || 0);
 
-        console.log("Notificaciones cargadas:", {
-          total: response.data.total,
-          pendientes: response.data.pendientes,
-        });
+
       }
     } catch (error) {
-      console.error("Error al cargar notificaciones:", error);
+
     }
   }, []);
 
@@ -116,12 +113,12 @@ export default function NotificationMenu({}: NotificationMenuProps) {
       );
 
       if (response.data.success) {
-        console.log("Notificación ocultada exitosamente");
+
         await cargarNotificaciones();
         emitirEventoActualizacion(); // ✅ EMITIR EVENTO
       }
     } catch (error: any) {
-      console.error("Error al ocultar notificación:", error);
+
       alert(error.response?.data?.detail || "Error al ocultar la notificación");
     } finally {
       setLoadingActions((prev) => {
@@ -150,12 +147,12 @@ export default function NotificationMenu({}: NotificationMenuProps) {
 
       await api.patch(`/api/solicitudes/${solicitudId}/rechazar`);
 
-      console.log("Solicitud rechazada exitosamente");
+
 
       await cargarNotificaciones();
       emitirEventoActualizacion(); // ✅ EMITIR EVENTO
     } catch (error: any) {
-      console.error("Error al rechazar solicitud:", error);
+
       alert(
         error.response?.data?.detail ||
           "Error al rechazar solicitud. Intenta nuevamente."
@@ -192,12 +189,12 @@ export default function NotificationMenu({}: NotificationMenuProps) {
       const blob = new Blob([response.data], { type: "application/pdf" });
       descargarPDF(blob, response.headers["content-disposition"]);
 
-      console.log("Certificado generado exitosamente");
+
 
       // 4. MARCAR COMO REALIZADA
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
 
-      console.log("Solicitud marcada como realizada automáticamente");
+
 
       // 5. RECARGAR NOTIFICACIONES
       await cargarNotificaciones();
@@ -205,7 +202,7 @@ export default function NotificationMenu({}: NotificationMenuProps) {
 
       alert("Certificado generado y solicitud marcada como realizada");
     } catch (error: any) {
-      console.error("Error al generar certificado:", error);
+
       alert(
         error.response?.data?.detail ||
           "Error al generar certificado. Intenta nuevamente."
@@ -241,9 +238,7 @@ export default function NotificationMenu({}: NotificationMenuProps) {
     try {
       setLoadingActions((prev) => ({ ...prev, eliminarTodas: "eliminando" }));
 
-      console.log(
-        `Eliminando ${notificacionesRealizadas.length} notificaciones...`
-      );
+
 
       const promesas = notificacionesRealizadas.map((notif) =>
         api.patch(`/api/solicitudes/${notif.id}/ocultar`)
@@ -251,7 +246,7 @@ export default function NotificationMenu({}: NotificationMenuProps) {
 
       await Promise.all(promesas);
 
-      console.log("Todas las notificaciones fueron ocultadas");
+
 
       await cargarNotificaciones();
       emitirEventoActualizacion(); // ✅ EMITIR EVENTO
@@ -260,7 +255,7 @@ export default function NotificationMenu({}: NotificationMenuProps) {
         `${notificacionesRealizadas.length} notificación(es) eliminada(s) exitosamente`
       );
     } catch (error: any) {
-      console.error("Error al eliminar notificaciones:", error);
+
       alert("Error al eliminar las notificaciones");
     } finally {
       setLoadingActions((prev) => {

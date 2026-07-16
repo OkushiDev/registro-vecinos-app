@@ -36,21 +36,7 @@ import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import api from "../../api";
 import { formatearRutConPuntos } from "../../utils/rut";
-
-const getErrorMessage = (error: any): string => {
-  if (!error) return "Error desconocido";
-  if (error.response && error.response.data) {
-    const data = error.response.data;
-    if (data.detail && Array.isArray(data.detail)) {
-      return `Faltan datos: ${data.detail
-        .map((e: any) => e.loc[1])
-        .join(", ")}`;
-    }
-    if (data.detail && typeof data.detail === "string") return data.detail;
-  }
-  if (error.message) return error.message;
-  return "Ocurrió un error inesperado.";
-};
+import { getErrorMessage } from "../../utils/error";
 
 // --- INTERFACES ---
 interface VecinoData {
@@ -153,10 +139,6 @@ const AntecedentesVecino: React.FC = () => {
             setListaDocumentos(responseDocs.data.documentos);
           }
         } catch (docErr) {
-          console.warn(
-            "No se pudieron cargar los documentos o no hay documentos aun.",
-            docErr
-          );
         }
 
         // 3. VERIFICAR SI TIENE SOLICITUD PENDIENTE
@@ -164,11 +146,9 @@ const AntecedentesVecino: React.FC = () => {
           const response = await api.get("/api/solicitudes/mi-pendiente");
           setTieneSolicitudPendiente(response.data.tiene_pendiente);
         } catch (solErr) {
-          console.warn("No se pudo verificar solicitudes:", solErr);
         }
       } catch (err: any) {
-        console.error("Error al cargar:", err);
-        setError(err.message || "Error al cargar información.");
+      setError(err.message || "Error al cargar información.");
       } finally {
         setIsLoading(false);
       }
@@ -195,8 +175,6 @@ const AntecedentesVecino: React.FC = () => {
     }
 
     try {
-      console.log("=== SOLICITANDO CERTIFICADO ===");
-
       // Verificar que hay un usuario logueado
       const token = localStorage.getItem("access_token");
       if (!token) {
@@ -208,12 +186,8 @@ const AntecedentesVecino: React.FC = () => {
         return;
       }
 
-      console.log("Token encontrado, enviando solicitud...");
-
       // Llamar al endpoint
       const response = await api.post("/api/solicitudes/crear");
-
-      console.log("Respuesta del servidor:", response.data);
 
       if (response.data.success) {
         setSnackbar({
@@ -227,21 +201,11 @@ const AntecedentesVecino: React.FC = () => {
         // Actualizar estado para deshabilitar el botón
         setTieneSolicitudPendiente(true);
 
-        console.log("Solicitud creada:", {
-          id: response.data.solicitud.id,
-          tipo: response.data.solicitud.tipo_solicitud,
-          estado: response.data.solicitud.estado,
-          fecha: response.data.solicitud.fecha_solicitud,
-        });
       }
     } catch (error: any) {
-      console.error("Error al solicitar certificado:", error);
-
       let mensaje = "Error al enviar la solicitud";
 
       if (error.response) {
-        console.error("Error response:", error.response.data);
-
         // Manejar diferentes tipos de error
         if (error.response.status === 400) {
           mensaje =
@@ -255,10 +219,8 @@ const AntecedentesVecino: React.FC = () => {
           mensaje = error.response.data.detail;
         }
       } else if (error.request) {
-        console.error("Error request:", error.request);
         mensaje = "No se pudo conectar con el servidor";
       } else {
-        console.error("Error:", error.message);
       }
 
       setSnackbar({

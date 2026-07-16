@@ -18,11 +18,15 @@ import {
 import { CALLES, RELACIONES_PROPIEDAD } from "../constants/calles";
 
 interface RegistroVecinoFormProps {
+  mode?: "create" | "edit";
+  vecinoId?: number;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
 const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
+  mode = "create",
+  vecinoId,
   onSuccess,
   onCancel,
 }) => {
@@ -42,34 +46,57 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitError, setSubmitError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingNumero, setIsLoadingNumero] = useState(true);
+  const [isLoading, setIsLoading] = useState(mode === "edit");
+
+  const esCreacion = mode === "create";
 
   useEffect(() => {
-    const fetchSiguienteNumero = async () => {
-      try {
-        setIsLoadingNumero(true);
-        const response = await api.get("/siguiente-numero-socio/");
-        const siguienteNumero = response.data.siguiente_numero_socio;
-
-        setFormData((prev) => ({
-          ...prev,
-          numero_socio: siguienteNumero.toString(),
-        }));
-
-        console.log("Siguiente número de socio cargado:", siguienteNumero);
-      } catch (error) {
-        console.error("Error al obtener siguiente número de socio:", error);
-        setFormData((prev) => ({
-          ...prev,
-          numero_socio: "",
-        }));
-      } finally {
-        setIsLoadingNumero(false);
-      }
-    };
-
-    fetchSiguienteNumero();
-  }, []);
+    if (esCreacion) {
+      const fetchSiguienteNumero = async () => {
+        try {
+          setIsLoading(true);
+          const response = await api.get("/siguiente-numero-socio/");
+          const siguienteNumero = response.data.siguiente_numero_socio;
+          setFormData((prev) => ({
+            ...prev,
+            numero_socio: siguienteNumero.toString(),
+          }));
+        } catch (error) {
+          setFormData((prev) => ({
+            ...prev,
+            numero_socio: "",
+          }));
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchSiguienteNumero();
+    } else if (vecinoId) {
+      const fetchVecino = async () => {
+        try {
+          const response = await api.get(`/vecino/${vecinoId}`);
+          const vecino = response.data;
+          setFormData({
+            nombres: vecino.nombres || "",
+            apellido_paterno: vecino.apellido_paterno || "",
+            apellido_materno: vecino.apellido_materno || "",
+            rut: vecino.rut || "",
+            numero_socio: vecino.numero_socio?.toString() || "",
+            nombre_calle: vecino.nombre_calle || "",
+            numero_casa: vecino.numero_casa || "",
+            relacion_propiedad: vecino.relacion_propiedad || "",
+            telefono: vecino.telefono || "",
+            email: vecino.email || "",
+          });
+        } catch (error) {
+          setSubmitError("Error al cargar los datos del vecino");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchVecino();
+    }
+  }, [esCreacion, vecinoId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -162,28 +189,31 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
         email: formData.email.trim() || null,
       };
 
-      console.log("RUT original:", formData.rut);
-      console.log("RUT formateado:", rutFormateado);
 
-      await api.post("/agregar-vecino/", dataToSend);
+
+      if (esCreacion) {
+        await api.post("/agregar-vecino/", dataToSend);
+      } else {
+        await api.put(`/editar-vecino/${vecinoId}`, dataToSend);
+      }
       onSuccess();
     } catch (error: any) {
-      console.error("Error al registrar vecino:", error);
+
       if (error.response?.data?.detail) {
         setSubmitError(error.response.data.detail);
       } else {
-        setSubmitError("Error al registrar el vecino. Intente nuevamente.");
+        setSubmitError(esCreacion ? "Error al registrar el vecino. Intente nuevamente." : "Error al actualizar el vecino. Intente nuevamente.");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoadingNumero) {
+  if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" p={3}>
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Cargando...</Typography>
+        <Typography sx={{ ml: 2 }}>{esCreacion ? "Cargando..." : "Cargando datos..."}</Typography>
       </Box>
     );
   }
@@ -259,7 +289,7 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
           <TextField
             required
             fullWidth
-            disabled
+            disabled={esCreacion}
             label="Número de Socio"
             name="numero_socio"
             type="number"
@@ -267,7 +297,7 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
             onChange={handleChange}
             error={!!errors.numero_socio}
             helperText={
-              errors.numero_socio || "Número asignado automáticamente"
+              errors.numero_socio || (esCreacion ? "Número asignado automáticamente" : "")
             }
           />
         </Grid>
@@ -404,7 +434,7 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
           color="primary"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Registrando..." : "Registrar"}
+          {isSubmitting ? (esCreacion ? "Registrando..." : "Guardando...") : (esCreacion ? "Registrar" : "Guardar Cambios")}
         </Button>
       </Box>
     </Box>

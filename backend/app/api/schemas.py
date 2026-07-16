@@ -59,8 +59,6 @@ class VecinoEdicionSchema(BaseModel):
     email: Optional[str] = None
     currentPassword: Optional[str] = None
     newPassword: Optional[str] = None
-    password: Optional[str] = None
-
     @field_validator("rut")
     @classmethod
     def validar_rut(cls, v: str) -> str:
@@ -100,20 +98,7 @@ class Token(BaseModel):
     nombre_completo: str
 
 
-class TokenData(BaseModel):
-    """Representacion del payload del JWT decodificado (uso interno)."""
-    user_id: Optional[int] = None
-    rol: Optional[str] = None
-
-
-class UserLogin(BaseModel):
-    """Schema de login (no usado actualmente; se usa OAuth2PasswordRequestForm en su lugar)."""
-    usuario: str
-    password: str
-
-
 class HistorialSchema(BaseModel):
     """Schema para crear un registro de historial (POST /historial/)."""
-    usuario: str
     tipo_accion: str
     descripcion_accion: str

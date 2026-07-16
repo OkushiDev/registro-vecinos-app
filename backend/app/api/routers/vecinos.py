@@ -1,7 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import Optional
-from datetime import datetime
 
 from app.api.schemas import VecinoCreate, VecinoEdicionSchema
 from app.api.dependencies import get_db, get_current_user
@@ -81,8 +79,6 @@ async def obtener_vecino(
             "fecha_edicion": formatear_fecha(vecino.fecha_edicion),
             "estado": vecino.estado,
         }
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -157,8 +153,6 @@ async def agregar_vecino(
                 ),
             },
         }
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -278,8 +272,6 @@ async def editar_vecino(
             },
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -330,8 +322,6 @@ async def cambiar_estado_vecino(
             "vecino": {"id": vecino_existente.id, "estado": vecino_existente.estado},
             "nuevo_estado": nuevo_estado,
         }
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(

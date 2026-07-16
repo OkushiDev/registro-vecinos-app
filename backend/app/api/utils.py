@@ -1,4 +1,4 @@
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from pathlib import Path
 from datetime import datetime

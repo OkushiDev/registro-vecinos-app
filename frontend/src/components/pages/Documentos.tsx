@@ -75,12 +75,9 @@ export default function Documentos() {
   // Cargar lista de vecinos
   const fetchVecinos = async () => {
     try {
-      console.log("Cargando lista de vecinos...");
       const response = await api.get("/lista-vecinos/");
-      console.log("Vecinos cargados:", response.data.vecinos?.length || 0);
       setVecinos(response.data.vecinos || []);
     } catch (error) {
-      console.error("Error al obtener vecinos:", error);
       setVecinos([]);
     }
   };
@@ -114,48 +111,27 @@ export default function Documentos() {
 
   // Cargar documentos del vecino seleccionado
   const fetchDocumentos = async (vecinoId: number) => {
-    console.log(`\n${"=".repeat(50)}`);
-    console.log(`FRONTEND - Solicitando documentos del vecino ID: ${vecinoId}`);
-
     setLoadingDocumentos(true);
     setDocumentos([]); // Limpiar documentos anteriores
 
     try {
       // Verificar token
       const token = localStorage.getItem("access_token");
-      console.log("Token presente:", token ? "SÍ" : "NO");
 
       if (!token) {
         alert("Sesión expirada. Por favor, inicia sesión nuevamente.");
         return;
       }
 
-      console.log(`Llamando a: /api/documentos/vecino/${vecinoId}`);
       const response = await api.get(`/api/documentos/vecino/${vecinoId}`);
-
-      console.log("Respuesta recibida:", response.data);
-      console.log("Total documentos:", response.data.total || 0);
-      console.log("Documentos array:", response.data.documentos);
 
       if (response.data.success && response.data.documentos) {
         setDocumentos(response.data.documentos);
-        console.log(
-          `Documentos cargados en estado: ${response.data.documentos.length}`
-        );
       } else {
-        console.warn("Respuesta sin documentos válidos");
         setDocumentos([]);
       }
     } catch (error: any) {
-      console.error("ERROR al obtener documentos:", error);
-
       if (error.response) {
-        console.error("Error response:", {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers,
-        });
-
         if (error.response.status === 401) {
           alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
           localStorage.removeItem("access_token");
@@ -170,17 +146,14 @@ export default function Documentos() {
           );
         }
       } else if (error.request) {
-        console.error("Error request:", error.request);
         alert("No se pudo conectar con el servidor. Verifica tu conexión.");
       } else {
-        console.error("Error:", error.message);
         alert("Error inesperado al cargar documentos");
       }
 
       setDocumentos([]);
     } finally {
       setLoadingDocumentos(false);
-      console.log(`${"=".repeat(50)}\n`);
     }
   };
 
@@ -188,8 +161,6 @@ export default function Documentos() {
     documentoId: number,
     nombreArchivo: string
   ) => {
-    console.log(`Descargando documento ID: ${documentoId}`);
-
     try {
       const token = localStorage.getItem("access_token");
       if (!token) {
@@ -197,7 +168,7 @@ export default function Documentos() {
         return;
       }
 
-      // Descargar usando axios y la utilidad compartida
+      // Descargar documento
       const response = await api.get(`/api/documentos/descargar/${documentoId}`, {
         responseType: "blob",
       });
@@ -214,21 +185,12 @@ export default function Documentos() {
       const blob = response.data;
       const contentDisposition = response.headers["content-disposition"] as string | null;
       descargarPDF(blob, contentDisposition, nombreArchivo);
-
-      console.log(`Documento ${nombreArchivo} descargado exitosamente`);
     } catch (error) {
-      console.error("Error al descargar documento:", error);
       alert("Error al descargar el documento");
     }
   };
 
   const handleSelectVecino = (vecino: Vecino) => {
-    console.log("Vecino seleccionado:", {
-      id: vecino.id,
-      nombre: `${vecino.nombres} ${vecino.apellido_paterno}`,
-      rut: vecino.rut,
-    });
-
     setSelectedVecino(vecino);
     fetchDocumentos(vecino.id);
   };

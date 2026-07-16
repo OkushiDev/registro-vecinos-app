@@ -164,14 +164,6 @@ async def generar_certificado(
             detail="No se puede generar certificado para un vecino inactivo",
         )
 
-    # debug: datos del certificado generado
-    print(f"Generando certificado para:")
-    print(f"  Nombres: {vecino.nombres}")
-    print(f"  Apellidos: {vecino.apellido_paterno} {vecino.apellido_materno}")
-    print(f"  RUT: {vecino.rut}")
-    print(f"  Domicilio: {vecino.nombre_calle} N° {vecino.numero_casa}")
-    print(f"  N° Socio: {vecino.numero_socio}")
-
     # Generar el PDF
     pdf_buffer = generar_certificado_pdf(vecino)
 
@@ -187,12 +179,6 @@ async def generar_certificado(
 
     # Nombre del archivo: Certificado_Residencia_12345678_010125.pdf
     nombre_archivo = f"C_Residencia_{rut_limpio}_{fecha_formateada}.pdf"
-
-    # debug: nombre del archivo generado y fecha de vigencia
-    print(f"  Nombre archivo: {nombre_archivo}")
-    print(
-        f"  Fecha vigencia: {(fecha_actual + timedelta(days=30)).strftime('%d-%m-%Y')}"
-    )
 
     registrar_accion(
         db=db,

@@ -1,8 +1,5 @@
-/**
- * Exporta un arreglo de objetos a un archivo Excel (.xlsx).
- * La función es asíncrona porque ExcelJS genera el buffer de forma asíncrona.
- * ExcelJS se importa dinámicamente (~1.2MB) solo al ejecutar la exportación.
- */
+import { descargarBlob } from "./download";
+
 export const exportarAExcel = async <T extends Record<string, unknown>>(
   data: T[],
   sheetName: string,
@@ -43,14 +40,6 @@ export const exportarAExcel = async <T extends Record<string, unknown>>(
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-
   const date = new Date().toISOString().split("T")[0];
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${fileName}_${date}.xlsx`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
+  descargarBlob(blob, `${fileName}_${date}.xlsx`);
 };

@@ -42,7 +42,6 @@ const SubirDocumento: React.FC = () => {
         const response = await api.get("/api/documentos/tipos");
         setTiposDocumento(response.data.tipos);
       } catch (error) {
-        console.error("Error al cargar tipos de documentos:", error);
       }
     };
     fetchTipos();

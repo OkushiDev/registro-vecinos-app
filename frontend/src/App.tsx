@@ -67,7 +67,6 @@ export default function App(): React.ReactElement {
           setUserProfile(profile);
           setIsAuthenticated(true);
         } catch (error) {
-          console.error("Error al verificar autenticación:", error);
           authService.logout();
           setUserProfile(null);
           setIsAuthenticated(false);

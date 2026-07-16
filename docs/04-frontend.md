@@ -66,7 +66,7 @@ MUI 7 con `createTheme`. Dark mode toggle via `isDarkMode` state.
             ├─ ListaVecinos
             │   ├─ Table con búsqueda/filtros
             │   ├─ Exportar Excel
-            │   └─ Modales: RegistroVecinoForm, EditarVecinoForm
+            │   └─ Modal: RegistroVecinoForm (create/edit)
             │
             ├─ Documentos
             │   ├─ Selector de vecino (sidebar)
@@ -91,17 +91,9 @@ MUI 7 con `createTheme`. Dark mode toggle via `isDarkMode` state.
 
 ## Servicios y Utilidades
 
-### api.tsx — Axios Instance
+### api.tsx — Fetch Wrapper
 
-```tsx
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
-  timeout: 30000,
-});
-
-// Interceptor request: attach Bearer token
-// Interceptor response: log 401 errors
-```
+Wrapper nativo sobre `fetch()` que agrega JWT automáticamente y mantiene interfaz compatible (`.data`, `.headers`, `.status`). Reemplaza a axios.
 
 ### services/authService.ts
 
@@ -122,6 +114,9 @@ const api = axios.create({
 | `rut.ts` | `limpiarRut`, `formatearRut`, `formatearRutConPuntos`, `validarFormatoRut` |
 | `pdf.ts` | `descargarPDF(blob, contentDisposition, defaultName?)` |
 | `excel.ts` | `exportarAExcel(data, sheetName, fileName)` — importa ExcelJS dinámicamente (~1MB, solo al exportar) |
+| `error.ts` | `getErrorMessage(error)` — mensajes de error uniformes |
+| `download.ts` | `descargarBlob(blob, fileName)` — descarga genérica de blobs |
+| `pagination.ts` | `displayedRowsLabel`, `usePagination()` — paginación y etiqueta compartida |
 
 ### src/constants/
 
@@ -135,7 +130,7 @@ const api = axios.create({
 |-------------|---------|
 | `React.lazy()` en 6 páginas + NotFound | Bundle inicial reducido **62%** (~1732 kB → ~661 kB) |
 | `import("exceljs")` dinámico | 937 kB fuera del bundle inicial, solo al exportar |
-| `StatCard` componente reutilizable | 4 tarjetas de estadísticas → 1 componente, -78 líneas |
+| `StatCard` → inline | 4 tarjetas de estadísticas inline en ListaSolicitudes, -38 líneas |
 | `CALLES`/`RELACIONES` a `constants/` | Fuente única, -58 líneas de duplicación |
 
 ## Robustez (2026-06-10)

@@ -8,12 +8,14 @@ Sistema web para gestión de juntas de vecinos. Dos roles: **presidente** (admin
 ┌─────────────────────────────────────────────────────────────────┐
 │                         CLIENTE (React)                        │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │  Login   │  │  Navbar  │  │  Pages   │  │   utils/      │  │
-│  │          │  │          │  │(6 pages) │  │ rut/pdf/excel │  │
+│  │  Login   │  │  Navbar  │  │  Pages   │  │   utils/        │  │
+│  │          │  │          │  │(6 pages) │  │rut/pdf/excel/  │  │
+│  │          │  │          │  │          │  │error/download/ │  │
+│  │          │  │          │  │          │  │ pagination     │  │
 │  └────┬─────┘  └──────────┘  └────┬─────┘  └───────────────┘  │
 │       │                           │                            │
 │       └──────────┬────────────────┘                            │
-│                  │ axios (api.tsx con JWT interceptor)          │
+│                  │ fetch (api.tsx con wrapper JWT)               │
 └──────────────────┼─────────────────────────────────────────────┘
                    │ HTTP (localhost:8000)
 ┌──────────────────┼─────────────────────────────────────────────┐
@@ -51,7 +53,7 @@ Sistema web para gestión de juntas de vecinos. Dos roles: **presidente** (admin
 |------|-----------|---------|
 | Frontend | React + TypeScript + Vite | 19 / 5.9 / 7 |
 | UI | MUI (Material-UI) + Emotion | 7 |
-| HTTP Client | Axios | 1.x |
+| HTTP Client | Fetch nativo (wrapper) | — |
 | Routing | react-router-dom | 7 |
 | Backend | Python + FastAPI | 3.11+ / 0.136 |
 | ORM | SQLAlchemy | 2.0 |
@@ -83,7 +85,6 @@ registro-vecinos-app/
 │   │   │   ├── dependencies.py     # get_current_user, oauth2
 │   │   │   ├── utils.py            # Helpers: archivos, password, historial
 │   │   │   ├── certificados.py     # Generación PDF con plantilla
-│   │   │   ├── tool_posiciones.py  # Dev tool: cuadrícula PDF
 │   │   │   └── routers/
 │   │   │       ├── auth.py         # Login, perfil actual
 │   │   │       ├── vecinos.py      # CRUD + estados
@@ -97,17 +98,17 @@ registro-vecinos-app/
 │   └── app/Test/                   # Tests pytest (28 tests)
 ├── frontend/
 │   └── src/
-│       ├── api.tsx                 # Axios instance + interceptors
+│       ├── api.tsx                 # Fetch wrapper + JWT
 │       ├── App.tsx                 # Root: theme, routing, auth gate, React.lazy()
 │       ├── services/authService.ts # Token management
-│       ├── components/             # ErrorBoundary, Login, Navbar, forms (7)
-│       ├── components/pages/       # Pages (6, lazy-loaded) + NotFound + StatCard
-│       ├── utils/                  # rut.ts, pdf.ts, excel.ts (exceljs lazy)
+│       ├── components/             # ErrorBoundary, Login, Navbar, forms (5)
+│       ├── components/pages/       # Pages (6, lazy-loaded) + NotFound
+│       ├── utils/                  # rut.ts, pdf.ts, excel.ts, error.ts, download.ts, pagination.ts
 │       ├── constants/              # calles.ts (CALLES, RELACIONES)
 │       └── test/                   # Tests vitest (21 tests)
 └── database/
     ├── docker-compose.yaml         # PostgreSQL container
-    └── scripts/init.sql            # Schema + seed data (35 vecinos)
+    └── scripts/init.sql            # Schema + seed data (2 vecinos)
 ```
 
 ## Decisiones de Arquitectura
@@ -118,11 +119,11 @@ registro-vecinos-app/
 
 3. **RUT con mod-11**: Validación de formato y dígito verificador en backend (Pydantic `field_validator`).
 
-4. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + PyPDF2. Las coordenadas se ajustaron con `tool_posiciones.py`.
+4. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + PyPDF2. Las coordenadas se ajustaron con una herramienta de desarrollo (`tool_posiciones.py`, eliminada del paquete de producción).
 
 5. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
 
-6. **Seed data hardcodeada**: El `init.sql` contiene 35 vecinos de prueba con contraseñas generadas con pgcrypto (`crypt()`). El vecino #35 es el presidente.
+6. **Seed data hardcodeada**: El `init.sql` contiene 2 vecinos de prueba: Maria Angelica Tapia (vecino activo) y Jose Luis Benavides (presidente). Contraseñas generadas con pgcrypto (`crypt()`).
 
 7. **Lazy loading de páginas**: Las 6 páginas + NotFound usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~661 kB (-62%).
 

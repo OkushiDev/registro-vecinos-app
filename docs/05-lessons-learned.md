@@ -40,6 +40,7 @@ Estado inicial: 1907 líneas. Refactorizado a 51 líneas con routers.
 Script de desarrollo para calibrar coordenadas PDF, pero ubicado dentro del módulo API.
 
 **En V2:** Scripts de desarrollo van en `scripts/` o `tools/`, no dentro del paquete de producción.
+✅ **Resuelto**: Eliminado del paquete de producción.
 
 ### ❌ Tests que dependen de DB real
 Los tests de integración requieren PostgreSQL funcionando, no se pueden correr aislados en CI fácilmente.
@@ -71,12 +72,13 @@ Originalmente coexistían `"token"` y `"access_token"`.
 ### ❌ URLs hardcodeadas
 `localhost:8000` en varios archivos del frontend (Documentos, Antecedentes_vecino) en vez de usar la variable de entorno `VITE_API_URL`.
 
-**En V2:** Usar siempre la instancia axios (que ya lee de env var).
+**En V2:** Usar siempre el cliente HTTP (que ya lee de env var).
 
-### ❌ fetch() directo
-Algunos componentes usaban `fetch()` en vez del interceptor axios, saltándose el manejo de tokens.
+### ❌ fetch() directo (inversión: axios)
+Algunos componentes usaban `fetch()` directo saltándose el manejo de tokens; otros dependían de axios.
 
-**En V2:** Un solo cliente HTTP con interceptores. No permitir `fetch()` directo.
+**En V2:** Un solo cliente HTTP con interceptores.
+✅ **Resuelto**: Se eliminó axios y se unificó todo en un wrapper `fetch()` con JWT automático.
 
 ## Código Duplicado
 
@@ -89,6 +91,7 @@ Login.tsx tenía su propia lógica de limpieza/formateo de RUT duplicando `src/u
 Documentos.tsx tenía su propia implementación de blob download duplicando `src/utils/pdf.ts`.
 
 **En V2:** Las utilidades de descarga/export deben estar en `utils/` desde el principio.
+✅ **Resuelto**: Blob download extraído a `utils/download.ts:descargarBlob`. `pdf.ts` y `excel.ts` lo usan.
 
 ## Testing
 
@@ -122,10 +125,13 @@ Documentos.tsx tenía su propia implementación de blob download duplicando `src
 | 🟡 Alta | Configurar tests frontend desde el día 1 | ✅ Resuelto (21 tests) |
 | 🟡 Alta | RUT con validación mod-11 en backend | ✅ Resuelto |
 | 🟢 Media | Unificar paths en una sola fuente de verdad | ✅ Resuelto (UPLOAD_BASE) |
-| 🟢 Media | Scripts de desarrollo en `scripts/` | ✅ Resuelto (documentado) |
+| 🟢 Media | Scripts de desarrollo en `scripts/` | ✅ Resuelto (eliminado del paquete) |
 | 🟢 Media | URLs dinámicas via env var, nunca hardcodeadas | ✅ Resuelto |
 | 🟢 Media | `React.lazy()` + `Suspense` desde el día 1 | ✅ Resuelto (-62% bundle) |
 | 🟢 Media | Dependencias pesadas con `import()` dinámico | ✅ Resuelto (exceljs) |
 | 🟢 Media | Constantes compartidas en `src/constants/` | ✅ Resuelto |
 | 🟢 Media | `formatear_fecha` centralizada en `utils/` | ✅ Resuelto |
 | 🟢 Media | Auditoría en todas las mutaciones | ✅ Resuelto |
+| 🟢 Media | Unificar cliente HTTP (eliminar axios) | ✅ Resuelto (fetch nativo con wrapper) |
+| 🟢 Media | Centralizar error handling y blob download | ✅ Resuelto (error.ts, download.ts) |
+| 🟢 Media | Reducir seed data de desarrollo | ✅ Resuelto (35→2 vecinos) |

@@ -8,7 +8,7 @@ React 19 + TypeScript + Vite 7 + MUI 7. Gestionado con npm.
 - **Build:** Vite 7
 - **UI:** MUI 7 (Material-UI) + Emotion
 - **Routing:** react-router-dom 7
-- **HTTP:** Axios (instancia única con interceptor JWT)
+- **HTTP:** Fetch nativo (wrapper con JWT)
 - **Excel:** ExcelJS 4.x (lazy-loaded, ~937 kB)
 - **Tests:** Vitest 4 + Testing Library (21 tests)
 - **Lint:** ESLint 9 + typescript-eslint
@@ -38,18 +38,15 @@ frontend/
 ├── src/
 │   ├── main.tsx                  # Entry point
 │   ├── App.tsx                   # Root: theme, routing, auth, lazy routes, ErrorBoundary
-│   ├── api.tsx                   # Instancia axios única (interceptor JWT)
+│   ├── api.tsx                   # Fetch wrapper + JWT
 │   ├── services/
 │   │   └── authService.ts        # Login, logout, token management
 │   ├── components/
 │   │   ├── ErrorBoundary.tsx     # Crash recovery
 │   │   ├── Navbar.tsx            # AppBar con navegación + theme toggle
 │   │   ├── Login.tsx             # Pantalla de login
-│   │   ├── Modal.tsx             # Modal genérico reutilizable
-│   │   ├── ConfirmDialog.tsx     # Diálogo de confirmación
 │   │   ├── NotificationMenu.tsx  # Campana de notificaciones (solo presidente)
-│   │   ├── RegistroVecinoForm.tsx   # Formulario crear vecino
-│   │   ├── EditarVecinoForm.tsx     # Formulario editar vecino
+│   │   ├── RegistroVecinoForm.tsx   # Formulario crear/editar vecino (mode prop)
 │   │   └── pages/
 │   │       ├── ListaVecinos.tsx        # Tabla de vecinos (1003L)
 │   │       ├── Antecedentes_vecino.tsx # Perfil del vecino (872L)
@@ -57,14 +54,16 @@ frontend/
 │   │       ├── Documentos.tsx          # Documentos por vecino (711L)
 │   │       ├── Historial.tsx           # Auditoría (453L)
 │   │       ├── SubirDocumento.tsx      # Subida de archivos (250L)
-│   │       ├── StatCard.tsx            # Tarjeta de estadísticas reusable
 │   │       └── NotFound.tsx            # Página 404
 │   ├── constants/
 │   │   └── calles.ts              # CALLES, RELACIONES_PROPIEDAD
 │   ├── utils/
 │   │   ├── rut.ts                # Formateo y validación de RUT chileno
 │   │   ├── pdf.ts                # Descarga de PDFs
-│   │   └── excel.ts              # Export Excel (ExcelJS lazy)
+│   │   ├── excel.ts              # Export Excel (ExcelJS lazy)
+│   │   ├── error.ts              # getErrorMessage()
+│   │   ├── download.ts           # descargarBlob()
+│   │   └── pagination.ts         # usePagination(), displayedRowsLabel
 │   └── test/                     # Tests vitest (21)
 │       ├── rut.test.ts           # 16 tests
 │       ├── pdf.test.ts           # 3 tests
@@ -103,7 +102,7 @@ const response = await api.get("/lista-vecinos/");
 const response = await api.post("/agregar-vecino/", data);
 ```
 
-**Prohibido usar `fetch()` directamente.** Los interceptores de `api` agregan automáticamente el token JWT y manejan errores 401.
+El wrapper de `api.tsx` usa `fetch()` nativo con manejo automático de JWT, errores 401, y soporte para blobs.
 
 ### Estado
 
@@ -136,7 +135,7 @@ MUI 7 usa Grid2 con API `size`:
 
 ### Performance
 
-- **6 páginas + NotFound con `React.lazy()` + `<Suspense>`**: bundle inicial **-62%** (1732→661 kB)
+- **6 páginas + NotFound con `React.lazy()` + `<Suspense>`**: bundle inicial **-62%** (1732→~654 kB)
 - **ExcelJS lazy**: solo se descarga al clickear "Exportar" (~937 kB)
 - **MUI en chunk separado**: `vite.config.ts` con `manualChunks`
 
@@ -144,7 +143,7 @@ MUI 7 usa Grid2 con API `size`:
 
 - **`ErrorBoundary.tsx`**: captura crashes de renderizado, permite recargar
 - **`NotFound.tsx`**: página 404 para rutas inexistentes
-- **Cero `fetch()` directo**: todo el HTTP pasa por `api.tsx`
+- **Wrapper `fetch()` unificado**: todo el HTTP pasa por `api.tsx` con manejo de JWT
 - **Sin `role="checkbox"` falso**, sin index-as-key, `target="_blank"` seguro
 
 ## Comandos

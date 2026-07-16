@@ -128,7 +128,7 @@ Wrapper nativo sobre `fetch()` que agrega JWT automáticamente y mantiene interf
 
 | Optimización | Impacto |
 |-------------|---------|
-| `React.lazy()` en 6 páginas + NotFound | Bundle inicial reducido **62%** (~1732 kB → ~661 kB) |
+| `React.lazy()` en 6 páginas + NotFound | Bundle inicial reducido **62%** (~1732 kB → ~654 kB) |
 | `import("exceljs")` dinámico | 937 kB fuera del bundle inicial, solo al exportar |
 | `StatCard` → inline | 4 tarjetas de estadísticas inline en ListaSolicitudes, -38 líneas |
 | `CALLES`/`RELACIONES` a `constants/` | Fuente única, -58 líneas de duplicación |

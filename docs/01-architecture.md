@@ -123,9 +123,9 @@ registro-vecinos-app/
 
 5. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
 
-6. **Seed data hardcodeada**: El `init.sql` contiene 2 vecinos de prueba: Maria Angelica Tapia (vecino activo) y Jose Luis Benavides (presidente). Contraseñas generadas con pgcrypto (`crypt()`).
+6. **Seed data hardcodeada**: El `init.sql` contiene 35 vecinos de prueba con nombres, RUTs y direcciones variadas. Contraseñas generadas con pgcrypto (`crypt()`). El vecino #35 es el presidente.
 
-7. **Lazy loading de páginas**: Las 6 páginas + NotFound usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~661 kB (-62%).
+7. **Lazy loading de páginas**: Las 6 páginas + NotFound usan `React.lazy()` + `<Suspense>`. El bundle inicial se redujo de ~1732 kB a ~654 kB (-62%).
 
 8. **ExcelJS dinámico**: Se importa solo al hacer click en "Exportar" (~937 kB lazy, no en bundle inicial).
 

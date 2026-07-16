@@ -179,7 +179,6 @@ registro-vecinos-app/
 │   │   │   ├── dependencies.py        # get_current_user (OAuth2)
 │   │   │   ├── utils.py               # Helpers: archivos, passwords, fechas
 │   │   │   ├── certificados.py        # PDF con plantilla ReportLab
-│   │   │   ├── tool_posiciones.py     # Dev tool: cuadrícula PDF
 │   │   │   └── routers/
 │   │   │       ├── auth.py            # Login + perfil
 │   │   │       ├── vecinos.py         # CRUD + estado + num socio
@@ -197,7 +196,7 @@ registro-vecinos-app/
 ├── frontend/                          # SPA (React + TypeScript)
 │   └── src/
 │       ├── App.tsx                    # Root: theme, auth, lazy routes, ErrorBoundary
-│       ├── api.tsx                    # Axios singleton + JWT interceptor
+│       ├── api.tsx                    # Fetch wrapper + JWT
 │       ├── main.tsx                   # Entry point
 │       ├── services/authService.ts    # Login/logout/token management
 │       ├── components/
@@ -205,10 +204,7 @@ registro-vecinos-app/
 │       │   ├── Login.tsx              # Login form
 │       │   ├── Navbar.tsx             # Navigation + theme toggle
 │       │   ├── NotificationMenu.tsx   # Campana de notificaciones
-│       │   ├── RegistroVecinoForm.tsx
-│       │   ├── EditarVecinoForm.tsx
-│       │   ├── Modal.tsx
-│       │   ├── ConfirmDialog.tsx
+│       │   ├── RegistroVecinoForm.tsx   # Crear/editar (mode prop)
 │       │   └── pages/
 │       │       ├── ListaVecinos.tsx        # 1003L
 │       │       ├── Antecedentes_vecino.tsx # 872L
@@ -216,14 +212,16 @@ registro-vecinos-app/
 │       │       ├── Documentos.tsx          # 711L
 │       │       ├── Historial.tsx           # 453L
 │       │       ├── SubirDocumento.tsx      # 250L
-│       │       ├── StatCard.tsx            # Reusable
 │       │       └── NotFound.tsx            # 404 page
 │       ├── constants/
 │       │   └── calles.ts              # CALLES, RELACIONES_PROPIEDAD
 │       ├── utils/
 │       │   ├── rut.ts                 # Formateo/validación RUT
 │       │   ├── pdf.ts                 # Descarga de PDF
-│       │   └── excel.ts               # Export Excel (ExcelJS lazy)
+│       │   ├── excel.ts               # Export Excel (ExcelJS lazy)
+│       │   ├── error.ts               # getErrorMessage()
+│       │   ├── download.ts            # descargarBlob()
+│       │   └── pagination.ts          # usePagination(), displayedRowsLabel
 │       └── test/                      # 21 tests (vitest)
 │           ├── rut.test.ts
 │           ├── pdf.test.ts
@@ -239,7 +237,7 @@ registro-vecinos-app/
 ---
 ## Notas
 
-- **El bundle inicial es de 661 kB** (React.lazy + Suspense en 6 páginas + ExcelJS dinámico)
+- **El bundle inicial es de ~654 kB** (React.lazy + Suspense en 6 páginas + ExcelJS dinámico)
 - **Solo 2 endpoints son públicos** (`/api/token` para login, `/api/documentos/tipos` para lista estática)
 - **Todas las mutaciones quedan registradas** en el historial de auditoría
 - **Las contraseñas seed usan pgcrypto** (`crypt()`). Python usa `bcrypt`. El backend tiene lógica de compatibilidad `$2a$` → `$2b$` en `core/security.py`

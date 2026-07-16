@@ -104,7 +104,6 @@ backend/
 │   │   ├── models.py            # SQLAlchemy ORM (Vecino, Usuario, Documento, etc.)
 │   │   ├── database.py          # Engine, SessionLocal, get_db
 │   │   ├── certificados.py      # Generación PDF con plantilla
-│   │   ├── tool_posiciones.py   # Dev tool: cuadrícula PDF (no producción)
 │   │   └── routers/
 │   │       ├── auth.py          # /api/token, /api/me
 │   │       ├── vecinos.py       # CRUD vecinos, estado, número socio

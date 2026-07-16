@@ -132,10 +132,10 @@ Log de auditoría de acciones.
 
 El archivo `database/scripts/init.sql` contiene:
 
-- **2 vecinos** de prueba: Maria Angelica Tapia (activo) y Jose Luis Benavides (presidente).
-- **2 usuarios** vinculados 1:1. Username = RUT del vecino.
-- **Contraseñas**: Vecino `Tapia6017`, Presidente `Benavides1430`, hasheadas con `pgcrypto` al insertarse.
-- **Presidente**: Jose Luis Benavides, RUT `14306046-2`, rol `presidente`.
+- **35 vecinos** de prueba con nombres, RUTs, direcciones (calles temáticas: Rio Loco, Galileo Galilei, Tiziano, etc.) y números de socio correlativos del 1 al 35.
+- **35 usuarios** vinculados 1:1. Username = RUT del vecino.
+- **Contraseñas**: Formato `ApellidoPaterno + primeros 4 dígitos del RUT` (ej: `Bolados1353`), hasheadas con `pgcrypto` al insertarse.
+- **Presidente**: El vecino #35 (José Luis Benavides, RUT `14306046-2`) tiene rol `presidente`. Los demás son `vecino`.
 
 ## Tipos de Acción (Historial)
 

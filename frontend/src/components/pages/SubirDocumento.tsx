@@ -17,6 +17,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageIcon from "@mui/icons-material/Image";
 import api from "../../api";
+import { getErrorMessage } from "../../utils/error";
 
 interface TipoDocumento {
   value: string;
@@ -41,7 +42,8 @@ const SubirDocumento: React.FC = () => {
       try {
         const response = await api.get("/api/documentos/tipos");
         setTiposDocumento(response.data.tipos);
-      } catch (error) {
+      } catch {
+        // Sin tipos disponibles el formulario queda vacío; no bloquea la página.
       }
     };
     fetchTipos();
@@ -123,12 +125,8 @@ const SubirDocumento: React.FC = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } catch (error: any) {
-      const msg =
-        error.response?.data?.detail ||
-        error.message ||
-        "Error al subir el documento";
-      setMessage({ type: "error", text: msg });
+    } catch (error) {
+      setMessage({ type: "error", text: getErrorMessage(error) });
     } finally {
       setUploading(false);
     }

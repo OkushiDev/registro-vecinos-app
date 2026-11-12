@@ -57,7 +57,8 @@ async def subir_documento(
         if not es_valido:
             raise HTTPException(status_code=400, detail=mensaje_error)
 
-        contenido = await file.read()
+        # Leer como máximo un byte de más: evita cargar un archivo enorme en memoria
+        contenido = await file.read(MAX_FILE_SIZE + 1)
         tamanio = len(contenido)
 
         if tamanio > MAX_FILE_SIZE:
@@ -110,6 +111,8 @@ async def subir_documento(
             },
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -227,7 +230,6 @@ async def obtener_documentos_vecino(
                 "nombre_archivo": doc.nombre_archivo,
                 "descripcion": doc.descripcion or "",
                 "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=None),
-                "ruta_archivo": doc.ruta_archivo,
                 "tipo_archivo": doc.tipo_archivo or None,
                 "tamanio": doc.tamanio or None,
             }
@@ -248,6 +250,8 @@ async def obtener_documentos_vecino(
             "total": len(documentos_lista),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -299,6 +303,8 @@ async def descargar_documento(
             media_type="application/octet-stream",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

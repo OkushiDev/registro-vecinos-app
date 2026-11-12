@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.schemas import HistorialSchema
-from app.api.dependencies import get_db, get_current_user
-from app.api.utils import registrar_accion, formatear_fecha
+from app.api.dependencies import get_db, require_presidente
+from app.api.utils import formatear_fecha
 import app.api.models as models
 
 router = APIRouter(prefix="/historial", tags=["historial"])
@@ -12,7 +11,7 @@ router = APIRouter(prefix="/historial", tags=["historial"])
 @router.get("/")
 async def obtener_historial(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """Retorna el historial completo de acciones, con datos del vecino que realizo cada accion. Ordenado por fecha descendente."""
     try:
@@ -37,26 +36,6 @@ async def obtener_historial(
             )
 
         return lista_historial
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/", status_code=201)
-async def crear_registro_historial(
-    item: HistorialSchema,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Crea un registro manual en el historial. Toma el usuario_id del token, no del body."""
-    try:
-        registrar_accion(
-            db=db,
-            usuario_id=current_user["user_id"],
-            descripcion=item.descripcion_accion,
-            tipo=item.tipo_accion,
-        )
-        return {"message": "Historial registrado exitosamente"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

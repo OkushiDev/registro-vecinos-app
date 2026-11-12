@@ -9,8 +9,8 @@ FastAPI + SQLAlchemy + PostgreSQL. Gestionado con `uv`.
 - **BD:** PostgreSQL via psycopg2-binary
 - **Auth:** JWT (python-jose + bcrypt)
 - **Validación:** Pydantic v2 con `field_validator` (RUT mod-11)
-- **PDF:** ReportLab + PyPDF2
-- **Tests:** pytest (28 tests con Mock + dependency_overrides)
+- **PDF:** ReportLab + pypdf
+- **Tests:** pytest (37 tests con Mock + dependency_overrides)
 - **Gestor:** uv
 
 ## Setup rápido
@@ -37,8 +37,8 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:1234@localhost:5432/postgres` | Conexión a BD |
-| `JWT_SECRET_KEY` | `DEV_ONLY_CHANGE_IN_PRODUCTION` | ⚠️ Cambiar en producción |
+| `DATABASE_URL` | obligatoria (ver `.env.example`) | Conexión a BD |
+| `JWT_SECRET_KEY` | obligatoria (ver `.env.example`) | ⚠️ Cambiar en producción |
 
 ## Endpoints
 
@@ -53,12 +53,12 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
-| `/lista-vecinos/` | GET | Lista todos los vecinos |
-| `/vecino/{id}` | GET | Obtener vecino por ID |
-| `/agregar-vecino/` | POST | Crear vecino + usuario |
-| `/editar-vecino/{id}` | PUT | Editar vecino (con cambio de password opcional) |
-| `/cambiar-estado-vecino/{id}` | PATCH | Habilitar/deshabilitar vecino |
-| `/siguiente-numero-socio/` | GET | Próximo número de socio |
+| `/lista-vecinos/` | GET | Lista todos los vecinos (solo presidente) |
+| `/vecino/{id}` | GET | Obtener vecino por ID (propio o presidente) |
+| `/agregar-vecino/` | POST | Crear vecino + usuario (solo presidente) |
+| `/editar-vecino/{id}` | PUT | Editar vecino (propio o presidente) |
+| `/cambiar-estado-vecino/{id}` | PATCH | Habilitar/deshabilitar vecino (solo presidente) |
+| `/siguiente-numero-socio/` | GET | Próximo número de socio (solo presidente) |
 
 ### Documentos (auth requerido)
 
@@ -87,9 +87,8 @@ Sin Docker, asegúrate de tener PostgreSQL corriendo en `localhost:5432` con usu
 
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
-| `/historial/` | GET | Auditoría completa |
-| `/historial/` | POST | Crear entrada manual |
-| `/api/generar-certificado/{id}` | GET | Generar PDF certificado |
+| `/historial/` | GET | Auditoría completa (solo presidente) |
+| `/api/generar-certificado/{id}` | GET | Generar PDF certificado (solo presidente) |
 
 ## Auth Flow
 
@@ -143,7 +142,7 @@ backend/
 │   │   └── security.py          # JWT: create/decode token, bcrypt hash/verify
 │   └── resources/
 │       └── certificado_plantilla.pdf
-├── app/Test/                    # Tests pytest (28)
+├── app/Test/                    # Tests pytest (37)
 ├── pyproject.toml               # Dependencias
 ├── .env                         # Variables locales (no commiteado)
 └── .gitignore
@@ -194,7 +193,7 @@ Usar `formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-")` de `utils.py` par
 uv run pytest app/Test/
 ```
 
-28 tests con `Mock` + `dependency_overrides`. No requieren PostgreSQL real. Para correr tests de integración contra BD:
+37 tests con `Mock` + `dependency_overrides`. No requieren PostgreSQL real. Para correr tests de integración contra BD:
 
 ```python
 from app.api.dependencies import get_db

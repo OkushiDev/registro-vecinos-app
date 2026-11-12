@@ -14,6 +14,7 @@ import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
 import { exportarAExcel } from "../../utils/excel";
 import { displayedRowsLabel, usePagination } from "../../utils/pagination";
 import { formatearRutConPuntos } from "../../utils/rut";
+import { getErrorDetail } from "../../utils/error";
 import { CALLES, RELACIONES_PROPIEDAD } from "../../constants/calles";
 
 // Importación de la API
@@ -37,7 +38,7 @@ import Box from "@mui/material/Box";
 import { Grid } from "@mui/material";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
+import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -82,7 +83,6 @@ interface Column {
   label: string;
   minWidth?: number;
   align?: "center" | "right" | "left";
-  format?: (value: any) => string;
 }
 
 const columns: readonly Column[] = [
@@ -137,34 +137,35 @@ export default function ListaVecinos() {
     Set<number>
   >(new Set());
 
-  const fetchItems = async () => {
+  // Función para obtener vecinos con solicitudes pendientes
+  const fetchSolicitudesPendientes = React.useCallback(async () => {
+    try {
+      const response = await api.get("/api/solicitudes");
+      const pendientes = response.data
+        .filter((sol: { estado: string }) => sol.estado === "pendiente")
+        .map((sol: { vecino_id: number }) => sol.vecino_id);
+
+      setVecinosConSolicitud(new Set(pendientes));
+    } catch {
+      // Se conserva el último estado conocido; el próximo fetch reintenta.
+    }
+  }, []);
+
+  const fetchItems = React.useCallback(async () => {
     try {
       const response = await api.get("/lista-vecinos/");
       setItems(response.data.vecinos || []);
 
       // Obtener solicitudes pendientes
       await fetchSolicitudesPendientes();
-    } catch (error) {
+    } catch {
       setItems([]);
     }
-  };
-
-  // Función para obtener vecinos con solicitudes pendientes
-  const fetchSolicitudesPendientes = async () => {
-    try {
-      const response = await api.get("/api/solicitudes");
-      const pendientes = response.data
-        .filter((sol: any) => sol.estado === "pendiente")
-        .map((sol: any) => sol.vecino_id);
-
-      setVecinosConSolicitud(new Set(pendientes));
-    } catch (error) {
-    }
-  };
+  }, [fetchSolicitudesPendientes]);
 
   React.useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterColumn, setFilterColumn] = React.useState("all");
@@ -190,7 +191,7 @@ export default function ListaVecinos() {
     setPage(0);
   };
 
-  const handleEstadoFiltroChange = (e: any) => {
+  const handleEstadoFiltroChange = (e: SelectChangeEvent) => {
     setEstadoFiltro(e.target.value);
     setPage(0);
   };
@@ -267,7 +268,7 @@ export default function ListaVecinos() {
     setPage(0);
   };
 
-  const handleFilterChange = (e: any) => {
+  const handleFilterChange = (e: SelectChangeEvent) => {
     setFilterColumn(e.target.value);
     setPage(0);
   };
@@ -377,8 +378,8 @@ export default function ListaVecinos() {
       setConfirmDialogOpen(false);
       setVecinoToToggle(null);
       fetchItems();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || "Error al cambiar el estado");
+    } catch (error) {
+      alert(getErrorDetail(error) || "Error al cambiar el estado");
     } finally {
       setLoadingToggle(false);
     }
@@ -413,21 +414,11 @@ export default function ListaVecinos() {
 
       alert(response.data.mensaje || "Solicitud creada exitosamente");
 
-      // Registrar en el historial
-      try {
-        await api.post("/historial/", {
-          usuario: "Presidente",
-          tipo_accion: "Crear Solicitud",
-          descripcion_accion: `Se creó solicitud de certificado para ${nombreVecino}`,
-        });
-      } catch (historialError) {
-      }
-
       // Actualizar la lista para reflejar el cambio
       await fetchItems();
-    } catch (error: any) {
+    } catch (error) {
       alert(
-        error.response?.data?.detail ||
+        getErrorDetail(error) ||
           "Error al crear la solicitud. Intenta nuevamente."
       );
     }

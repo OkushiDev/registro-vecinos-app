@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- respuestas dinámicas sin contrato compartido */
+
+import { clearSession } from "./services/session";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 class ApiError extends Error {
@@ -21,19 +25,25 @@ function headersToObject(headers: Headers): Record<string, string> {
   return obj;
 }
 
-async function request<T = any>(url: string, options: RequestInit & { responseType?: string; params?: Record<string, any> } = {}): Promise<{ data: T; headers: Record<string, string>; status: number }> {
+async function request<T = any>(url: string, options: RequestInit & { responseType?: string; params?: Record<string, any>; skipAuthRedirect?: boolean } = {}): Promise<{ data: T; headers: Record<string, string>; status: number }> {
   const token = localStorage.getItem("access_token");
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
 
-  const { responseType, params, ...fetchOptions } = options;
+  const { responseType, params, skipAuthRedirect, ...fetchOptions } = options;
   const fullUrl = buildUrl(`${API_URL}${url}`, params);
   const res = await fetch(fullUrl, { ...fetchOptions, headers });
 
   const status = res.status;
 
-  if (status === 401) throw new ApiError("No autorizado", 401);
+  // Token inválido o expirado: limpiar sesión y volver al login.
+  // El login y las consultas de fondo (skipAuthRedirect) quedan excluidos.
+  if (status === 401 && !skipAuthRedirect && !url.includes("/api/token")) {
+    clearSession();
+    window.location.reload();
+    throw new ApiError("Sesión expirada", 401);
+  }
 
   const resHeaders = headersToObject(res.headers);
 
@@ -51,7 +61,7 @@ async function request<T = any>(url: string, options: RequestInit & { responseTy
 }
 
 const api = {
-  get: <T = any>(url: string, config?: { responseType?: string; params?: Record<string, any> }) =>
+  get: <T = any>(url: string, config?: { responseType?: string; params?: Record<string, any>; skipAuthRedirect?: boolean }) =>
     request<T>(url, { method: "GET", ...config }),
   post: <T = any>(url: string, body?: any, config?: { headers?: Record<string, string>; params?: Record<string, any> }) =>
     request<T>(url, { method: "POST", body: body instanceof FormData ? body : JSON.stringify(body), ...config }),

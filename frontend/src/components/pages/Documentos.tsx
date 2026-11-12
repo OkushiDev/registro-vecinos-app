@@ -29,6 +29,7 @@ import IconButton from "@mui/material/IconButton";
 import DownloadIcon from "@mui/icons-material/Download";
 import Tooltip from "@mui/material/Tooltip";
 import { formatearRutConPuntos } from "../../utils/rut";
+import { getErrorMessage } from "../../utils/error";
 
 interface Vecino {
   id: number;
@@ -77,7 +78,7 @@ export default function Documentos() {
     try {
       const response = await api.get("/lista-vecinos/");
       setVecinos(response.data.vecinos || []);
-    } catch (error) {
+    } catch {
       setVecinos([]);
     }
   };
@@ -130,27 +131,8 @@ export default function Documentos() {
       } else {
         setDocumentos([]);
       }
-    } catch (error: any) {
-      if (error.response) {
-        if (error.response.status === 401) {
-          alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
-          localStorage.removeItem("access_token");
-          window.location.href = "/login";
-        } else if (error.response.status === 403) {
-          alert("No tienes permiso para ver documentos de otros vecinos");
-        } else {
-          alert(
-            `Error al cargar documentos: ${
-              error.response.data.detail || "Error desconocido"
-            }`
-          );
-        }
-      } else if (error.request) {
-        alert("No se pudo conectar con el servidor. Verifica tu conexión.");
-      } else {
-        alert("Error inesperado al cargar documentos");
-      }
-
+    } catch (error) {
+      alert(`Error al cargar documentos: ${getErrorMessage(error)}`);
       setDocumentos([]);
     } finally {
       setLoadingDocumentos(false);
@@ -185,7 +167,7 @@ export default function Documentos() {
       const blob = response.data;
       const contentDisposition = response.headers["content-disposition"] as string | null;
       descargarPDF(blob, contentDisposition, nombreArchivo);
-    } catch (error) {
+    } catch {
       alert("Error al descargar el documento");
     }
   };

@@ -41,9 +41,6 @@ class VecinoCreate(BaseModel):
             raise ValueError(f"El digito verificador del RUT es invalido (esperado: {dv_calculado})")
         return v
 
-    class Config:
-        from_attributes = True
-
 
 class VecinoEdicionSchema(BaseModel):
     """Schema para editar un vecino (request body de PUT /editar-vecino/{id}). Incluye campos opcionales para cambio de password."""
@@ -84,9 +81,6 @@ class VecinoEdicionSchema(BaseModel):
             raise ValueError(f"El digito verificador del RUT es invalido (esperado: {dv_calculado})")
         return v
 
-    class Config:
-        from_attributes = True
-
 
 class Token(BaseModel):
     """Schema de respuesta para POST /api/token (login exitoso)."""
@@ -96,9 +90,3 @@ class Token(BaseModel):
     user_id: int
     vecino_id: int
     nombre_completo: str
-
-
-class HistorialSchema(BaseModel):
-    """Schema para crear un registro de historial (POST /historial/)."""
-    tipo_accion: str
-    descripcion_accion: str

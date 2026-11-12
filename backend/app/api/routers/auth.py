@@ -90,6 +90,8 @@ async def login(
             "nombre_completo": nombre_completo,
         }
 
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -142,6 +144,8 @@ async def get_me(
             },
         }
 
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

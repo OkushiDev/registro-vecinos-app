@@ -16,6 +16,7 @@ import BlockIcon from "@mui/icons-material/Block";
 import api from "../api";
 import { formatearRutConPuntos } from "../utils/rut";
 import { descargarPDF } from "../utils/pdf";
+import { getErrorDetail } from "../utils/error";
 
 interface Notificacion {
   id: number;
@@ -30,9 +31,6 @@ interface Notificacion {
   numero_socio: number;
 }
 
-interface NotificationMenuProps {
-}
-
 // Función para emitir evento de actualización
 const emitirEventoActualizacion = () => {
   const evento = new CustomEvent("actualizarSolicitudes");
@@ -40,7 +38,7 @@ const emitirEventoActualizacion = () => {
 
 };
 
-export default function NotificationMenu({}: NotificationMenuProps) {
+export default function NotificationMenu() {
   const theme = useTheme();
 
   // Estados
@@ -57,7 +55,9 @@ export default function NotificationMenu({}: NotificationMenuProps) {
   // Cargar notificaciones
   const cargarNotificaciones = React.useCallback(async () => {
     try {
-      const response = await api.get("/api/solicitudes/notificaciones");
+      const response = await api.get("/api/solicitudes/notificaciones", {
+        skipAuthRedirect: true,
+      });
 
       if (response.data.success) {
         setNotificaciones(response.data.notificaciones || []);
@@ -65,8 +65,8 @@ export default function NotificationMenu({}: NotificationMenuProps) {
 
 
       }
-    } catch (error) {
-
+    } catch {
+      // Se mantienen las notificaciones previas; el siguiente sondeo reintenta.
     }
   }, []);
 
@@ -117,9 +117,8 @@ export default function NotificationMenu({}: NotificationMenuProps) {
         await cargarNotificaciones();
         emitirEventoActualizacion(); // ✅ EMITIR EVENTO
       }
-    } catch (error: any) {
-
-      alert(error.response?.data?.detail || "Error al ocultar la notificación");
+    } catch (error) {
+      alert(getErrorDetail(error) || "Error al ocultar la notificación");
     } finally {
       setLoadingActions((prev) => {
         const newState = { ...prev };
@@ -151,10 +150,9 @@ export default function NotificationMenu({}: NotificationMenuProps) {
 
       await cargarNotificaciones();
       emitirEventoActualizacion(); // ✅ EMITIR EVENTO
-    } catch (error: any) {
-
+    } catch (error) {
       alert(
-        error.response?.data?.detail ||
+        getErrorDetail(error) ||
           "Error al rechazar solicitud. Intenta nuevamente."
       );
     } finally {
@@ -201,10 +199,9 @@ export default function NotificationMenu({}: NotificationMenuProps) {
       emitirEventoActualizacion(); // ✅ EMITIR EVENTO
 
       alert("Certificado generado y solicitud marcada como realizada");
-    } catch (error: any) {
-
+    } catch (error) {
       alert(
-        error.response?.data?.detail ||
+        getErrorDetail(error) ||
           "Error al generar certificado. Intenta nuevamente."
       );
     } finally {
@@ -254,8 +251,7 @@ export default function NotificationMenu({}: NotificationMenuProps) {
       alert(
         `${notificacionesRealizadas.length} notificación(es) eliminada(s) exitosamente`
       );
-    } catch (error: any) {
-
+    } catch {
       alert("Error al eliminar las notificaciones");
     } finally {
       setLoadingActions((prev) => {

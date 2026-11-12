@@ -1,4 +1,5 @@
 import api from "../api";
+import { clearSession } from "./session";
 
 const TOKEN_KEY = "access_token";
 
@@ -64,12 +65,7 @@ class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("rol");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("vecino_id");
-    localStorage.removeItem("nombre_completo");
-    localStorage.removeItem("usuario");
+    clearSession();
   }
 
   getToken(): string | null {

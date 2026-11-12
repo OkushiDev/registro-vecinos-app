@@ -86,13 +86,13 @@ def crear_usuario_para_vecino(
     )
     hashed_password = get_password_hash(password_inicial)
 
-    rol = "presidente" if vecino.numero_socio == 35 else "vecino"  # socio 35 = presidente (definido en seed data)
-
+    # Los vecinos creados por la app siempre son vecinos; el presidente
+    # inicial viene definido en el seed y no se otorga por número de socio.
     nuevo_usuario = models.Usuario(
         username=username,
         hashed_password=hashed_password,
         vecino_id=vecino.id,
-        rol=rol,
+        rol="vecino",
         estado=vecino.estado,
     )
 

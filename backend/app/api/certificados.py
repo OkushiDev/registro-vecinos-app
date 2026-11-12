@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.database import get_db
-from app.api.dependencies import get_current_user
+from app.api.dependencies import require_presidente
 from app.api.utils import registrar_accion
 from app.api import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
-from PyPDF2 import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter
 from io import BytesIO
 from datetime import datetime, timedelta
 import os
@@ -118,21 +118,14 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     # === COMBINAR PDF PLANTILLA CON DATOS ===
     packet.seek(0)
 
-    # Leer la plantilla
+    # Leer la capa de datos y clonar la plantilla directamente en el writer
     plantilla_pdf = PdfReader(ruta_plantilla)
     nueva_capa = PdfReader(packet)
 
-    # Crear el PDF final
-    output = PdfWriter()
+    output = PdfWriter(clone_from=plantilla_pdf)
 
-    # Obtener la primera página de la plantilla
-    pagina_plantilla = plantilla_pdf.pages[0]
-
-    # Superponer la capa con los datos
-    pagina_plantilla.merge_page(nueva_capa.pages[0])
-
-    # Agregar al output
-    output.add_page(pagina_plantilla)
+    # Superponer la capa con los datos sobre la primera página
+    output.pages[0].merge_page(nueva_capa.pages[0])
 
     # Escribir el resultado en un buffer
     resultado = BytesIO()
@@ -146,7 +139,7 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
 async def generar_certificado(
     vecino_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """
     Endpoint para generar un certificado de residencia en PDF

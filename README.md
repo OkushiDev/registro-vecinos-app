@@ -10,12 +10,12 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 |---|---|
 | Frontend | React 19 + TypeScript 5.9 + Vite 7 + MUI 7 |
 | Backend | Python 3.11+ / FastAPI + SQLAlchemy 2.0 |
-| Base de datos | PostgreSQL 16 (Docker) |
+| Base de datos | PostgreSQL (Docker) |
 | Auth | JWT (OAuth2PasswordBearer + bcrypt) |
-| PDF | ReportLab + PyPDF2 |
+| PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (28) + vitest (21) |
+| Tests | pytest (37) + vitest (21) |
 
 ---
 
@@ -78,7 +78,7 @@ Abrir `http://localhost:5173` en el navegador.
 ### 5. Verificar que todo funciona
 
 ```bash
-# Tests backend (28)
+# Tests backend (37)
 cd backend
 uv run pytest app/Test/
 
@@ -118,8 +118,8 @@ npm run build
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:1234@localhost:5432/postgres` | Conexión PostgreSQL |
-| `JWT_SECRET_KEY` | `DEV_ONLY_CHANGE_IN_PRODUCTION` | ⚠️ Cambiar en producción |
+| `DATABASE_URL` | obligatoria (ver `.env.example`) | Conexión PostgreSQL |
+| `JWT_SECRET_KEY` | obligatoria (ver `.env.example`) | ⚠️ Cambiar en producción |
 
 ### Frontend (`frontend/.env`)
 
@@ -135,7 +135,7 @@ npm run build
 # ── Backend ──
 cd backend
 uv sync --dev                   # Instalar dependencias
-uv run pytest app/Test/         # Tests (28)
+uv run pytest app/Test/         # Tests (37)
 uv run ruff check .             # Linter
 uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 
@@ -187,7 +187,7 @@ registro-vecinos-app/
 │   │   │       └── historial.py       # Auditoría
 │   │   ├── core/
 │   │   │   └── security.py            # JWT + bcrypt
-│   │   └── Test/                      # 28 tests (pytest)
+│   │   └── Test/                      # 37 tests (pytest)
 │   ├── resources/
 │   │   └── certificado_plantilla.pdf
 │   ├── pyproject.toml

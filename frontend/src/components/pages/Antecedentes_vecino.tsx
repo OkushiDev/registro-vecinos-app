@@ -37,6 +37,7 @@ import PostAddIcon from "@mui/icons-material/PostAdd";
 import api from "../../api";
 import { formatearRutConPuntos } from "../../utils/rut";
 import { getErrorMessage } from "../../utils/error";
+import { descargarPDF } from "../../utils/pdf";
 
 // --- INTERFACES ---
 interface VecinoData {
@@ -61,7 +62,6 @@ interface DocumentoBackend {
   tipo_documento: string;
   tipo_documento_value: string;
   nombre_archivo: string;
-  ruta_archivo: string;
   fecha_subida: string;
 }
 
@@ -138,17 +138,19 @@ const AntecedentesVecino: React.FC = () => {
           ) {
             setListaDocumentos(responseDocs.data.documentos);
           }
-        } catch (docErr) {
+        } catch {
+          // Los documentos son opcionales; el perfil se muestra igual.
         }
 
         // 3. VERIFICAR SI TIENE SOLICITUD PENDIENTE
         try {
           const response = await api.get("/api/solicitudes/mi-pendiente");
           setTieneSolicitudPendiente(response.data.tiene_pendiente);
-        } catch (solErr) {
+        } catch {
+          // Si falla esta consulta, el botón de solicitud queda deshabilitado.
         }
-      } catch (err: any) {
-      setError(err.message || "Error al cargar información.");
+      } catch (err) {
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
@@ -202,30 +204,10 @@ const AntecedentesVecino: React.FC = () => {
         setTieneSolicitudPendiente(true);
 
       }
-    } catch (error: any) {
-      let mensaje = "Error al enviar la solicitud";
-
-      if (error.response) {
-        // Manejar diferentes tipos de error
-        if (error.response.status === 400) {
-          mensaje =
-            error.response.data.detail || "Ya tienes una solicitud pendiente";
-        } else if (error.response.status === 403) {
-          mensaje = "No tienes permiso para solicitar certificados";
-        } else if (error.response.status === 401) {
-          mensaje = "Sesión expirada. Por favor, inicia sesión nuevamente.";
-          localStorage.removeItem("access_token");
-        } else if (error.response.data?.detail) {
-          mensaje = error.response.data.detail;
-        }
-      } else if (error.request) {
-        mensaje = "No se pudo conectar con el servidor";
-      } else {
-      }
-
+    } catch (error) {
       setSnackbar({
         open: true,
-        message: mensaje,
+        message: getErrorMessage(error),
         severity: "error",
       });
     }
@@ -271,7 +253,7 @@ const AntecedentesVecino: React.FC = () => {
         severity: "success",
       });
       handleClose();
-    } catch (err: any) {
+    } catch (err) {
       const msg = getErrorMessage(err);
       setErrors((prev) => ({ ...prev, currentPassword: "Error al guardar" }));
       setSnackbar({ open: true, message: msg, severity: "error" });
@@ -316,7 +298,7 @@ const AntecedentesVecino: React.FC = () => {
         severity: "success",
       });
       handleClose();
-    } catch (err: any) {
+    } catch (err) {
       const msg = getErrorMessage(err);
       setErrors((prev) => ({
         ...prev,
@@ -346,12 +328,12 @@ const AntecedentesVecino: React.FC = () => {
     });
     setOpenPasswordDialog(true);
   };
-  const handleContactChange = (e: any) =>
+  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setContactForm({ ...contactForm, [e.target.name]: e.target.value });
-  const handlePasswordChange = (e: any) =>
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
 
-  const renderRow = (label: string, value: any, isTitle = false) => (
+  const renderRow = (label: string, value: React.ReactNode, isTitle = false) => (
     <TableRow
       hover={!isTitle}
       sx={{
@@ -380,9 +362,27 @@ const AntecedentesVecino: React.FC = () => {
     </TableRow>
   );
 
-  const getDownloadUrl = (rutaArchivo: string) => {
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    return `${baseUrl}/${rutaArchivo.replace(/\\/g, "/")}`;
+  const handleDescargarDocumento = async (
+    documentoId: number,
+    nombreArchivo: string
+  ) => {
+    try {
+      const response = await api.get(
+        `/api/documentos/descargar/${documentoId}`,
+        { responseType: "blob" }
+      );
+      descargarPDF(
+        response.data,
+        response.headers["content-disposition"] ?? null,
+        nombreArchivo
+      );
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: getErrorMessage(error),
+        severity: "error",
+      });
+    }
   };
 
   if (isLoading)
@@ -591,10 +591,12 @@ const AntecedentesVecino: React.FC = () => {
                           size="small"
                           startIcon={<CloudDownloadIcon />}
                           variant="text"
-                          href={getDownloadUrl(docEncontrado.ruta_archivo)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          component="a"
+                          onClick={() =>
+                            handleDescargarDocumento(
+                              docEncontrado.id,
+                              docEncontrado.nombre_archivo
+                            )
+                          }
                         >
                           Descargar
                         </Button>

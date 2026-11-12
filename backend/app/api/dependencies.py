@@ -43,11 +43,25 @@ async def get_current_user(
         if usuario.estado != 1:  # 1 = activo; rechazar usuarios deshabilitados
             raise credentials_exception
 
+        # El rol se lee de la BD, no del token: un rol revocado no sigue vigente
+        # hasta que expire el JWT.
         return {
-            "user_id": user_id,
-            "rol": rol,
+            "user_id": usuario.id,
+            "rol": usuario.rol,
             "vecino_id": usuario.vecino_id,
         }
 
     except JWTError:
         raise credentials_exception
+
+
+def require_presidente(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Dependencia para endpoints exclusivos del presidente."""
+    if current_user["rol"] != "presidente":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el presidente puede realizar esta acción",
+        )
+    return current_user

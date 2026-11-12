@@ -21,7 +21,7 @@ import Box from "@mui/material/Box";
 import { Grid } from "@mui/material";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
+import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -76,7 +76,8 @@ export default function Historial() {
       setLoading(true);
       const response = await api.get("/historial/");
       setRows(response.data || []);
-    } catch (error) {
+    } catch {
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -139,7 +140,7 @@ export default function Historial() {
     setPage(0);
   };
 
-  const handleFilterChange = (e: any) => {
+  const handleFilterChange = (e: SelectChangeEvent) => {
     setFilterColumn(e.target.value);
     setPage(0);
   };

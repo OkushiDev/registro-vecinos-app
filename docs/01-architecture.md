@@ -58,7 +58,7 @@ Sistema web para gestión de juntas de vecinos. Dos roles: **presidente** (admin
 | Backend | Python + FastAPI | 3.11+ / 0.136 |
 | ORM | SQLAlchemy | 2.0 |
 | Auth | python-jose (JWT) + bcrypt | — |
-| PDF | ReportLab + PyPDF2 | — |
+| PDF | ReportLab + pypdf | — |
 | RUT | Pydantic field_validator (mod-11) | — |
 | Database | PostgreSQL | latest (Docker) |
 | Excel | ExcelJS (frontend) | 4.x |
@@ -95,7 +95,7 @@ registro-vecinos-app/
 │   │   │   └── security.py         # JWT create/decode, bcrypt hash/verify
 │   │   └── resources/
 │   │       └── certificado_plantilla.pdf
-│   └── app/Test/                   # Tests pytest (28 tests)
+│   └── app/Test/                   # Tests pytest (37 tests)
 ├── frontend/
 │   └── src/
 │       ├── api.tsx                 # Fetch wrapper + JWT
@@ -119,7 +119,7 @@ registro-vecinos-app/
 
 3. **RUT con mod-11**: Validación de formato y dígito verificador en backend (Pydantic `field_validator`).
 
-4. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + PyPDF2. Las coordenadas se ajustaron con una herramienta de desarrollo (`tool_posiciones.py`, eliminada del paquete de producción).
+4. **PDF con plantilla**: Se usa un PDF base (`certificado_plantilla.pdf`) y se superponen los datos con ReportLab + pypdf. Las coordenadas se ajustaron con una herramienta de desarrollo (`tool_posiciones.py`, eliminada del paquete de producción).
 
 5. **autocommit=False en SQLAlchemy**: Manejo explícito de transacciones con `commit()`/`rollback()`.
 

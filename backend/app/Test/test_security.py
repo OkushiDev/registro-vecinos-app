@@ -52,8 +52,8 @@ class TestJWT:
     def test_token_missing_sub(self):
         from jose import jwt
         from app.core.security import SECRET_KEY, ALGORITHM
-        token = jwt.encode({"rol": "vecino", "sub": "1"}, SECRET_KEY, algorithm=ALGORITHM)
-        assert decode_token(token) is not None
+        token = jwt.encode({"rol": "vecino"}, SECRET_KEY, algorithm=ALGORITHM)
+        assert decode_token(token) is None
 
     def test_invalid_token(self):
         assert decode_token("token.invalido.123") is None

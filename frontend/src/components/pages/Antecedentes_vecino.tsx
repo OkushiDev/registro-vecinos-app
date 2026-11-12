@@ -177,18 +177,6 @@ const AntecedentesVecino: React.FC = () => {
     }
 
     try {
-      // Verificar que hay un usuario logueado
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setSnackbar({
-          open: true,
-          message: "Sesión expirada. Por favor, inicia sesión nuevamente.",
-          severity: "error",
-        });
-        return;
-      }
-
-      // Llamar al endpoint
       const response = await api.post("/api/solicitudes/crear");
 
       if (response.data.success) {

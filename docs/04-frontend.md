@@ -103,9 +103,7 @@ Wrapper nativo sobre `fetch()` que agrega JWT automáticamente y mantiene interf
 | `getCurrentUser()` | GET /api/me |
 | `logout()` | Limpia todo del localStorage |
 | `getToken()` | Retorna `access_token` |
-| `getRol()` | Retorna rol del usuario |
 | `isAuthenticated()` | `!!getToken()` |
-| `isPresidente()` / `isVecino()` | Check de rol |
 
 ### src/utils/
 

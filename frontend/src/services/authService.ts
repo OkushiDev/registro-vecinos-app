@@ -72,20 +72,8 @@ class AuthService {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  getRol(): string | null {
-    return localStorage.getItem("rol");
-  }
-
   isAuthenticated(): boolean {
     return !!this.getToken();
-  }
-
-  isPresidente(): boolean {
-    return this.getRol() === "presidente";
-  }
-
-  isVecino(): boolean {
-    return this.getRol() === "vecino";
   }
 }
 

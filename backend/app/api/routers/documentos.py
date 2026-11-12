@@ -27,12 +27,8 @@ async def obtener_tipos_documento():
     """Endpoint publico: retorna la lista estatica de tipos de documento disponibles."""
     return {
         "tipos": [
-            {"value": "cedula_identidad", "label": "Cédula de Identidad"},
-            {"value": "registro_social_hogares", "label": "Registro Social de Hogares"},
-            {"value": "avaluo_fiscal", "label": "Avalúo Fiscal"},
-            {"value": "boleta_agua", "label": "Boleta de Agua"},
-            {"value": "boleta_luz", "label": "Boleta de Luz"},
-            {"value": "escritura_casa", "label": "Escritura de Casa"},
+            {"value": value, "label": label}
+            for value, label in TIPOS_DOCUMENTO_LABELS.items()
         ]
     }
 

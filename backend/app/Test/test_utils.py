@@ -1,8 +1,11 @@
 """Tests para utilidades: validacion de archivos, schemas, generacion de password."""
 
+import pytest
 from fastapi import UploadFile
 from io import BytesIO
+from pydantic import ValidationError
 
+from app.api.schemas import VecinoEdicionSchema
 from app.api.utils import validate_file, generar_password_inicial
 
 
@@ -45,6 +48,18 @@ class TestValidateFile:
         valid, msg = validate_file(file)
         assert not valid
         assert "PDF válido" in msg
+
+
+class TestVecinoEdicionSchema:
+    def test_hereda_validacion_de_rut(self):
+        with pytest.raises(ValidationError):
+            VecinoEdicionSchema(
+                nombres="Ana",
+                apellido_paterno="Perez",
+                apellido_materno="Soto",
+                rut="12345678-0",
+                numero_socio=1,
+            )
 
 
 class TestGenerarPassword:

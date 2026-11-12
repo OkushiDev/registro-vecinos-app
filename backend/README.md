@@ -10,7 +10,7 @@ FastAPI + SQLAlchemy + PostgreSQL. Gestionado con `uv`.
 - **Auth:** JWT (python-jose + bcrypt)
 - **Validación:** Pydantic v2 con `field_validator` (RUT mod-11)
 - **PDF:** ReportLab + pypdf
-- **Tests:** pytest (37 tests con Mock + dependency_overrides)
+- **Tests:** pytest (38 tests con Mock + dependency_overrides)
 - **Gestor:** uv
 
 ## Setup rápido
@@ -19,7 +19,7 @@ FastAPI + SQLAlchemy + PostgreSQL. Gestionado con `uv`.
 # 1. Sincronizar dependencias
 uv sync --dev
 
-# 2. Configurar variables de entorno (opcional, hay defaults para dev)
+# 2. Configurar variables de entorno (obligatorio)
 cp .env.example .env
 
 # 3. Iniciar PostgreSQL (Docker)
@@ -142,7 +142,7 @@ backend/
 │   │   └── security.py          # JWT: create/decode token, bcrypt hash/verify
 │   └── resources/
 │       └── certificado_plantilla.pdf
-├── app/Test/                    # Tests pytest (37)
+├── app/Test/                    # Tests pytest (38)
 ├── pyproject.toml               # Dependencias
 ├── .env                         # Variables locales (no commiteado)
 └── .gitignore
@@ -193,7 +193,7 @@ Usar `formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-")` de `utils.py` par
 uv run pytest app/Test/
 ```
 
-37 tests con `Mock` + `dependency_overrides`. No requieren PostgreSQL real. Para correr tests de integración contra BD:
+38 tests con `Mock` + `dependency_overrides`. No requieren PostgreSQL real. Para correr tests de integración contra BD:
 
 ```python
 from app.api.dependencies import get_db

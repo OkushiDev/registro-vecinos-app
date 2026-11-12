@@ -116,14 +116,6 @@ export default function Documentos() {
     setDocumentos([]); // Limpiar documentos anteriores
 
     try {
-      // Verificar token
-      const token = localStorage.getItem("access_token");
-
-      if (!token) {
-        alert("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        return;
-      }
-
       const response = await api.get(`/api/documentos/vecino/${vecinoId}`);
 
       if (response.data.success && response.data.documentos) {
@@ -144,31 +136,15 @@ export default function Documentos() {
     nombreArchivo: string
   ) => {
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        alert("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        return;
-      }
-
-      // Descargar documento
       const response = await api.get(`/api/documentos/descargar/${documentoId}`, {
         responseType: "blob",
       });
 
-      if (response.status === 403) {
-        alert("No tienes permiso para descargar este documento");
-        return;
-      }
-      if (response.status === 404) {
-        alert("Documento no encontrado");
-        return;
-      }
-
       const blob = response.data;
       const contentDisposition = response.headers["content-disposition"] as string | null;
       descargarPDF(blob, contentDisposition, nombreArchivo);
-    } catch {
-      alert("Error al descargar el documento");
+    } catch (error) {
+      alert(getErrorMessage(error));
     }
   };
 

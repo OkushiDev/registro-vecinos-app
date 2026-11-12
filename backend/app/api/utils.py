@@ -17,15 +17,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
-TIPOS_DOCUMENTO = [
-    "cedula_identidad",
-    "registro_social_hogares",
-    "avaluo_fiscal",
-    "boleta_agua",
-    "boleta_luz",
-    "escritura_casa",
-]
-
 TIPOS_DOCUMENTO_LABELS = {
     "cedula_identidad": "Cédula de Identidad",
     "registro_social_hogares": "Registro Social de Hogares",
@@ -34,6 +25,8 @@ TIPOS_DOCUMENTO_LABELS = {
     "boleta_luz": "Boleta de Luz",
     "escritura_casa": "Escritura de Casa",
 }
+
+TIPOS_DOCUMENTO = list(TIPOS_DOCUMENTO_LABELS)
 
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:

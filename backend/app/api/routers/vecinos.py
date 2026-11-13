@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.schemas import VecinoCreate, VecinoEdicionSchema
-from app.api.dependencies import get_db, get_current_user
+from app.api.dependencies import get_db, get_current_user, require_presidente
 from app.api.utils import (
     registrar_accion,
     generar_password_inicial,
@@ -18,7 +18,7 @@ router = APIRouter(tags=["vecinos"])
 @router.get("/lista-vecinos/")
 async def lista_vecinos(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """Retorna la lista completa de todos los vecinos con sus datos formateados."""
     try:
@@ -43,6 +43,8 @@ async def lista_vecinos(
             for vecino in vecinos
         ]
         return {"vecinos": vecinos_formateados}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -53,8 +55,17 @@ async def obtener_vecino(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna los datos de un vecino especifico por su ID."""
+    """Retorna los datos de un vecino especifico por su ID. Solo el propio vecino o el presidente."""
     try:
+        if (
+            current_user["rol"] != "presidente"
+            and current_user["vecino_id"] != vecino_id
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="No tienes permiso para ver datos de otros vecinos",
+            )
+
         vecino = (
             db.query(models.Vecino)
             .filter(models.Vecino.id == vecino_id)
@@ -79,6 +90,8 @@ async def obtener_vecino(
             "fecha_edicion": formatear_fecha(vecino.fecha_edicion),
             "estado": vecino.estado,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -87,7 +100,7 @@ async def obtener_vecino(
 async def agregar_vecino(
     vecino: VecinoCreate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """Crea un nuevo vecino y su usuario asociado. Valida que RUT y numero de socio no esten duplicados."""
     try:
@@ -125,7 +138,8 @@ async def agregar_vecino(
             email=vecino.email,
         )
         db.add(nuevo_vecino)
-        db.commit()
+        # flush (no commit) para que un fallo al crear el usuario revierta también al vecino
+        db.flush()
         db.refresh(nuevo_vecino)
 
         nuevo_usuario = crear_usuario_para_vecino(db, nuevo_vecino)
@@ -153,6 +167,8 @@ async def agregar_vecino(
                 ),
             },
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -169,6 +185,15 @@ async def editar_vecino(
 ):
     """Actualiza los datos de un vecino existente. Si se proporciona currentPassword+newPassword, cambia la contrasena."""
     try:
+        if (
+            current_user["rol"] != "presidente"
+            and current_user["vecino_id"] != vecino_id
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="No tienes permiso para editar datos de otros vecinos",
+            )
+
         vecino_existente = (
             db.query(models.Vecino)
             .filter(models.Vecino.id == vecino_id)
@@ -272,6 +297,8 @@ async def editar_vecino(
             },
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -283,7 +310,7 @@ async def editar_vecino(
 async def cambiar_estado_vecino(
     vecino_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """Alterna el estado del vecino entre activo (1) e inactivo (0). Sincroniza el estado del usuario asociado."""
     try:
@@ -322,6 +349,8 @@ async def cambiar_estado_vecino(
             "vecino": {"id": vecino_existente.id, "estado": vecino_existente.estado},
             "nuevo_estado": nuevo_estado,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -332,7 +361,7 @@ async def cambiar_estado_vecino(
 @router.get("/siguiente-numero-socio/")
 async def siguiente_numero_socio(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """Retorna el siguiente numero de socio disponible (maximo actual + 1)."""
     try:
@@ -343,5 +372,7 @@ async def siguiente_numero_socio(
         )
         siguiente_numero = (max_numero[0] + 1) if max_numero and max_numero[0] else 1
         return {"siguiente_numero_socio": siguiente_numero}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

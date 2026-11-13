@@ -1,6 +1,6 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 import app.api.models as models
 from app.api.database import engine
@@ -8,24 +8,28 @@ from app.api.database import engine
 from app.api.routers import auth, vecinos, documentos, solicitudes, historial
 from app.api import certificados
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Intenta crear las tablas en la BD al iniciar. No interrumpe si la BD no esta disponible."""
     try:
         models.Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"⚠ No se pudieron crear las tablas (BD caida?): {e}")
+    yield
 
-# Servir archivos subidos como estáticos
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

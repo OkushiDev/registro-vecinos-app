@@ -72,9 +72,8 @@ export default function Login({
       const userProfile: UserProfile =
         response.rol === "presidente" ? "presidente" : "vecino";
       onLogin(userProfile);
-    } catch (err: any) {
-      const msg = getErrorMessage(err);
-      setError(msg);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

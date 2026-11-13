@@ -1,6 +1,6 @@
 import uuid
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, status
 from fastapi.responses import FileResponse
@@ -15,7 +15,7 @@ from app.api.utils import (
     validate_file,
     MAX_FILE_SIZE,
     registrar_accion,
-    formatear_fecha,
+    formatear_fecha_hora,
 )
 import app.api.models as models
 
@@ -27,12 +27,8 @@ async def obtener_tipos_documento():
     """Endpoint publico: retorna la lista estatica de tipos de documento disponibles."""
     return {
         "tipos": [
-            {"value": "cedula_identidad", "label": "Cédula de Identidad"},
-            {"value": "registro_social_hogares", "label": "Registro Social de Hogares"},
-            {"value": "avaluo_fiscal", "label": "Avalúo Fiscal"},
-            {"value": "boleta_agua", "label": "Boleta de Agua"},
-            {"value": "boleta_luz", "label": "Boleta de Luz"},
-            {"value": "escritura_casa", "label": "Escritura de Casa"},
+            {"value": value, "label": label}
+            for value, label in TIPOS_DOCUMENTO_LABELS.items()
         ]
     }
 
@@ -57,7 +53,8 @@ async def subir_documento(
         if not es_valido:
             raise HTTPException(status_code=400, detail=mensaje_error)
 
-        contenido = await file.read()
+        # Leer como máximo un byte de más: evita cargar un archivo enorme en memoria
+        contenido = await file.read(MAX_FILE_SIZE + 1)
         tamanio = len(contenido)
 
         if tamanio > MAX_FILE_SIZE:
@@ -84,7 +81,7 @@ async def subir_documento(
             tipo_archivo=file.content_type,
             tamanio=tamanio,
             descripcion=descripcion,
-            fecha_subida=datetime.now(),
+            fecha_subida=datetime.now(timezone.utc),
         )
 
         db.add(nuevo_documento)
@@ -106,10 +103,14 @@ async def subir_documento(
                 "tipo_archivo": nuevo_documento.tipo_archivo,
                 "tamanio": nuevo_documento.tamanio,
                 "descripcion": nuevo_documento.descripcion,
-                "fecha_subida": str(nuevo_documento.fecha_subida),
+                "fecha_subida": formatear_fecha_hora(
+                    nuevo_documento.fecha_subida, default=None
+                ),
             },
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,7 +140,7 @@ async def listar_mis_documentos(
                 "tipo_archivo": doc.tipo_archivo,
                 "tamanio": doc.tamanio,
                 "descripcion": doc.descripcion,
-                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=""),
+                "fecha_subida": formatear_fecha_hora(doc.fecha_subida, default=""),
             }
             for doc in documentos
         ]
@@ -226,8 +227,7 @@ async def obtener_documentos_vecino(
                 "tipo_documento_value": doc.tipo_documento,
                 "nombre_archivo": doc.nombre_archivo,
                 "descripcion": doc.descripcion or "",
-                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=None),
-                "ruta_archivo": doc.ruta_archivo,
+                "fecha_subida": formatear_fecha_hora(doc.fecha_subida, default=None),
                 "tipo_archivo": doc.tipo_archivo or None,
                 "tamanio": doc.tamanio or None,
             }
@@ -248,6 +248,8 @@ async def obtener_documentos_vecino(
             "total": len(documentos_lista),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -299,6 +301,8 @@ async def descargar_documento(
             media_type="application/octet-stream",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

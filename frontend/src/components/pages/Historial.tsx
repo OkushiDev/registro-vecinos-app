@@ -21,7 +21,7 @@ import Box from "@mui/material/Box";
 import { Grid } from "@mui/material";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
+import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -76,7 +76,8 @@ export default function Historial() {
       setLoading(true);
       const response = await api.get("/historial/");
       setRows(response.data || []);
-    } catch (error) {
+    } catch {
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -139,7 +140,7 @@ export default function Historial() {
     setPage(0);
   };
 
-  const handleFilterChange = (e: any) => {
+  const handleFilterChange = (e: SelectChangeEvent) => {
     setFilterColumn(e.target.value);
     setPage(0);
   };
@@ -151,21 +152,9 @@ export default function Historial() {
       Usuario: row.usuario,
       Acción: row.tipo_accion,
       Descripción: row.descripcion_accion,
-      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
+      Fecha: row.fecha_accion,
     }));
     await exportarAExcel(dataToExport, "Historial", "Historial_Acciones");
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const commonFilterStyle = {
@@ -394,7 +383,7 @@ export default function Historial() {
 
                         let value = row[column.id];
                         if (column.id === "fecha_accion") {
-                          value = formatDate(row.fecha_accion);
+                          value = row.fecha_accion;
                         }
 
                         return (

@@ -58,7 +58,7 @@ Perfil del usuario autenticado.
 ### `GET /lista-vecinos/`
 Lista todos los vecinos.
 
-**Auth:** Requiere token
+**Auth:** Solo presidente.
 
 **Response (200):** `{ "vecinos": [ { id, nombres, rut, ... }, ... ] }`
 
@@ -67,14 +67,14 @@ Lista todos los vecinos.
 ### `GET /vecino/{id}`
 Obtiene un vecino por ID.
 
-**Auth:** Requiere token
+**Auth:** El propio vecino o el presidente.
 
 ---
 
 ### `POST /agregar-vecino/`
 Crea un vecino + su usuario automáticamente.
 
-**Auth:** Requiere token (presidente)
+**Auth:** Solo presidente.
 
 **Request body:**
 ```json
@@ -99,7 +99,7 @@ Crea un vecino + su usuario automáticamente.
 ### `PUT /editar-vecino/{id}`
 Actualiza datos del vecino. Opcionalmente cambia contraseña.
 
-**Auth:** Requiere token
+**Auth:** El propio vecino o el presidente.
 
 Si se envía `currentPassword`, se valida contra el hash almacenado. Si además se envía `newPassword`, se actualiza.
 
@@ -108,7 +108,7 @@ Si se envía `currentPassword`, se valida contra el hash almacenado. Si además 
 ### `PATCH /cambiar-estado-vecino/{id}`
 Toggle activo/inactivo del vecino (y su usuario asociado).
 
-**Auth:** Requiere token
+**Auth:** Solo presidente.
 
 **Response:** `{ "message": "...", "nuevo_estado": 0|1 }`
 
@@ -117,7 +117,7 @@ Toggle activo/inactivo del vecino (y su usuario asociado).
 ### `GET /siguiente-numero-socio/`
 Obtiene el próximo número de socio disponible.
 
-**Auth:** Requiere token
+**Auth:** Solo presidente.
 
 **Response:** `{ "siguiente_numero_socio": 36 }`
 
@@ -191,38 +191,37 @@ Lista todas las solicitudes (solo presidente).
 ---
 
 ### `POST /api/solicitudes/crear`
-Crea una solicitud de certificado para el vecino autenticado.
+Crea una solicitud de certificado para el vecino autenticado. No requiere body.
 
 **Auth:** Requiere token
 
-**Request body:** `{ "tipo_solicitud": "certificado_residencia" }`
-
 ---
 
-### `PATCH /api/solicitudes/{id}/estado`
-Actualiza el estado de una solicitud.
+### `PATCH /api/solicitudes/{id}/rechazar`
+Rechaza una solicitud (estado `rechazado`).
 
-**Auth:** Requiere token (presidente)
+**Auth:** Solo presidente.
 
-**Request body:** `{ "estado": "aprobada|rechazada" }`
+### `PATCH /api/solicitudes/{id}/marcar-realizada`
+Marca una solicitud como realizada (estado `realizado`).
+
+**Auth:** Solo presidente.
+
+### `PATCH /api/solicitudes/{id}/ocultar`
+Oculta la notificación de una solicitud (visibilidad `oculto`).
+
+**Auth:** Solo presidente.
 
 ---
 
 ## Historial / Auditoría
 
 ### `GET /historial/`
-Lista todo el historial de acciones (orden descendente).
+Lista todo el historial de acciones (orden descendente). Las entradas las genera el backend automáticamente; no se aceptan registros manuales.
 
-**Auth:** Requiere token
+**Auth:** Solo presidente.
 
 **Response:** Array de `{ id, descripcion_accion, tipo_accion, fecha_accion, usuario }`
-
----
-
-### `POST /historial/`
-Crea un registro en el historial.
-
-**Auth:** Requiere token
 
 ---
 
@@ -231,7 +230,7 @@ Crea un registro en el historial.
 ### `GET /api/generar-certificado/{vecino_id}`
 Genera y descarga un PDF de certificado de residencia.
 
-**Auth:** Requiere token
+**Auth:** Solo presidente.
 
 **Response:** `application/pdf` con `Content-Disposition: attachment`.
 
@@ -243,9 +242,9 @@ Genera y descarga un PDF de certificado de residencia.
 |---------|-------|
 | Auth | `Authorization: Bearer <token>` |
 | Errores | `{ "detail": "mensaje" }` con código HTTP |
-| Fechas | ISO 8601 en BD, formato `dd-mm-YYYY` en respuestas de listado |
+| Fechas | Timestamps en UTC en BD; horas formateadas en `America/Santiago` |
 | Archivos | Máximo 5MB, solo PDF/PNG/JPG |
-| CORS | `localhost:3000` y `localhost:5173` |
+| CORS | `localhost` y `127.0.0.1` en puertos 3000 y 5173 |
 | Token expiry | 480 minutos (8 horas) |
 
 ## Endpoints sin autenticación

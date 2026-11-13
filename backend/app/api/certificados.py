@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.database import get_db
-from app.api.dependencies import get_current_user
-from app.api.utils import registrar_accion
+from app.api.dependencies import require_presidente
+from app.api.utils import ZONA_HORARIA, registrar_accion
 from app.api import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
-from PyPDF2 import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter
 from io import BytesIO
 from datetime import datetime, timedelta
 import os
@@ -32,7 +32,9 @@ MESES = {
 }
 
 
-def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
+def generar_certificado_pdf(
+    vecino: models.Vecino, fecha_creacion: datetime | None = None
+) -> BytesIO:
     """
     Genera un PDF con el certificado de residencia sobreescribiendo datos sobre una plantilla PDF.
     Retorna un BytesIO con el PDF generado.
@@ -57,8 +59,8 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     domicilio = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
     numero_socio = vecino.numero_socio
 
-    # Fecha actual (creación del certificado)
-    fecha_creacion = datetime.now()
+    # Fecha de creación del certificado en Chile
+    fecha_creacion = fecha_creacion or datetime.now(ZONA_HORARIA)
 
     # === FECHA DE CREACIÓN (SEPARADA) ===
     dia_creacion = str(fecha_creacion.day)
@@ -118,21 +120,14 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     # === COMBINAR PDF PLANTILLA CON DATOS ===
     packet.seek(0)
 
-    # Leer la plantilla
+    # Leer la capa de datos y clonar la plantilla directamente en el writer
     plantilla_pdf = PdfReader(ruta_plantilla)
     nueva_capa = PdfReader(packet)
 
-    # Crear el PDF final
-    output = PdfWriter()
+    output = PdfWriter(clone_from=plantilla_pdf)
 
-    # Obtener la primera página de la plantilla
-    pagina_plantilla = plantilla_pdf.pages[0]
-
-    # Superponer la capa con los datos
-    pagina_plantilla.merge_page(nueva_capa.pages[0])
-
-    # Agregar al output
-    output.add_page(pagina_plantilla)
+    # Superponer la capa con los datos sobre la primera página
+    output.pages[0].merge_page(nueva_capa.pages[0])
 
     # Escribir el resultado en un buffer
     resultado = BytesIO()
@@ -146,7 +141,7 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
 async def generar_certificado(
     vecino_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
 ):
     """
     Endpoint para generar un certificado de residencia en PDF
@@ -164,12 +159,12 @@ async def generar_certificado(
             detail="No se puede generar certificado para un vecino inactivo",
         )
 
-    # Generar el PDF
-    pdf_buffer = generar_certificado_pdf(vecino)
+    # Generar el PDF con una única lectura del reloj para fecha y nombre
+    fecha_creacion = datetime.now(ZONA_HORARIA)
+    pdf_buffer = generar_certificado_pdf(vecino, fecha_creacion)
 
     # === FORMATEAR NOMBRE DEL ARCHIVO ===
-    # Obtener fecha actual para el nombre del archivo
-    fecha_actual = datetime.now()
+    fecha_actual = fecha_creacion
 
     # Formato: DDMMAA (01 enero 2025 = 010125)
     fecha_formateada = fecha_actual.strftime("%d%m%y")

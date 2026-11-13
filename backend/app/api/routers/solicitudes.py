@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_db, get_current_user
-from app.api.utils import registrar_accion
+from app.api.dependencies import get_db, get_current_user, require_presidente
+from app.api.utils import formatear_fecha_hora, registrar_accion
 import app.api.models as models
 
 router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
@@ -11,17 +11,11 @@ router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
 
 @router.get("")
 async def obtener_todas_solicitudes(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Retorna todas las solicitudes. Solo para presidente."""
     try:
-        if current_user["rol"] != "presidente":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Solo presidentes pueden ver todas las solicitudes",
-            )
-
         solicitudes = (
             db.query(models.Solicitud)
             .order_by(models.Solicitud.fecha_solicitud.desc())
@@ -38,8 +32,8 @@ async def obtener_todas_solicitudes(
                     "rut": vecino.rut,
                     "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
                     "fecha_solicitud": sol.fecha_solicitud.isoformat(),
-                    "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
-                        "%d-%m-%Y %H:%M"
+                    "fecha_solicitud_formato": formatear_fecha_hora(
+                        sol.fecha_solicitud
                     ),
                     "estado": sol.estado,
                     "visibilidad": sol.visibilidad,
@@ -50,6 +44,8 @@ async def obtener_todas_solicitudes(
 
         return solicitudes_lista
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -72,6 +68,14 @@ async def crear_solicitud(
 
         vecino_id = current_user["vecino_id"]
 
+        vecino = (
+            db.query(models.Vecino)
+            .filter(models.Vecino.id == vecino_id)
+            .first()
+        )
+        if not vecino:
+            raise HTTPException(status_code=404, detail="Vecino no encontrado")
+
         solicitud_existente = (
             db.query(models.Solicitud)
             .filter(
@@ -92,18 +96,12 @@ async def crear_solicitud(
             tipo_solicitud="certificado_residencia",
             estado="pendiente",
             visibilidad="mostrar",
-            fecha_solicitud=datetime.now(),
+            fecha_solicitud=datetime.now(timezone.utc),
         )
 
         db.add(nueva_solicitud)
         db.commit()
         db.refresh(nueva_solicitud)
-
-        vecino = (
-            db.query(models.Vecino)
-            .filter(models.Vecino.id == vecino_id)
-            .first()
-        )
 
         registrar_accion(
             db=db,
@@ -127,6 +125,8 @@ async def crear_solicitud(
             },
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -154,17 +154,11 @@ async def mi_solicitud_pendiente(
 
 @router.get("/notificaciones")
 async def obtener_notificaciones(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Retorna notificaciones (solicitudes visibles) para el presidente. Incluye conteo de pendientes."""
     try:
-        if current_user["rol"] != "presidente":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Solo presidentes pueden ver notificaciones",
-            )
-
         solicitudes = (
             db.query(models.Solicitud)
             .filter(models.Solicitud.visibilidad == "mostrar")
@@ -184,8 +178,8 @@ async def obtener_notificaciones(
                     "rut": vecino.rut,
                     "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
                     "fecha_solicitud": sol.fecha_solicitud.isoformat(),
-                    "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
-                        "%d-%m-%Y %H:%M"
+                    "fecha_solicitud_formato": formatear_fecha_hora(
+                        sol.fecha_solicitud
                     ),
                     "estado": sol.estado,
                     "visibilidad": sol.visibilidad,
@@ -201,6 +195,8 @@ async def obtener_notificaciones(
             "total": len(notificaciones),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -211,16 +207,18 @@ async def obtener_notificaciones(
 @router.post("/crear-por-presidente")
 async def crear_solicitud_presidente(
     vecino_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Crea una solicitud de certificado para un vecino especifico (solo presidente)."""
     try:
-        if current_user["rol"] != "presidente":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Solo presidentes pueden crear solicitudes para otros vecinos",
-            )
+        vecino = (
+            db.query(models.Vecino)
+            .filter(models.Vecino.id == vecino_id)
+            .first()
+        )
+        if not vecino:
+            raise HTTPException(status_code=404, detail="Vecino no encontrado")
 
         solicitud_existente = (
             db.query(models.Solicitud)
@@ -242,7 +240,7 @@ async def crear_solicitud_presidente(
             tipo_solicitud="certificado_residencia",
             estado="pendiente",
             visibilidad="mostrar",
-            fecha_solicitud=datetime.now(),
+            fecha_solicitud=datetime.now(timezone.utc),
         )
 
         db.add(nueva_solicitud)
@@ -262,6 +260,8 @@ async def crear_solicitud_presidente(
             "solicitud": {"id": nueva_solicitud.id},
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -273,16 +273,10 @@ async def crear_solicitud_presidente(
 @router.patch("/{solicitud_id}/ocultar")
 async def ocultar_solicitud(
     solicitud_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Oculta una notificacion de solicitud (visibilidad='oculto'). Solo presidente."""
-    if current_user["rol"] != "presidente":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No autorizado",
-        )
-
     solicitud = (
         db.query(models.Solicitud)
         .filter(models.Solicitud.id == solicitud_id)
@@ -307,16 +301,10 @@ async def ocultar_solicitud(
 @router.patch("/{solicitud_id}/rechazar")
 async def rechazar_solicitud(
     solicitud_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Rechaza una solicitud (estado='rechazado'). Solo presidente."""
-    if current_user["rol"] != "presidente":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No autorizado",
-        )
-
     solicitud = (
         db.query(models.Solicitud)
         .filter(models.Solicitud.id == solicitud_id)
@@ -341,16 +329,10 @@ async def rechazar_solicitud(
 @router.patch("/{solicitud_id}/marcar-realizada")
 async def marcar_realizada(
     solicitud_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_presidente),
     db: Session = Depends(get_db),
 ):
     """Marca una solicitud como realizada (estado='realizado'). Solo presidente."""
-    if current_user["rol"] != "presidente":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No autorizado",
-        )
-
     solicitud = (
         db.query(models.Solicitud)
         .filter(models.Solicitud.id == solicitud_id)

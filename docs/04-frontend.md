@@ -103,9 +103,7 @@ Wrapper nativo sobre `fetch()` que agrega JWT automáticamente y mantiene interf
 | `getCurrentUser()` | GET /api/me |
 | `logout()` | Limpia todo del localStorage |
 | `getToken()` | Retorna `access_token` |
-| `getRol()` | Retorna rol del usuario |
 | `isAuthenticated()` | `!!getToken()` |
-| `isPresidente()` / `isVecino()` | Check de rol |
 
 ### src/utils/
 
@@ -159,7 +157,7 @@ npm test        # vitest run (CI)
 npm run test:watch  # vitest (watch mode)
 ```
 
-Actualmente 21 tests para utilidades:
+Actualmente 23 tests para utilidades:
 - `rut.test.ts` — 16 tests (limpieza, formato, validación)
 - `pdf.test.ts` — 3 tests (descarga con/sin Content-Disposition)
 - `excel.test.ts` — 2 tests (datos vacíos, exportación básica)

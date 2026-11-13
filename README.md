@@ -10,12 +10,12 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 |---|---|
 | Frontend | React 19 + TypeScript 5.9 + Vite 7 + MUI 7 |
 | Backend | Python 3.11+ / FastAPI + SQLAlchemy 2.0 |
-| Base de datos | PostgreSQL 16 (Docker) |
+| Base de datos | PostgreSQL (Docker) |
 | Auth | JWT (OAuth2PasswordBearer + bcrypt) |
-| PDF | ReportLab + PyPDF2 |
+| PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (28) + vitest (21) |
+| Tests | pytest (45) + vitest (23) |
 
 ---
 
@@ -49,6 +49,18 @@ Esto levanta PostgreSQL en `localhost:5432` con:
 - Base de datos: `postgres`
 - Ejecuta `scripts/init.sql` automáticamente (crea tablas + 35 vecinos de seed)
 
+Si vienes de una base creada antes del fix de zona horaria, ejecuta la
+migración antes de arrancar el backend nuevo y una sola vez, con el instante
+UTC del despliegue:
+
+```bash
+docker compose -f database/docker-compose.yaml exec -T database-app \
+  psql -U postgres -d postgres -v ON_ERROR_STOP=1 -v cutoff="<UTC-del-deploy>" \
+  -f /docker-entrypoint-initdb.d/migrations/2026-11-13_timestamps_utc.sql
+```
+
+En desarrollo puedes recrear el volumen con `docker compose down -v`.
+
 ### 3. Backend
 
 ```bash
@@ -78,11 +90,11 @@ Abrir `http://localhost:5173` en el navegador.
 ### 5. Verificar que todo funciona
 
 ```bash
-# Tests backend (28)
+# Tests backend (45)
 cd backend
 uv run pytest app/Test/
 
-# Tests frontend (21)
+# Tests frontend (23)
 cd frontend
 npm test
 
@@ -118,8 +130,8 @@ npm run build
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:1234@localhost:5432/postgres` | Conexión PostgreSQL |
-| `JWT_SECRET_KEY` | `DEV_ONLY_CHANGE_IN_PRODUCTION` | ⚠️ Cambiar en producción |
+| `DATABASE_URL` | obligatoria (ver `.env.example`) | Conexión PostgreSQL |
+| `JWT_SECRET_KEY` | obligatoria (ver `.env.example`) | ⚠️ Cambiar en producción |
 
 ### Frontend (`frontend/.env`)
 
@@ -135,7 +147,7 @@ npm run build
 # ── Backend ──
 cd backend
 uv sync --dev                   # Instalar dependencias
-uv run pytest app/Test/         # Tests (28)
+uv run pytest app/Test/         # Tests (45)
 uv run ruff check .             # Linter
 uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 
@@ -144,7 +156,7 @@ cd frontend
 npm install                     # Instalar dependencias
 npm run dev                     # Dev server (localhost:5173)
 npm run build                   # Build producción
-npm test                        # Tests (21, vitest)
+npm test                        # Tests (23, vitest)
 npm run test:watch              # Tests en watch mode
 npm run lint                    # ESLint
 
@@ -187,7 +199,7 @@ registro-vecinos-app/
 │   │   │       └── historial.py       # Auditoría
 │   │   ├── core/
 │   │   │   └── security.py            # JWT + bcrypt
-│   │   └── Test/                      # 28 tests (pytest)
+│   │   └── Test/                      # 45 tests (pytest)
 │   ├── resources/
 │   │   └── certificado_plantilla.pdf
 │   ├── pyproject.toml
@@ -222,7 +234,7 @@ registro-vecinos-app/
 │       │   ├── error.ts               # getErrorMessage()
 │       │   ├── download.ts            # descargarBlob()
 │       │   └── pagination.ts          # usePagination(), displayedRowsLabel
-│       └── test/                      # 21 tests (vitest)
+│       └── test/                      # 23 tests (vitest)
 │           ├── rut.test.ts
 │           ├── pdf.test.ts
 │           ├── excel.test.ts

@@ -1,4 +1,5 @@
 import api from "../api";
+import { clearSession } from "./session";
 
 const TOKEN_KEY = "access_token";
 
@@ -43,9 +44,7 @@ class AuthService {
     formData.append("username", credentials.username);
     formData.append("password", credentials.password);
 
-    const response = await api.post<AuthResponse>("/api/token", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await api.post<AuthResponse>("/api/token", formData);
 
     if (response.data.access_token) {
       localStorage.setItem(TOKEN_KEY, response.data.access_token);
@@ -64,32 +63,15 @@ class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("rol");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("vecino_id");
-    localStorage.removeItem("nombre_completo");
-    localStorage.removeItem("usuario");
+    clearSession();
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  getRol(): string | null {
-    return localStorage.getItem("rol");
-  }
-
   isAuthenticated(): boolean {
     return !!this.getToken();
-  }
-
-  isPresidente(): boolean {
-    return this.getRol() === "presidente";
-  }
-
-  isVecino(): boolean {
-    return this.getRol() === "vecino";
   }
 }
 

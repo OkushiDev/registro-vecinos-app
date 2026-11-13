@@ -11,6 +11,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import api from "../api";
+import { getErrorDetail } from "../utils/error";
 import {
   formatearRut,
   validarFormatoRut,
@@ -61,7 +62,7 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
             ...prev,
             numero_socio: siguienteNumero.toString(),
           }));
-        } catch (error) {
+        } catch {
           setFormData((prev) => ({
             ...prev,
             numero_socio: "",
@@ -88,7 +89,7 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
             telefono: vecino.telefono || "",
             email: vecino.email || "",
           });
-        } catch (error) {
+        } catch {
           setSubmitError("Error al cargar los datos del vecino");
         } finally {
           setIsLoading(false);
@@ -197,13 +198,13 @@ const RegistroVecinoForm: React.FC<RegistroVecinoFormProps> = ({
         await api.put(`/editar-vecino/${vecinoId}`, dataToSend);
       }
       onSuccess();
-    } catch (error: any) {
-
-      if (error.response?.data?.detail) {
-        setSubmitError(error.response.data.detail);
-      } else {
-        setSubmitError(esCreacion ? "Error al registrar el vecino. Intente nuevamente." : "Error al actualizar el vecino. Intente nuevamente.");
-      }
+    } catch (error) {
+      setSubmitError(
+        getErrorDetail(error) ||
+          (esCreacion
+            ? "Error al registrar el vecino. Intente nuevamente."
+            : "Error al actualizar el vecino. Intente nuevamente.")
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -66,7 +66,7 @@ export default function App(): React.ReactElement {
             userData.rol === "presidente" ? "presidente" : "vecino";
           setUserProfile(profile);
           setIsAuthenticated(true);
-        } catch (error) {
+        } catch {
           authService.logout();
           setUserProfile(null);
           setIsAuthenticated(false);

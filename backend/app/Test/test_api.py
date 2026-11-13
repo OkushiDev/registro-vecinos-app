@@ -103,3 +103,58 @@ class TestHistorial:
         response = client.get("/historial/")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
+
+
+@pytest.fixture
+def vecino_client(mock_db):
+    def override_get_db():
+        yield mock_db
+
+    def override_get_current_user():
+        return {"user_id": 2, "rol": "vecino", "vecino_id": 2}
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+class TestAutorizacion:
+    def test_vecino_no_puede_listar_vecinos(self, vecino_client):
+        assert vecino_client.get("/lista-vecinos/").status_code == 403
+
+    def test_vecino_no_puede_ver_historial(self, vecino_client):
+        assert vecino_client.get("/historial/").status_code == 403
+
+    def test_vecino_no_puede_cambiar_estado(self, vecino_client):
+        assert vecino_client.patch("/cambiar-estado-vecino/1").status_code == 403
+
+    def test_vecino_no_puede_ver_datos_de_otro_vecino(self, vecino_client):
+        assert vecino_client.get("/vecino/1").status_code == 403
+
+
+def test_presidente_puede_cambiar_estado(client, mock_db):
+    vecino = MagicMock()
+    vecino.id = 1
+    vecino.nombres = "Ana"
+    vecino.apellido_paterno = "Perez"
+    vecino.estado = 1
+    mock_db.query.return_value.filter.return_value.first.return_value = vecino
+
+    response = client.patch("/cambiar-estado-vecino/1")
+
+    assert response.status_code == 200
+    assert response.json()["nuevo_estado"] == 0
+
+
+class TestLogin:
+    def test_credenciales_invalidas_devuelve_401(self, mock_db):
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        app.dependency_overrides[get_db] = lambda: mock_db
+        try:
+            response = TestClient(app).post(
+                "/api/token", data={"username": "12345678-9", "password": "mala"}
+            )
+            assert response.status_code == 401
+        finally:
+            app.dependency_overrides.clear()

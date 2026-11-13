@@ -1,10 +1,13 @@
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import app.api.models as models
 from app.core.security import get_password_hash
+
+ZONA_HORARIA = ZoneInfo("America/Santiago")
 
 # === CONFIGURACIÓN DE ARCHIVOS ===
 
@@ -17,15 +20,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
-TIPOS_DOCUMENTO = [
-    "cedula_identidad",
-    "registro_social_hogares",
-    "avaluo_fiscal",
-    "boleta_agua",
-    "boleta_luz",
-    "escritura_casa",
-]
-
 TIPOS_DOCUMENTO_LABELS = {
     "cedula_identidad": "Cédula de Identidad",
     "registro_social_hogares": "Registro Social de Hogares",
@@ -34,6 +28,8 @@ TIPOS_DOCUMENTO_LABELS = {
     "boleta_luz": "Boleta de Luz",
     "escritura_casa": "Escritura de Casa",
 }
+
+TIPOS_DOCUMENTO = list(TIPOS_DOCUMENTO_LABELS)
 
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:
@@ -86,13 +82,13 @@ def crear_usuario_para_vecino(
     )
     hashed_password = get_password_hash(password_inicial)
 
-    rol = "presidente" if vecino.numero_socio == 35 else "vecino"  # socio 35 = presidente (definido en seed data)
-
+    # Los vecinos creados por la app siempre son vecinos; el presidente
+    # inicial viene definido en el seed y no se otorga por número de socio.
     nuevo_usuario = models.Usuario(
         username=username,
         hashed_password=hashed_password,
         vecino_id=vecino.id,
-        rol=rol,
+        rol="vecino",
         estado=vecino.estado,
     )
 
@@ -103,7 +99,7 @@ def crear_usuario_para_vecino(
 
 
 def formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-"):
-    """Formatea una fecha de forma segura. Fuente única para vecinos y documentos."""
+    """Formatea una fecha sin convertir zona. Usar para fechas sin hora (registro/edición)."""
     if not fecha_obj:
         return default
     if isinstance(fecha_obj, str):
@@ -112,3 +108,19 @@ def formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-"):
         except (ValueError, AttributeError):
             return fecha_obj  # ya está formateada
     return fecha_obj.strftime(fmt)
+
+
+def formatear_fecha_hora(fecha_obj, fmt="%d-%m-%Y %H:%M", default="-"):
+    """Formatea un timestamp en la zona de Chile. Los timestamps naive se asumen UTC."""
+    if not fecha_obj:
+        return default
+    if isinstance(fecha_obj, str):
+        try:
+            fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return fecha_obj  # ya está formateada
+    if not isinstance(fecha_obj, datetime):
+        return fecha_obj
+    if fecha_obj.tzinfo is None:
+        fecha_obj = fecha_obj.replace(tzinfo=timezone.utc)
+    return fecha_obj.astimezone(ZONA_HORARIA).strftime(fmt)

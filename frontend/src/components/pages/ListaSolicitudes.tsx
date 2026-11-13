@@ -12,6 +12,7 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import api from "../../api";
 import { exportarAExcel } from "../../utils/excel";
 import { descargarPDF } from "../../utils/pdf";
+import { getErrorDetail } from "../../utils/error";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -19,7 +20,7 @@ import Box from "@mui/material/Box";
 import { Grid } from "@mui/material";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
+import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -100,7 +101,7 @@ export default function ListaSolicitudes() {
       setLoading(true);
       const response = await api.get("/api/solicitudes");
 
-      const solicitudesFormateadas = response.data.map((sol: any) => ({
+      const solicitudesFormateadas = response.data.map((sol: Data) => ({
         ...sol,
         tipo_solicitud:
           sol.tipo_solicitud === "certificado_residencia"
@@ -109,7 +110,7 @@ export default function ListaSolicitudes() {
       }));
 
       setRows(solicitudesFormateadas || []);
-    } catch (error) {
+    } catch {
       setRows([]);
     } finally {
       setLoading(false);
@@ -144,12 +145,12 @@ export default function ListaSolicitudes() {
     setPage(0);
   };
 
-  const handleFilterChange = (e: any) => {
+  const handleFilterChange = (e: SelectChangeEvent) => {
     setFilterColumn(e.target.value);
     setPage(0);
   };
 
-  const handleEstadoFiltroChange = (e: any) => {
+  const handleEstadoFiltroChange = (e: SelectChangeEvent) => {
     setEstadoFiltro(e.target.value);
     setPage(0);
   };
@@ -178,9 +179,9 @@ export default function ListaSolicitudes() {
       await api.patch(`/api/solicitudes/${solicitudId}/marcar-realizada`);
 
       await fetchSolicitudes();
-    } catch (error: any) {
+    } catch (error) {
       alert(
-        error.response?.data?.detail ||
+        getErrorDetail(error) ||
           "Error al generar certificado. Intenta nuevamente."
       );
     }
@@ -203,9 +204,9 @@ export default function ListaSolicitudes() {
       await api.patch(`/api/solicitudes/${solicitudId}/rechazar`);
 
       await fetchSolicitudes();
-    } catch (error: any) {
+    } catch (error) {
       alert(
-        error.response?.data?.detail ||
+        getErrorDetail(error) ||
           "Error al rechazar solicitud. Intenta nuevamente."
       );
     }

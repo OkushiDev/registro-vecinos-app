@@ -23,15 +23,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 
 // IMPORTAR EL COMPONENTE DE NOTIFICACIONES
 import NotificationMenu from "./NotificationMenu";
-
-export type UserProfile = "presidente" | "vecino";
-
-interface NavbarProps {
-  userProfile: UserProfile;
-  onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-}
+import { useAuth } from "../context/auth";
 
 interface NavItem {
   label: string;
@@ -87,12 +79,8 @@ const vecinoPages: NavItem[] = [
 
 const settings = ["Cerrar Sesión"];
 
-export default function Navbar({
-  userProfile,
-  onLogout,
-  isDarkMode,
-  onToggleTheme,
-}: NavbarProps): React.ReactElement {
+export default function Navbar(): React.ReactElement {
+  const { userProfile, logout, isDarkMode, toggleTheme } = useAuth();
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
     null
   );
@@ -127,7 +115,7 @@ export default function Navbar({
 
   const handleSettingClick = (setting: string) => {
     if (setting === "Cerrar Sesión") {
-      onLogout();
+      logout();
     }
     handleCloseUserMenu();
   };
@@ -303,7 +291,7 @@ export default function Navbar({
               }
             >
               <IconButton
-                onClick={onToggleTheme}
+                onClick={toggleTheme}
                 color="inherit"
                 sx={{ ml: 1, mr: 1 }}
               >

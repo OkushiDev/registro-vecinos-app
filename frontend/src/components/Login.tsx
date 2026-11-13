@@ -28,20 +28,11 @@ import {
 import authService from "../services/authService";
 import { limpiarRut, formatearRut } from "../utils/rut";
 import { getErrorMessage } from "../utils/error";
-import type { UserProfile } from "./Navbar";
+import { useAuth, type UserProfile } from "../context/auth";
 
-interface LoginProps {
-  onLogin: (profile: UserProfile) => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-}
-
-export default function Login({
-  onLogin,
-  isDarkMode,
-  onToggleTheme,
-}: LoginProps): React.ReactElement {
+export default function Login(): React.ReactElement {
   const theme = useTheme();
+  const { login, isDarkMode, toggleTheme } = useAuth();
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -71,7 +62,7 @@ export default function Login({
 
       const userProfile: UserProfile =
         response.rol === "presidente" ? "presidente" : "vecino";
-      onLogin(userProfile);
+      login(userProfile);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -148,7 +139,7 @@ export default function Login({
       >
         {/* Botón de cambio de tema - Esquina superior derecha */}
         <IconButton
-          onClick={onToggleTheme}
+          onClick={toggleTheme}
           sx={{
             position: "absolute",
             top: 16,

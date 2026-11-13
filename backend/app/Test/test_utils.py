@@ -61,6 +61,18 @@ class TestVecinoEdicionSchema:
                 numero_socio=1,
             )
 
+    def test_acepta_campos_de_password(self):
+        schema = VecinoEdicionSchema(
+            nombres="Ana",
+            apellido_paterno="Perez",
+            apellido_materno="Soto",
+            rut="14306046-2",
+            numero_socio=35,
+            currentPassword="actual",
+            newPassword="nueva",
+        )
+        assert schema.newPassword == "nueva"
+
 
 class TestGenerarPassword:
     def test_password_format(self):

@@ -15,7 +15,7 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 | PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (38) + vitest (21) |
+| Tests | pytest (39) + vitest (21) |
 
 ---
 
@@ -78,7 +78,7 @@ Abrir `http://localhost:5173` en el navegador.
 ### 5. Verificar que todo funciona
 
 ```bash
-# Tests backend (38)
+# Tests backend (39)
 cd backend
 uv run pytest app/Test/
 
@@ -135,7 +135,7 @@ npm run build
 # ── Backend ──
 cd backend
 uv sync --dev                   # Instalar dependencias
-uv run pytest app/Test/         # Tests (38)
+uv run pytest app/Test/         # Tests (39)
 uv run ruff check .             # Linter
 uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 
@@ -187,7 +187,7 @@ registro-vecinos-app/
 │   │   │       └── historial.py       # Auditoría
 │   │   ├── core/
 │   │   │   └── security.py            # JWT + bcrypt
-│   │   └── Test/                      # 38 tests (pytest)
+│   │   └── Test/                      # 39 tests (pytest)
 │   ├── resources/
 │   │   └── certificado_plantilla.pdf
 │   ├── pyproject.toml

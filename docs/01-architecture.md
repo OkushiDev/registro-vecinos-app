@@ -95,7 +95,7 @@ registro-vecinos-app/
 │   │   │   └── security.py         # JWT create/decode, bcrypt hash/verify
 │   │   └── resources/
 │   │       └── certificado_plantilla.pdf
-│   └── app/Test/                   # Tests pytest (38 tests)
+│   └── app/Test/                   # Tests pytest (39 tests)
 ├── frontend/
 │   └── src/
 │       ├── api.tsx                 # Fetch wrapper + JWT

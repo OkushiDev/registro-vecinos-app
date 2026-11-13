@@ -6,8 +6,8 @@
 --
 -- `cutoff` debe ser el instante UTC en que se desplego el backend nuevo:
 -- las solicitudes anteriores se convierten; las posteriores ya estan en UTC.
--- Ejecutar una sola vez. En desarrollo es mas simple recrear el volumen:
--- docker compose down -v.
+-- Ejecutar una sola vez, antes de arrancar el backend nuevo.
+-- En desarrollo es mas simple recrear el volumen: docker compose down -v.
 BEGIN;
 
 DO $$

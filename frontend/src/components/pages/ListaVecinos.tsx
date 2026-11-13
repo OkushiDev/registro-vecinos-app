@@ -1,128 +1,23 @@
 import * as React from "react";
-import { useTheme } from "@mui/material/styles";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import TablePagination from "@mui/material/TablePagination";
-import TableSortLabel from "@mui/material/TableSortLabel"; // Importación para ordenar
-import { visuallyHidden } from "@mui/utils"; // Utilidad para accesibilidad
+import type { SelectChangeEvent } from "@mui/material/Select";
 
 import { exportarAExcel } from "../../utils/excel";
-import { displayedRowsLabel, usePagination } from "../../utils/pagination";
+import { usePagination } from "../../utils/pagination";
 import { formatearRutConPuntos } from "../../utils/rut";
 import { getErrorDetail } from "../../utils/error";
-import { CALLES, RELACIONES_PROPIEDAD } from "../../constants/calles";
 
 // Importación de la API
 import api from "../../api";
 
 // Componentes propios
-import RegistroVecinoForm from "../RegistroVecinoForm";
-
-// Material UI Dialogs
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContentText from "@mui/material/DialogContentText";
-
-// Material UI Components
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from "@mui/icons-material/Search";
-import Box from "@mui/material/Box";
-import { Grid } from "@mui/material";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select, { type SelectChangeEvent } from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
-import FormGroup from "@mui/material/FormGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
-
-// Iconos
-import AddIcon from "@mui/icons-material/Add";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import EditIcon from "@mui/icons-material/Edit";
-import IconButton from "@mui/material/IconButton";
-import ToggleOnIcon from "@mui/icons-material/ToggleOn";
-import ToggleOffIcon from "@mui/icons-material/ToggleOff";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import CloseIcon from "@mui/icons-material/Close";
-import WarningIcon from "@mui/icons-material/Warning";
-
-// Definición de Columnas
-interface Column {
-  id:
-    | "id"
-    | "nombres"
-    | "apellido_paterno"
-    | "apellido_materno"
-    | "rut"
-    | "numero_socio"
-    | "nombre_calle"
-    | "numero_casa"
-    | "relacion_propiedad"
-    | "fecha_registro"
-    | "fecha_edicion"
-    | "telefono"
-    | "email"
-    | "acciones_certificado"
-    | "acciones_editar"
-    | "acciones_estado";
-  label: string;
-  minWidth?: number;
-  align?: "center" | "right" | "left";
-}
-
-const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 50 },
-  { id: "nombres", label: "Nombres", minWidth: 150 },
-  { id: "apellido_paterno", label: "Ap. Paterno", minWidth: 120 },
-  { id: "apellido_materno", label: "Ap. Materno", minWidth: 120 },
-  { id: "rut", label: "RUT", minWidth: 120 },
-  { id: "numero_socio", label: "N° Socio", minWidth: 95, align: "center" },
-  { id: "nombre_calle", label: "Calle", minWidth: 150 },
-  { id: "numero_casa", label: "N° Casa", minWidth: 80 },
-  { id: "relacion_propiedad", label: "Relación", minWidth: 120 },
-  { id: "fecha_registro", label: "F. Registro", minWidth: 120, align: "right" },
-  { id: "fecha_edicion", label: "F. Edición", minWidth: 120, align: "right" },
-  { id: "telefono", label: "Teléfono", minWidth: 120 },
-  { id: "email", label: "Email", minWidth: 200 },
-  { id: "acciones_certificado", label: "Solicitud", minWidth: 100 },
-  { id: "acciones_editar", label: "Editar", minWidth: 80 },
-  { id: "acciones_estado", label: "Estado", minWidth: 100 },
-];
-
-interface Data {
-  id: number;
-  nombres: string;
-  apellido_paterno: string;
-  apellido_materno: string;
-  rut: string;
-  numero_socio: number;
-  nombre_calle: string;
-  numero_casa: string;
-  relacion_propiedad: string;
-  fecha_registro: string;
-  fecha_edicion: string;
-  telefono: string;
-  email: string;
-  estado: number;
-}
+import VecinosFilters from "./lista-vecinos/VecinosFilters";
+import VecinosTable from "./lista-vecinos/VecinosTable";
+import VecinosDialogs from "./lista-vecinos/VecinosDialogs";
+import ConfirmEstadoDialog from "./lista-vecinos/ConfirmEstadoDialog";
+import type { Data, VecinoToToggle } from "./lista-vecinos/types";
 
 export default function ListaVecinos() {
-  const theme = useTheme();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
@@ -293,28 +188,6 @@ export default function ListaVecinos() {
     await exportarAExcel(dataToExport, "Vecinos", "Reporte_Vecinos");
   };
 
-  const commonFilterStyle = {
-    backgroundColor: "background.paper",
-    color: "text.primary",
-    borderRadius: "4px",
-    border: `1px solid ${theme.palette.divider}`,
-    "&:hover": {
-      backgroundColor:
-        theme.palette.mode === "dark"
-          ? "rgba(255, 255, 255, 0.05)"
-          : "rgba(0, 0, 0, 0.04)",
-      borderColor: theme.palette.text.primary,
-    },
-    minHeight: "56px",
-    display: "flex",
-    alignItems: "center",
-    "& .MuiSelect-icon, & .MuiAccordionSummary-expandIconWrapper .MuiSvgIcon-root":
-      {
-        color: "text.primary",
-      },
-    "&:before": { display: "none" },
-  };
-
   const [modalOpen, setModalOpen] = React.useState(false);
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
@@ -343,11 +216,9 @@ export default function ListaVecinos() {
   };
 
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
-  const [vecinoToToggle, setVecinoToToggle] = React.useState<{
-    id: number;
-    nombre: string;
-    estadoActual: number;
-  } | null>(null);
+  const [vecinoToToggle, setVecinoToToggle] = React.useState<
+    VecinoToToggle | null
+  >(null);
   const [loadingToggle, setLoadingToggle] = React.useState(false);
 
   const handleToggleEstado = (
@@ -440,554 +311,55 @@ export default function ListaVecinos() {
       }}
       elevation={0}
     >
-      <Box sx={{ p: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          {/* BUSCADOR */}
-          <Grid size={{ xs: 12, md: 2.5 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Buscar vecinos..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  color: "text.primary",
-                  backgroundColor: "transparent",
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: "4px",
-                  transition: "all 0.2s",
-                  "& fieldset": { border: "none" },
-                  "&:hover": {
-                    borderColor: "text.primary",
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.05)"
-                        : "rgba(0,0,0,0.05)",
-                  },
-                  "&.Mui-focused": {
-                    borderColor: "#3b82f6",
-                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
-                  },
-                },
-                "& .MuiSvgIcon-root": { color: "text.secondary" },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                sx: { height: "56px" },
-              }}
-            />
-          </Grid>
-
-          {/* FILTRO COLUMNA */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: "text.secondary" }}>
-                Buscar en
-              </InputLabel>
-              <Select
-                value={filterColumn}
-                label="Buscar en"
-                onChange={handleFilterChange}
-                displayEmpty
-                variant="outlined"
-                sx={{
-                  ...commonFilterStyle,
-                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                  width: "100%",
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      backgroundImage: "none",
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="all">Todo</MenuItem>
-                <MenuItem value="nombres">Nombres</MenuItem>
-                <MenuItem value="apellido_paterno">Ap. Paterno</MenuItem>
-                <MenuItem value="rut">RUT</MenuItem>
-                <MenuItem value="nombre_calle">Calle</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* FILTRO ESTADO */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
-              <Select
-                value={estadoFiltro}
-                label="Estado"
-                onChange={handleEstadoFiltroChange}
-                displayEmpty
-                sx={{
-                  ...commonFilterStyle,
-                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      backgroundImage: "none",
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="todos">Todos</MenuItem>
-                <MenuItem value="habilitados">Activos</MenuItem>
-                <MenuItem value="deshabilitados">Inactivos</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* FILTRO CALLE */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                sx={{
-                  minHeight: "56px",
-                  width: "100%",
-                  "& .MuiAccordionSummary-content": { marginRight: 5 },
-                }}
-              >
-                <Typography noWrap sx={{ fontSize: "0.9rem" }}>
-                  Calle
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails
-                sx={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  width: "100%",
-                  backgroundColor: "background.paper",
-                  color: "text.primary",
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  zIndex: 10,
-                  border: `1px solid ${theme.palette.divider}`,
-                  boxShadow: theme.shadows[4],
-                  borderRadius: "0 0 4px 4px",
-                  padding: 1,
-                }}
-              >
-                <FormGroup>
-                  {CALLES.map((calle) => (
-                    <FormControlLabel
-                      key={calle}
-                      control={
-                        <Checkbox
-                          checked={selectedCalles.includes(calle)}
-                          onChange={() => handleCalleChange(calle)}
-                          sx={{
-                            color: "text.secondary",
-                            "&.Mui-checked": { color: "#3b82f6" },
-                          }}
-                        />
-                      }
-                      label={<Typography variant="body2">{calle}</Typography>}
-                    />
-                  ))}
-                </FormGroup>
-              </AccordionDetails>
-            </Accordion>
-          </Grid>
-
-          {/* FILTRO RELACIÓN */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Accordion sx={commonFilterStyle} disableGutters elevation={0}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                sx={{
-                  minHeight: "56px",
-                  width: "100%",
-                  "& .MuiAccordionSummary-content": { margin: 2 },
-                }}
-              >
-                <Typography noWrap sx={{ fontSize: "0.9rem" }}>
-                  Relación
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails
-                sx={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  width: "100%",
-                  backgroundColor: "background.paper",
-                  color: "text.primary",
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  zIndex: 10,
-                  border: `1px solid ${theme.palette.divider}`,
-                  boxShadow: theme.shadows[4],
-                  borderRadius: "0 0 4px 4px",
-                  padding: 1,
-                }}
-              >
-                <FormGroup>
-                  {RELACIONES_PROPIEDAD.map((relacion) => (
-                    <FormControlLabel
-                      key={relacion}
-                      control={
-                        <Checkbox
-                          checked={selectedRelaciones.includes(relacion)}
-                          onChange={() => handleRelacionChange(relacion)}
-                          sx={{
-                            color: "text.secondary",
-                            "&.Mui-checked": { color: "#3b82f6" },
-                          }}
-                        />
-                      }
-                      label={
-                        <Typography variant="body2">{relacion}</Typography>
-                      }
-                    />
-                  ))}
-                </FormGroup>
-              </AccordionDetails>
-            </Accordion>
-          </Grid>
-
-          {/* BOTÓN EXCEL */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
-              onClick={handleExportToExcel}
-              sx={{
-                height: "56px",
-                background: "linear-gradient(to right, #059669, #10b981)",
-                color: "white",
-                fontWeight: "bold",
-                boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
-                "&:hover": {
-                  background: "linear-gradient(to right, #047857, #059669)",
-                },
-              }}
-            >
-              Excel
-            </Button>
-          </Grid>
-
-          {/* BOTÓN REGISTRAR */}
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenModal}
-              sx={{
-                height: "56px",
-                background: "linear-gradient(to right, #2563eb, #3b82f6)",
-                color: "white",
-                fontWeight: "bold",
-                boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.3)",
-                "&:hover": {
-                  background: "linear-gradient(to right, #1d4ed8, #2563eb)",
-                },
-              }}
-            >
-              Nuevo
-            </Button>
-          </Grid>
-        </Grid>
-
-        {/* Resumen de Filtros */}
-        {(searchTerm ||
-          selectedCalles.length > 0 ||
-          selectedRelaciones.length > 0 ||
-          estadoFiltro !== "todos") && (
-          <Box sx={{ mt: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Resultados: {filteredRows.length}
-            </Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* TABLA */}
-      <TableContainer
-        sx={{
-          flex: 1,
-          backgroundColor: "transparent",
-          boxShadow: "none",
-          border: "none",
-        }}
-      >
-        <Table stickyHeader aria-label="sticky table">
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  align={column.align}
-                  style={{ minWidth: column.minWidth }}
-                  sx={{
-                    backgroundColor: "background.paper",
-                    color: "text.primary",
-                    fontWeight: "bold",
-                    borderBottom: `1px solid ${theme.palette.divider}`,
-                  }}
-                  sortDirection={column.id === "id" ? order : false}
-                >
-                  {column.id === "id" ? (
-                    <TableSortLabel
-                      active={true}
-                      direction={order}
-                      onClick={handleRequestSort}
-                    >
-                      {column.label}
-                      <Box component="span" sx={visuallyHidden}>
-                        {order === "desc"
-                          ? "sorted descending"
-                          : "sorted ascending"}
-                      </Box>
-                    </TableSortLabel>
-                  ) : (
-                    column.label
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedRows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => {
-                // Verificar si el vecino tiene solicitud pendiente
-                const tieneSolicitudPendiente = vecinosConSolicitud.has(row.id);
-
-                return (
-                  <TableRow
-                    hover
-                    key={row.id}
-                    sx={{
-                      backgroundColor: "transparent",
-                      "&:last-child td, &:last-child th": { border: 0 },
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(255,255,255,0.05) !important"
-                            : "rgba(0,0,0,0.04) !important",
-                      },
-                    }}
-                  >
-                    {columns.map((column) => {
-                      const cellStyle = {
-                        color: "text.primary",
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                      };
-
-                      if (column.id === "id") {
-                        return (
-                          <TableCell
-                            key={column.id}
-                            align={column.align}
-                            sx={cellStyle}
-                          >
-                            <Typography variant="body2" fontWeight="bold">
-                              {row.id}
-                            </Typography>
-                          </TableCell>
-                        );
-                      }
-                      if (column.id === "rut") {
-                        return (
-                          <TableCell
-                            key={column.id}
-                            align={column.align}
-                            sx={cellStyle}
-                          >
-                            {formatearRutConPuntos(row.rut)}
-                          </TableCell>
-                        );
-                      }
-
-                      if (column.id === "acciones_certificado") {
-                        return (
-                          <TableCell
-                            key={column.id}
-                            align={column.align}
-                            sx={cellStyle}
-                          >
-                            <IconButton
-                              onClick={() =>
-                                handleCrearSolicitud(
-                                  row.id,
-                                  `${row.nombres} ${row.apellido_paterno}`
-                                )
-                              }
-                              size="small"
-                              title={
-                                row.estado !== 1
-                                  ? "Vecino inactivo"
-                                  : tieneSolicitudPendiente
-                                  ? "Ya tiene una solicitud pendiente"
-                                  : "Crear solicitud de certificado"
-                              }
-                              sx={{ color: "#9c27b0" }}
-                              disabled={
-                                row.estado !== 1 || tieneSolicitudPendiente
-                              }
-                            >
-                              <AssignmentIcon />
-                            </IconButton>
-                          </TableCell>
-                        );
-                      }
-                      if (column.id === "acciones_editar") {
-                        return (
-                          <TableCell
-                            key={column.id}
-                            align={column.align}
-                            sx={cellStyle}
-                          >
-                            <IconButton
-                              onClick={() => handleOpenEditModal(row.id)}
-                              size="small"
-                              title="Editar vecino"
-                              sx={{ color: "#64b5f6" }}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </TableCell>
-                        );
-                      }
-                      if (column.id === "acciones_estado") {
-                        return (
-                          <TableCell
-                            key={column.id}
-                            align={column.align}
-                            sx={cellStyle}
-                          >
-                            <IconButton
-                              color={row.estado === 1 ? "success" : "error"}
-                              onClick={() =>
-                                handleToggleEstado(
-                                  row.id,
-                                  row.estado,
-                                  row.nombres
-                                )
-                              }
-                              size="small"
-                              title={
-                                row.estado === 1
-                                  ? "Deshabilitar vecino"
-                                  : "Habilitar vecino"
-                              }
-                              disabled={loadingToggle}
-                            >
-                              {row.estado === 1 ? (
-                                <ToggleOnIcon />
-                              ) : (
-                                <ToggleOffIcon />
-                              )}
-                            </IconButton>
-                          </TableCell>
-                        );
-                      }
-                      const value = row[column.id];
-                      return (
-                        <TableCell
-                          key={column.id}
-                          align={column.align}
-                          sx={cellStyle}
-                        >
-                          {value || "-"}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 100]}
-        component="div"
-        count={filteredRows.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={displayedRowsLabel}
-        sx={{
-          backgroundColor: "background.default",
-          color: "text.primary",
-          borderTop: `1px solid ${theme.palette.divider}`,
-          ".MuiTablePagination-selectIcon": { color: "text.primary" },
-          ".MuiIconButton-root": {
-            color: "text.primary",
-            "&.Mui-disabled": { color: "text.disabled" },
-          },
-        }}
+      <VecinosFilters
+        searchTerm={searchTerm}
+        filterColumn={filterColumn}
+        estadoFiltro={estadoFiltro}
+        selectedCalles={selectedCalles}
+        selectedRelaciones={selectedRelaciones}
+        filteredCount={filteredRows.length}
+        onSearchChange={handleSearchChange}
+        onFilterChange={handleFilterChange}
+        onEstadoChange={handleEstadoFiltroChange}
+        onCalleChange={handleCalleChange}
+        onRelacionChange={handleRelacionChange}
+        onExportToExcel={handleExportToExcel}
+        onOpenModal={handleOpenModal}
       />
 
-      {/* Modales y Diálogos */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth
-        PaperProps={{ sx: { borderRadius: 2, minHeight: "200px" } }}>
-        <DialogTitle sx={{ m: 0, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>Registrar Nuevo Vecino</Typography>
-          <IconButton aria-label="close" onClick={handleCloseModal} sx={{ color: theme => theme.palette.grey[500], "&:hover": { backgroundColor: theme => theme.palette.grey[100] } }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <RegistroVecinoForm onSuccess={handleRegistroSuccess} onCancel={handleCloseModal} />
-          </Box>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth
-        PaperProps={{ sx: { borderRadius: 2, minHeight: "200px" } }}>
-        <DialogTitle sx={{ m: 0, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>Editar Vecino</Typography>
-          <IconButton aria-label="close" onClick={handleCloseEditModal} sx={{ color: theme => theme.palette.grey[500], "&:hover": { backgroundColor: theme => theme.palette.grey[100] } }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            {selectedVecinoId && (
-              <RegistroVecinoForm mode="edit" vecinoId={selectedVecinoId} onSuccess={handleEditSuccess} onCancel={handleCloseEditModal} />
-            )}
-          </Box>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={confirmDialogOpen} onClose={handleCancelToggleEstado} maxWidth="xs" fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
-          <WarningIcon color="warning" />
-          <Typography variant="h6" component="div">Confirmar cambio de estado</Typography>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: "text.primary", fontSize: "1rem" }}>
-            {vecinoToToggle
-              ? `¿Estás seguro de que deseas ${vecinoToToggle.estadoActual === 1 ? "deshabilitar" : "habilitar"} al vecino "${vecinoToToggle.nombre}"?`
-              : ""}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button onClick={handleCancelToggleEstado} variant="outlined" disabled={loadingToggle}>Cancelar</Button>
-          <Button onClick={handleConfirmToggleEstado} variant="contained" color="warning" disabled={loadingToggle} autoFocus>
-            {loadingToggle ? "Procesando..." : (vecinoToToggle?.estadoActual === 1 ? "Deshabilitar" : "Habilitar")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <VecinosTable
+        rows={sortedRows}
+        count={filteredRows.length}
+        order={order}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        vecinosConSolicitud={vecinosConSolicitud}
+        loadingToggle={loadingToggle}
+        onRequestSort={handleRequestSort}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        onCreateSolicitud={handleCrearSolicitud}
+        onEdit={handleOpenEditModal}
+        onToggleEstado={handleToggleEstado}
+      />
+
+      <VecinosDialogs
+        createOpen={modalOpen}
+        editOpen={editModalOpen}
+        selectedVecinoId={selectedVecinoId}
+        onCloseCreate={handleCloseModal}
+        onCreateSuccess={handleRegistroSuccess}
+        onCloseEdit={handleCloseEditModal}
+        onEditSuccess={handleEditSuccess}
+      />
+
+      <ConfirmEstadoDialog
+        open={confirmDialogOpen}
+        vecino={vecinoToToggle}
+        loading={loadingToggle}
+        onCancel={handleCancelToggleEstado}
+        onConfirm={handleConfirmToggleEstado}
+      />
     </Paper>
   );
 }

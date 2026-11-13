@@ -487,10 +487,7 @@ const AntecedentesVecino: React.FC = () => {
             )}
             {renderRow("RUT", formatearRutConPuntos(vecinoData.rut))}
             {renderRow("Número de Socio", vecinoData.numero_socio)}
-            {renderRow(
-              "Fecha de Registro",
-              new Date(vecinoData.fecha_registro).toLocaleDateString("es-ES")
-            )}
+            {renderRow("Fecha de Registro", vecinoData.fecha_registro)}
             {renderRow("DIRECCIÓN", "", true)}
             {renderRow("Calle", vecinoData.nombre_calle)}
             {renderRow("Número de Casa", vecinoData.numero_casa)}

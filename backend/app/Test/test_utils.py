@@ -1,12 +1,18 @@
 """Tests para utilidades: validacion de archivos, schemas, generacion de password."""
 
+from datetime import date, datetime, timezone
 import pytest
 from fastapi import UploadFile
 from io import BytesIO
 from pydantic import ValidationError
 
 from app.api.schemas import VecinoEdicionSchema
-from app.api.utils import validate_file, generar_password_inicial
+from app.api.utils import (
+    formatear_fecha,
+    formatear_fecha_hora,
+    validate_file,
+    generar_password_inicial,
+)
 
 
 class TestValidateFile:
@@ -48,6 +54,30 @@ class TestValidateFile:
         valid, msg = validate_file(file)
         assert not valid
         assert "PDF válido" in msg
+
+
+class TestFormatearFecha:
+    def test_timestamp_utc_a_chile(self):
+        fecha = datetime(2026, 11, 13, 1, 49, tzinfo=timezone.utc)
+        assert formatear_fecha_hora(fecha) == "12-11-2026 22:49"
+
+    def test_timestamp_chile_invierno(self):
+        fecha = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+        assert formatear_fecha_hora(fecha) == "01-06-2026 08:00"
+
+    def test_timestamp_naive_se_asume_utc(self):
+        fecha = datetime(2026, 11, 13, 1, 49)
+        assert formatear_fecha_hora(fecha) == "12-11-2026 22:49"
+
+    def test_string_iso(self):
+        assert (
+            formatear_fecha_hora("2026-11-13T01:49:00+00:00")
+            == "12-11-2026 22:49"
+        )
+
+    def test_fecha_sin_hora_no_cambia(self):
+        assert formatear_fecha(date(2004, 10, 21)) == "21-10-2004"
+        assert formatear_fecha("21-10-2004") == "21-10-2004"
 
 
 class TestVecinoEdicionSchema:

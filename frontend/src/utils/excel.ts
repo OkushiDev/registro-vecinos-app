@@ -40,6 +40,6 @@ export const exportarAExcel = async <T extends Record<string, unknown>>(
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-  const date = new Date().toISOString().split("T")[0];
+  const date = new Date().toLocaleDateString("sv-SE");
   descargarBlob(blob, `${fileName}_${date}.xlsx`);
 };

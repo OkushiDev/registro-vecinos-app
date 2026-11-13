@@ -1,10 +1,13 @@
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import app.api.models as models
 from app.core.security import get_password_hash
+
+ZONA_HORARIA = ZoneInfo("America/Santiago")
 
 # === CONFIGURACIÓN DE ARCHIVOS ===
 
@@ -96,7 +99,7 @@ def crear_usuario_para_vecino(
 
 
 def formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-"):
-    """Formatea una fecha de forma segura. Fuente única para vecinos y documentos."""
+    """Formatea una fecha sin convertir zona. Usar para fechas sin hora (registro/edición)."""
     if not fecha_obj:
         return default
     if isinstance(fecha_obj, str):
@@ -105,3 +108,19 @@ def formatear_fecha(fecha_obj, fmt="%d-%m-%Y", default="-"):
         except (ValueError, AttributeError):
             return fecha_obj  # ya está formateada
     return fecha_obj.strftime(fmt)
+
+
+def formatear_fecha_hora(fecha_obj, fmt="%d-%m-%Y %H:%M", default="-"):
+    """Formatea un timestamp en la zona de Chile. Los timestamps naive se asumen UTC."""
+    if not fecha_obj:
+        return default
+    if isinstance(fecha_obj, str):
+        try:
+            fecha_obj = datetime.fromisoformat(fecha_obj.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return fecha_obj  # ya está formateada
+    if not isinstance(fecha_obj, datetime):
+        return fecha_obj
+    if fecha_obj.tzinfo is None:
+        fecha_obj = fecha_obj.replace(tzinfo=timezone.utc)
+    return fecha_obj.astimezone(ZONA_HORARIA).strftime(fmt)

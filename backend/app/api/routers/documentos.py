@@ -1,6 +1,6 @@
 import uuid
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, status
 from fastapi.responses import FileResponse
@@ -15,7 +15,7 @@ from app.api.utils import (
     validate_file,
     MAX_FILE_SIZE,
     registrar_accion,
-    formatear_fecha,
+    formatear_fecha_hora,
 )
 import app.api.models as models
 
@@ -81,7 +81,7 @@ async def subir_documento(
             tipo_archivo=file.content_type,
             tamanio=tamanio,
             descripcion=descripcion,
-            fecha_subida=datetime.now(),
+            fecha_subida=datetime.now(timezone.utc),
         )
 
         db.add(nuevo_documento)
@@ -138,7 +138,7 @@ async def listar_mis_documentos(
                 "tipo_archivo": doc.tipo_archivo,
                 "tamanio": doc.tamanio,
                 "descripcion": doc.descripcion,
-                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=""),
+                "fecha_subida": formatear_fecha_hora(doc.fecha_subida, default=""),
             }
             for doc in documentos
         ]
@@ -225,7 +225,7 @@ async def obtener_documentos_vecino(
                 "tipo_documento_value": doc.tipo_documento,
                 "nombre_archivo": doc.nombre_archivo,
                 "descripcion": doc.descripcion or "",
-                "fecha_subida": formatear_fecha(doc.fecha_subida, fmt="%d-%m-%Y %H:%M", default=None),
+                "fecha_subida": formatear_fecha_hora(doc.fecha_subida, default=None),
                 "tipo_archivo": doc.tipo_archivo or None,
                 "tamanio": doc.tamanio or None,
             }

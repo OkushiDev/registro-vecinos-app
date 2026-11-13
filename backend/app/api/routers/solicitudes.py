@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db, get_current_user, require_presidente
-from app.api.utils import registrar_accion
+from app.api.utils import formatear_fecha_hora, registrar_accion
 import app.api.models as models
 
 router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
@@ -32,8 +32,8 @@ async def obtener_todas_solicitudes(
                     "rut": vecino.rut,
                     "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
                     "fecha_solicitud": sol.fecha_solicitud.isoformat(),
-                    "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
-                        "%d-%m-%Y %H:%M"
+                    "fecha_solicitud_formato": formatear_fecha_hora(
+                        sol.fecha_solicitud
                     ),
                     "estado": sol.estado,
                     "visibilidad": sol.visibilidad,
@@ -96,7 +96,7 @@ async def crear_solicitud(
             tipo_solicitud="certificado_residencia",
             estado="pendiente",
             visibilidad="mostrar",
-            fecha_solicitud=datetime.now(),
+            fecha_solicitud=datetime.now(timezone.utc),
         )
 
         db.add(nueva_solicitud)
@@ -178,8 +178,8 @@ async def obtener_notificaciones(
                     "rut": vecino.rut,
                     "nombre_completo": f"{vecino.nombres} {vecino.apellido_paterno} {vecino.apellido_materno or ''}".strip(),
                     "fecha_solicitud": sol.fecha_solicitud.isoformat(),
-                    "fecha_solicitud_formato": sol.fecha_solicitud.strftime(
-                        "%d-%m-%Y %H:%M"
+                    "fecha_solicitud_formato": formatear_fecha_hora(
+                        sol.fecha_solicitud
                     ),
                     "estado": sol.estado,
                     "visibilidad": sol.visibilidad,
@@ -240,7 +240,7 @@ async def crear_solicitud_presidente(
             tipo_solicitud="certificado_residencia",
             estado="pendiente",
             visibilidad="mostrar",
-            fecha_solicitud=datetime.now(),
+            fecha_solicitud=datetime.now(timezone.utc),
         )
 
         db.add(nueva_solicitud)

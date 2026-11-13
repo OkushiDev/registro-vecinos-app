@@ -152,21 +152,9 @@ export default function Historial() {
       Usuario: row.usuario,
       Acción: row.tipo_accion,
       Descripción: row.descripcion_accion,
-      Fecha: new Date(row.fecha_accion).toLocaleString("es-CL"),
+      Fecha: row.fecha_accion,
     }));
     await exportarAExcel(dataToExport, "Historial", "Historial_Acciones");
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const commonFilterStyle = {
@@ -395,7 +383,7 @@ export default function Historial() {
 
                         let value = row[column.id];
                         if (column.id === "fecha_accion") {
-                          value = formatDate(row.fecha_accion);
+                          value = row.fecha_accion;
                         }
 
                         return (

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db, require_presidente
-from app.api.utils import formatear_fecha
+from app.api.utils import formatear_fecha_hora
 import app.api.models as models
 
 router = APIRouter(prefix="/historial", tags=["historial"])
@@ -30,7 +30,7 @@ async def obtener_historial(
                     "id": accion.id,
                     "descripcion_accion": accion.descripcion,
                     "tipo_accion": accion.tipo_accion,
-                    "fecha_accion": formatear_fecha(accion.fecha_accion, fmt="%d-%m-%Y %H:%M"),
+                    "fecha_accion": formatear_fecha_hora(accion.fecha_accion),
                     "usuario": f"{vecino.nombres} {vecino.apellido_paterno}",
                 }
             )

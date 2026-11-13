@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.database import get_db
 from app.api.dependencies import require_presidente
-from app.api.utils import registrar_accion
+from app.api.utils import ZONA_HORARIA, registrar_accion
 from app.api import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
@@ -57,8 +57,8 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     domicilio = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
     numero_socio = vecino.numero_socio
 
-    # Fecha actual (creación del certificado)
-    fecha_creacion = datetime.now()
+    # Fecha actual en Chile (creación del certificado)
+    fecha_creacion = datetime.now(ZONA_HORARIA)
 
     # === FECHA DE CREACIÓN (SEPARADA) ===
     dia_creacion = str(fecha_creacion.day)
@@ -162,7 +162,7 @@ async def generar_certificado(
 
     # === FORMATEAR NOMBRE DEL ARCHIVO ===
     # Obtener fecha actual para el nombre del archivo
-    fecha_actual = datetime.now()
+    fecha_actual = datetime.now(ZONA_HORARIA)
 
     # Formato: DDMMAA (01 enero 2025 = 010125)
     fecha_formateada = fecha_actual.strftime("%d%m%y")

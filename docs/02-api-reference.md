@@ -242,7 +242,7 @@ Genera y descarga un PDF de certificado de residencia.
 |---------|-------|
 | Auth | `Authorization: Bearer <token>` |
 | Errores | `{ "detail": "mensaje" }` con código HTTP |
-| Fechas | ISO 8601 en BD, formato `dd-mm-YYYY` en respuestas de listado |
+| Fechas | Timestamps en UTC en BD; horas formateadas en `America/Santiago` |
 | Archivos | Máximo 5MB, solo PDF/PNG/JPG |
 | CORS | `localhost` y `127.0.0.1` en puertos 3000 y 5173 |
 | Token expiry | 480 minutos (8 horas) |

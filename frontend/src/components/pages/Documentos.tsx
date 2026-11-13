@@ -49,9 +49,6 @@ interface Documento {
   nombre_archivo: string;
   descripcion: string;
   fecha_subida: string;
-  ruta_archivo: string;
-  tipo_archivo?: string;
-  tamanio?: number;
 }
 
 type FiltroTipo =

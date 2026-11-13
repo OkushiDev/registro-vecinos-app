@@ -79,6 +79,9 @@ class TestFormatearFecha:
         assert formatear_fecha(date(2004, 10, 21)) == "21-10-2004"
         assert formatear_fecha("21-10-2004") == "21-10-2004"
 
+    def test_timestamp_nulo(self):
+        assert formatear_fecha_hora(None) == "-"
+
 
 class TestVecinoEdicionSchema:
     def test_hereda_validacion_de_rut(self):

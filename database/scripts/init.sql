@@ -36,7 +36,7 @@ CREATE TABLE documentos (
     tipo_archivo VARCHAR(50),
     tamanio INT,
     descripcion VARCHAR(500),
-    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_subida TIMESTAMPTZ DEFAULT NOW(),
     estado INT DEFAULT 1
 );
 

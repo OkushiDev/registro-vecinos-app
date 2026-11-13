@@ -32,7 +32,9 @@ MESES = {
 }
 
 
-def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
+def generar_certificado_pdf(
+    vecino: models.Vecino, fecha_creacion: datetime | None = None
+) -> BytesIO:
     """
     Genera un PDF con el certificado de residencia sobreescribiendo datos sobre una plantilla PDF.
     Retorna un BytesIO con el PDF generado.
@@ -57,8 +59,8 @@ def generar_certificado_pdf(vecino: models.Vecino) -> BytesIO:
     domicilio = f"{vecino.nombre_calle} N° {vecino.numero_casa}"
     numero_socio = vecino.numero_socio
 
-    # Fecha actual en Chile (creación del certificado)
-    fecha_creacion = datetime.now(ZONA_HORARIA)
+    # Fecha de creación del certificado en Chile
+    fecha_creacion = fecha_creacion or datetime.now(ZONA_HORARIA)
 
     # === FECHA DE CREACIÓN (SEPARADA) ===
     dia_creacion = str(fecha_creacion.day)
@@ -157,12 +159,12 @@ async def generar_certificado(
             detail="No se puede generar certificado para un vecino inactivo",
         )
 
-    # Generar el PDF
-    pdf_buffer = generar_certificado_pdf(vecino)
+    # Generar el PDF con una única lectura del reloj para fecha y nombre
+    fecha_creacion = datetime.now(ZONA_HORARIA)
+    pdf_buffer = generar_certificado_pdf(vecino, fecha_creacion)
 
     # === FORMATEAR NOMBRE DEL ARCHIVO ===
-    # Obtener fecha actual para el nombre del archivo
-    fecha_actual = datetime.now(ZONA_HORARIA)
+    fecha_actual = fecha_creacion
 
     # Formato: DDMMAA (01 enero 2025 = 010125)
     fecha_formateada = fecha_actual.strftime("%d%m%y")

@@ -15,7 +15,7 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 | PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (44) + vitest (23) |
+| Tests | pytest (45) + vitest (23) |
 
 ---
 
@@ -49,6 +49,10 @@ Esto levanta PostgreSQL en `localhost:5432` con:
 - Base de datos: `postgres`
 - Ejecuta `scripts/init.sql` automáticamente (crea tablas + 35 vecinos de seed)
 
+Si vienes de una base creada antes del fix de zona horaria, aplica
+`database/scripts/migrations/2026-11-13_timestamps_utc.sql`. En desarrollo
+puedes recrear el volumen con `docker compose down -v`.
+
 ### 3. Backend
 
 ```bash
@@ -78,7 +82,7 @@ Abrir `http://localhost:5173` en el navegador.
 ### 5. Verificar que todo funciona
 
 ```bash
-# Tests backend (44)
+# Tests backend (45)
 cd backend
 uv run pytest app/Test/
 
@@ -135,7 +139,7 @@ npm run build
 # ── Backend ──
 cd backend
 uv sync --dev                   # Instalar dependencias
-uv run pytest app/Test/         # Tests (44)
+uv run pytest app/Test/         # Tests (45)
 uv run ruff check .             # Linter
 uv run uvicorn app.api.main:app --reload --port 8000 --env-file .env
 
@@ -187,7 +191,7 @@ registro-vecinos-app/
 │   │   │       └── historial.py       # Auditoría
 │   │   ├── core/
 │   │   │   └── security.py            # JWT + bcrypt
-│   │   └── Test/                      # 44 tests (pytest)
+│   │   └── Test/                      # 45 tests (pytest)
 │   ├── resources/
 │   │   └── certificado_plantilla.pdf
 │   ├── pyproject.toml

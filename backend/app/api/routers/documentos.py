@@ -103,7 +103,9 @@ async def subir_documento(
                 "tipo_archivo": nuevo_documento.tipo_archivo,
                 "tamanio": nuevo_documento.tamanio,
                 "descripcion": nuevo_documento.descripcion,
-                "fecha_subida": str(nuevo_documento.fecha_subida),
+                "fecha_subida": formatear_fecha_hora(
+                    nuevo_documento.fecha_subida, default=None
+                ),
             },
         }
 

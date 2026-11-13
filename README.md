@@ -15,7 +15,7 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 | PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (39) + vitest (21) |
+| Tests | pytest (39) + vitest (23) |
 
 ---
 
@@ -82,7 +82,7 @@ Abrir `http://localhost:5173` en el navegador.
 cd backend
 uv run pytest app/Test/
 
-# Tests frontend (21)
+# Tests frontend (23)
 cd frontend
 npm test
 
@@ -144,7 +144,7 @@ cd frontend
 npm install                     # Instalar dependencias
 npm run dev                     # Dev server (localhost:5173)
 npm run build                   # Build producción
-npm test                        # Tests (21, vitest)
+npm test                        # Tests (23, vitest)
 npm run test:watch              # Tests en watch mode
 npm run lint                    # ESLint
 
@@ -222,7 +222,7 @@ registro-vecinos-app/
 │       │   ├── error.ts               # getErrorMessage()
 │       │   ├── download.ts            # descargarBlob()
 │       │   └── pagination.ts          # usePagination(), displayedRowsLabel
-│       └── test/                      # 21 tests (vitest)
+│       └── test/                      # 23 tests (vitest)
 │           ├── rut.test.ts
 │           ├── pdf.test.ts
 │           ├── excel.test.ts

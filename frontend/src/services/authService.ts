@@ -44,9 +44,7 @@ class AuthService {
     formData.append("username", credentials.username);
     formData.append("password", credentials.password);
 
-    const response = await api.post<AuthResponse>("/api/token", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await api.post<AuthResponse>("/api/token", formData);
 
     if (response.data.access_token) {
       localStorage.setItem(TOKEN_KEY, response.data.access_token);

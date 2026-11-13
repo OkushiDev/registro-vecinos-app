@@ -109,9 +109,7 @@ const SubirDocumento: React.FC = () => {
         formData.append("descripcion", descripcion.trim());
       }
 
-      const response = await api.post("/api/documentos/subir", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/api/documentos/subir", formData);
 
       setMessage({
         type: "success",

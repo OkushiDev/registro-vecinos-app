@@ -157,7 +157,7 @@ npm test        # vitest run (CI)
 npm run test:watch  # vitest (watch mode)
 ```
 
-Actualmente 21 tests para utilidades:
+Actualmente 23 tests para utilidades:
 - `rut.test.ts` — 16 tests (limpieza, formato, validación)
 - `pdf.test.ts` — 3 tests (descarga con/sin Content-Disposition)
 - `excel.test.ts` — 2 tests (datos vacíos, exportación básica)

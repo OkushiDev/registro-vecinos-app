@@ -29,7 +29,12 @@ async function request<T = any>(url: string, options: RequestInit & { responseTy
   const token = localStorage.getItem("access_token");
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
+  if (options.body instanceof FormData) {
+    // El navegador genera el boundary; fijarlo a mano rompe el multipart.
+    delete headers["Content-Type"];
+  } else {
+    headers["Content-Type"] = "application/json";
+  }
 
   const { responseType, params, skipAuthRedirect, ...fetchOptions } = options;
   const fullUrl = buildUrl(`${API_URL}${url}`, params);

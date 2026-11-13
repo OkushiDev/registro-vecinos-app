@@ -244,7 +244,7 @@ Genera y descarga un PDF de certificado de residencia.
 | Errores | `{ "detail": "mensaje" }` con código HTTP |
 | Fechas | ISO 8601 en BD, formato `dd-mm-YYYY` en respuestas de listado |
 | Archivos | Máximo 5MB, solo PDF/PNG/JPG |
-| CORS | `localhost:3000` y `localhost:5173` |
+| CORS | `localhost` y `127.0.0.1` en puertos 3000 y 5173 |
 | Token expiry | 480 minutos (8 horas) |
 
 ## Endpoints sin autenticación

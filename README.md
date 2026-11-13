@@ -49,9 +49,16 @@ Esto levanta PostgreSQL en `localhost:5432` con:
 - Base de datos: `postgres`
 - Ejecuta `scripts/init.sql` automáticamente (crea tablas + 35 vecinos de seed)
 
-Si vienes de una base creada antes del fix de zona horaria, aplica
-`database/scripts/migrations/2026-11-13_timestamps_utc.sql`. En desarrollo
-puedes recrear el volumen con `docker compose down -v`.
+Si vienes de una base creada antes del fix de zona horaria, ejecuta la
+migración con el instante UTC del despliegue:
+
+```bash
+docker compose -f database/docker-compose.yaml exec -T database-app \
+  psql -U postgres -d postgres -v cutoff="<UTC-del-deploy>" \
+  -f /docker-entrypoint-initdb.d/migrations/2026-11-13_timestamps_utc.sql
+```
+
+En desarrollo puedes recrear el volumen con `docker compose down -v`.
 
 ### 3. Backend
 

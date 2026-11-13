@@ -102,7 +102,7 @@ Archivos subidos por los vecinos.
 | tipo_archivo | VARCHAR(50) | NULL | MIME type |
 | tamanio | INTEGER | NULL | En bytes |
 | descripcion | VARCHAR(500) | NULL | |
-| fecha_subida | TIMESTAMP | `now()` | |
+| fecha_subida | TIMESTAMPTZ | `now()` | |
 | estado | INTEGER | 1 | |
 
 ### solicitudes

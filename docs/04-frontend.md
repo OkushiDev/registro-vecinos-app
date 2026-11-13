@@ -14,7 +14,7 @@ Controla: tema (dark/light), autenticación, routing.
 main.tsx
   └─ App.tsx
        ├─ isLoading = true → CircularProgress (full screen)
-       ├─ !isAuthenticated → <Login onLogin={...} />
+       ├─ !isAuthenticated → <Login />
        └─ isAuthenticated →
             ├─ <Navbar /> (siempre visible arriba)
             └─ <Routes> (según rol)
@@ -36,7 +36,7 @@ main.tsx
 
 ## Theme
 
-MUI 7 con `createTheme`. Dark mode toggle via `isDarkMode` state.
+MUI 7 con `createTheme`. Dark mode toggle via `useAuth()` (`AuthContext`).
 
 | Modo | Background default | Paper |
 |------|-------------------|-------|
@@ -137,11 +137,11 @@ Wrapper nativo sobre `fetch()` que agrega JWT automáticamente y mantiene interf
 |---------|-------------|
 | `ErrorBoundary` | Captura errores de renderizado, muestra mensaje amigable + botón recargar |
 | `NotFound` (404) | Página para rutas inexistentes, reemplaza redirects silenciosos |
-| `AuthContext` | Store global vía React Context (infraestructura lista, migración pendiente) |
+| `AuthContext` | `AuthProvider` + `useAuth` centralizan sesión, carga inicial y tema |
 
 ## Estado y Comunicación entre Componentes
 
-No hay store global. Se usan:
+Auth y tema viven en `AuthContext`. El resto se mantiene local:
 
 - **useState / useReducer** — estado local de cada componente
 - **useEffect** — carga inicial de datos, polling de notificaciones
@@ -157,10 +157,12 @@ npm test        # vitest run (CI)
 npm run test:watch  # vitest (watch mode)
 ```
 
-Actualmente 23 tests para utilidades:
+Actualmente 27 tests:
 - `rut.test.ts` — 16 tests (limpieza, formato, validación)
 - `pdf.test.ts` — 3 tests (descarga con/sin Content-Disposition)
 - `excel.test.ts` — 2 tests (datos vacíos, exportación básica)
+- `api.test.ts` — 2 tests (boundary de FormData, Content-Type JSON)
+- `authContext.test.tsx` — 4 tests (carga, login/logout, tema)
 
 ## Notas sobre MUI 7
 

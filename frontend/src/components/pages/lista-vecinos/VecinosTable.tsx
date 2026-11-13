@@ -273,7 +273,7 @@ export default function VecinosTable({
         </Table>
       </TableContainer>
       <TablePagination
-        rowsPerPageOptions={[10, 25, 100]}
+        rowsPerPageOptions={[10, 20, 25, 100]}
         component="div"
         count={count}
         rowsPerPage={rowsPerPage}

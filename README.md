@@ -15,7 +15,7 @@ Sistema de gestión para juntas de vecinos. Permite registrar vecinos, gestionar
 | PDF | ReportLab + pypdf |
 | Excel | ExcelJS (lazy-loaded) |
 | Gestores | uv (Python) / npm (Node) |
-| Tests | pytest (45) + vitest (23) |
+| Tests | pytest (45) + vitest (27) |
 
 ---
 
@@ -94,7 +94,7 @@ Abrir `http://localhost:5173` en el navegador.
 cd backend
 uv run pytest app/Test/
 
-# Tests frontend (23)
+# Tests frontend (27)
 cd frontend
 npm test
 
@@ -156,7 +156,7 @@ cd frontend
 npm install                     # Instalar dependencias
 npm run dev                     # Dev server (localhost:5173)
 npm run build                   # Build producción
-npm test                        # Tests (23, vitest)
+npm test                        # Tests (27, vitest)
 npm run test:watch              # Tests en watch mode
 npm run lint                    # ESLint
 
@@ -207,9 +207,12 @@ registro-vecinos-app/
 │
 ├── frontend/                          # SPA (React + TypeScript)
 │   └── src/
-│       ├── App.tsx                    # Root: theme, auth, lazy routes, ErrorBoundary
+│       ├── App.tsx                    # Root: rutas, tema, ErrorBoundary
 │       ├── api.tsx                    # Fetch wrapper + JWT
 │       ├── main.tsx                   # Entry point
+│       ├── context/
+│       │   ├── auth.ts                # Context + useAuth
+│       │   └── AuthProvider.tsx       # Sesión, carga inicial y tema
 │       ├── services/authService.ts    # Login/logout/token management
 │       ├── components/
 │       │   ├── ErrorBoundary.tsx      # Crash recovery
@@ -218,10 +221,14 @@ registro-vecinos-app/
 │       │   ├── NotificationMenu.tsx   # Campana de notificaciones
 │       │   ├── RegistroVecinoForm.tsx   # Crear/editar (mode prop)
 │       │   └── pages/
-│       │       ├── ListaVecinos.tsx        # 1003L
-│       │       ├── Antecedentes_vecino.tsx # 872L
-│       │       ├── ListaSolicitudes.tsx    # 726L
-│       │       ├── Documentos.tsx          # 711L
+│       │       ├── ListaVecinos.tsx        # 365L (orquestador)
+│       │       ├── lista-vecinos/          # filtros, tabla, diálogos
+│       │       ├── Antecedentes_vecino.tsx # 451L (orquestador)
+│       │       ├── antecedentes/           # datos, documentos, diálogos
+│       │       ├── ListaSolicitudes.tsx    # 283L (orquestador)
+│       │       ├── solicitudes/            # stats, filtros, tabla
+│       │       ├── Documentos.tsx          # 139L (orquestador)
+│       │       ├── documentos/             # búsqueda, tabla
 │       │       ├── Historial.tsx           # 453L
 │       │       ├── SubirDocumento.tsx      # 250L
 │       │       └── NotFound.tsx            # 404 page
@@ -234,7 +241,9 @@ registro-vecinos-app/
 │       │   ├── error.ts               # getErrorMessage()
 │       │   ├── download.ts            # descargarBlob()
 │       │   └── pagination.ts          # usePagination(), displayedRowsLabel
-│       └── test/                      # 23 tests (vitest)
+│       └── test/                      # 27 tests (vitest)
+│           ├── api.test.ts
+│           ├── authContext.test.tsx
 │           ├── rut.test.ts
 │           ├── pdf.test.ts
 │           ├── excel.test.ts

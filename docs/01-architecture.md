@@ -105,7 +105,7 @@ registro-vecinos-app/
 │       ├── components/pages/       # Pages (6, lazy-loaded) + NotFound
 │       ├── utils/                  # rut.ts, pdf.ts, excel.ts, error.ts, download.ts, pagination.ts
 │       ├── constants/              # calles.ts (CALLES, RELACIONES)
-│       └── test/                   # Tests vitest (23 tests)
+│       └── test/                   # Tests vitest (27 tests)
 └── database/
     ├── docker-compose.yaml         # PostgreSQL container
     └── scripts/init.sql            # Schema + seed data (2 vecinos)

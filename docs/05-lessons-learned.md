@@ -121,7 +121,7 @@ Documentos.tsx tenía su propia implementación de blob download duplicando `src
 | 🔴 Crítica | Autenticar todos los endpoints por defecto | ✅ Resuelto (2 públicos) |
 | 🔴 Crítica | Reemplazar localStorage JWT por httpOnly cookies | ❌ Pendiente |
 | 🟡 Alta | Agregar Error Boundary + ruta 404 | ✅ Resuelto |
-| 🟡 Alta | Store global para estado compartido | 🟡 Infraestructura lista (AuthContext) |
+| 🟡 Alta | Store global para estado compartido | Resuelto: AuthProvider + useAuth implementados |
 | 🟡 Alta | Configurar tests frontend desde el día 1 | ✅ Resuelto (21 tests) |
 | 🟡 Alta | RUT con validación mod-11 en backend | ✅ Resuelto |
 | 🟢 Media | Unificar paths en una sola fuente de verdad | ✅ Resuelto (UPLOAD_BASE) |

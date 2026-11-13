@@ -10,7 +10,6 @@ import { AuthContext, type UserProfile } from "./auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -22,7 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserProfile(
             userData.rol === "presidente" ? "presidente" : "vecino"
           );
-          setIsAuthenticated(true);
         } catch {
           authService.logout();
         }
@@ -35,13 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback((profile: UserProfile) => {
     setUserProfile(profile);
-    setIsAuthenticated(true);
   }, []);
 
   const logout = useCallback(() => {
     authService.logout();
     setUserProfile(null);
-    setIsAuthenticated(false);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -51,22 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       userProfile,
-      isAuthenticated,
+      isAuthenticated: userProfile !== null,
       isLoading,
       isDarkMode,
       login,
       logout,
       toggleTheme,
     }),
-    [
-      userProfile,
-      isAuthenticated,
-      isLoading,
-      isDarkMode,
-      login,
-      logout,
-      toggleTheme,
-    ]
+    [userProfile, isLoading, isDarkMode, login, logout, toggleTheme]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,79 +1,29 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Paper,
   Typography,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  InputAdornment,
-  IconButton,
   Snackbar,
-  Divider,
-  TableHead,
-  Chip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
 import KeyIcon from "@mui/icons-material/Key";
-import PhoneIcon from "@mui/icons-material/Phone";
-import EmailIcon from "@mui/icons-material/Email";
-import LockIcon from "@mui/icons-material/Lock";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import DescriptionIcon from "@mui/icons-material/Description";
-import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import api from "../../api";
-import { formatearRutConPuntos } from "../../utils/rut";
 import { getErrorMessage } from "../../utils/error";
 import { descargarPDF } from "../../utils/pdf";
-
-// --- INTERFACES ---
-interface VecinoData {
-  id: number;
-  nombres: string;
-  apellido_paterno: string;
-  apellido_materno: string | null;
-  rut: string;
-  numero_socio: number | null;
-  nombre_calle: string | null;
-  numero_casa: string | null;
-  relacion_propiedad: string | null;
-  telefono: string | null;
-  email: string | null;
-  fecha_registro: string;
-  estado: number;
-}
-
-interface DocumentoBackend {
-  id: number;
-  vecino_id: number;
-  tipo_documento: string;
-  tipo_documento_value: string;
-  nombre_archivo: string;
-  fecha_subida: string;
-}
-
-// CONFIGURACIÓN
-const DOCUMENTOS_REQUERIDOS = [
-  { label: "Cédula de Identidad", value: "cedula_identidad" },
-  { label: "Registro Social de Hogares", value: "registro_social_hogares" },
-  { label: "Avalúo Fiscal", value: "avaluo_fiscal" },
-  { label: "Boleta de Agua", value: "boleta_agua" },
-  { label: "Boleta de Luz", value: "boleta_luz" },
-  { label: "Escritura de Casa", value: "escritura_casa" },
-];
+import ContactoDialog from "./antecedentes/ContactoDialog";
+import DatosPersonales from "./antecedentes/DatosPersonales";
+import DocumentosAdjuntos from "./antecedentes/DocumentosAdjuntos";
+import PasswordDialog from "./antecedentes/PasswordDialog";
+import type {
+  ContactForm,
+  DocumentoBackend,
+  FormErrors,
+  PasswordForm,
+  VecinoData,
+} from "./antecedentes/types";
 
 const AntecedentesVecino: React.FC = () => {
   const [vecinoData, setVecinoData] = useState<VecinoData | null>(null);
@@ -94,17 +44,17 @@ const AntecedentesVecino: React.FC = () => {
   const [showNewPass, setShowNewPass] = useState(false);
 
   // Formularios
-  const [contactForm, setContactForm] = useState({
+  const [contactForm, setContactForm] = useState<ContactForm>({
     telefono: "",
     email: "",
     currentPassword: "",
   });
-  const [passwordForm, setPasswordForm] = useState({
+  const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     currentPassword: "",
     newPassword: "",
     confirmNewPassword: "",
   });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -251,7 +201,7 @@ const AntecedentesVecino: React.FC = () => {
   };
 
   const handleSavePassword = async () => {
-    const newErrors: { [key: string]: string } = {};
+    const newErrors: FormErrors = {};
     if (!passwordForm.currentPassword)
       newErrors.currentPassword = "Ingrese contraseña actual";
     if (!passwordForm.newPassword)
@@ -320,35 +270,6 @@ const AntecedentesVecino: React.FC = () => {
     setContactForm({ ...contactForm, [e.target.name]: e.target.value });
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
-
-  const renderRow = (label: string, value: React.ReactNode, isTitle = false) => (
-    <TableRow
-      hover={!isTitle}
-      sx={{
-        backgroundColor: isTitle
-          ? (theme) =>
-              theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.08)"
-                : "#f5f5f5"
-          : "inherit",
-      }}
-    >
-      <TableCell
-        component="th"
-        scope="row"
-        sx={{
-          fontWeight: isTitle ? "bold" : "medium",
-          width: "40%",
-          color: isTitle ? "primary.main" : "text.secondary",
-        }}
-      >
-        {label}
-      </TableCell>
-      <TableCell sx={{ fontWeight: isTitle ? "bold" : "regular" }}>
-        {value || "-"}
-      </TableCell>
-    </TableRow>
-  );
 
   const handleDescargarDocumento = async (
     documentoId: number,
@@ -471,327 +392,42 @@ const AntecedentesVecino: React.FC = () => {
       )}
 
       {/* --- DATOS PERSONALES --- */}
-      <TableContainer
-        component={Paper}
-        elevation={3}
-        sx={{ borderRadius: 2, overflow: "hidden", mb: 4 }}
-      >
-        <Table sx={{ minWidth: 350 }}>
-          <TableBody>
-            {renderRow("DATOS PERSONALES", "", true)}
-            {renderRow(
-              "Nombre Completo",
-              `${vecinoData.nombres} ${vecinoData.apellido_paterno} ${
-                vecinoData.apellido_materno || ""
-              }`
-            )}
-            {renderRow("RUT", formatearRutConPuntos(vecinoData.rut))}
-            {renderRow("Número de Socio", vecinoData.numero_socio)}
-            {renderRow("Fecha de Registro", vecinoData.fecha_registro)}
-            {renderRow("DIRECCIÓN", "", true)}
-            {renderRow("Calle", vecinoData.nombre_calle)}
-            {renderRow("Número de Casa", vecinoData.numero_casa)}
-            {renderRow("Relación con Propiedad", vecinoData.relacion_propiedad)}
-            {renderRow("CONTACTO Y SEGURIDAD", "", true)}
-            {renderRow("Teléfono", vecinoData.telefono)}
-            {renderRow("Correo Electrónico", vecinoData.email)}
-            {renderRow("Contraseña", "********")}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <DatosPersonales vecinoData={vecinoData} />
 
       {/* --- DOCUMENTACIÓN ADJUNTA --- */}
-      <Box mb={4}>
-        <Typography
-          variant="h5"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-        >
-          <DescriptionIcon /> Documentación Adjunta
-        </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Listado de documentos requeridos y su estado actual en el sistema.
-        </Typography>
-
-        <TableContainer
-          component={Paper}
-          elevation={3}
-          sx={{ borderRadius: 2, overflow: "hidden" }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow
-                sx={{
-                  bgcolor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 255, 255, 0.05)"
-                      : "#f5f5f5",
-                }}
-              >
-                <TableCell>
-                  <strong>Tipo de Documento</strong>
-                </TableCell>
-                <TableCell align="center">
-                  <strong>Estado</strong>
-                </TableCell>
-                <TableCell align="right">
-                  <strong>Acciones</strong>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {DOCUMENTOS_REQUERIDOS.map((docConfig) => {
-                const docEncontrado = listaDocumentos.find(
-                  (d) =>
-                    d.tipo_documento_value === docConfig.value ||
-                    d.tipo_documento === docConfig.value
-                );
-                const existe = !!docEncontrado;
-
-                return (
-                  <TableRow key={docConfig.value} hover>
-                    <TableCell>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <DescriptionIcon
-                          color={existe ? "primary" : "action"}
-                          fontSize="small"
-                        />
-                        {docConfig.label}
-                      </Box>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Chip
-                        label={existe ? "Cargado" : "Pendiente"}
-                        color={existe ? "success" : "default"}
-                        size="small"
-                        variant={existe ? "filled" : "outlined"}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {existe && docEncontrado ? (
-                        <Button
-                          size="small"
-                          startIcon={<CloudDownloadIcon />}
-                          variant="text"
-                          onClick={() =>
-                            handleDescargarDocumento(
-                              docEncontrado.id,
-                              docEncontrado.nombre_archivo
-                            )
-                          }
-                        >
-                          Descargar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          startIcon={<CloudDownloadIcon />}
-                          disabled
-                          variant="text"
-                        >
-                          Descargar
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+      <DocumentosAdjuntos
+        listaDocumentos={listaDocumentos}
+        onDescargar={handleDescargarDocumento}
+      />
 
       {/* --- DIALOGS --- */}
-      <Dialog
+      <ContactoDialog
         open={openContactDialog}
+        form={contactForm}
+        errors={errors}
+        isSubmitting={isSubmitting}
+        showPassword={showCurrentPass}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Actualizar Contacto</DialogTitle>
-        <DialogContent dividers>
-          <Box
-            component="form"
-            sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Actualice su teléfono y correo. Requiere contraseña actual.
-            </Typography>
-            <TextField
-              fullWidth
-              label="Teléfono"
-              name="telefono"
-              value={contactForm.telefono}
-              onChange={handleContactChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Correo Electrónico"
-              name="email"
-              value={contactForm.email}
-              onChange={handleContactChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Box
-              sx={{
-                mt: 1,
-                p: 2,
-                bgcolor: "warning.light",
-                opacity: 0.9,
-                borderRadius: 1,
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  color: "black",
-                }}
-              >
-                <LockIcon fontSize="inherit" /> Seguridad: Ingrese su contraseña
-                para confirmar.
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              required
-              label="Contraseña Actual"
-              name="currentPassword"
-              type={showCurrentPass ? "text" : "password"}
-              value={contactForm.currentPassword}
-              onChange={handleContactChange}
-              error={!!errors.currentPassword}
-              helperText={errors.currentPassword}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowCurrentPass(!showCurrentPass)}
-                    >
-                      {showCurrentPass ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} color="inherit" disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSaveContact}
-            variant="contained"
-            startIcon={<SaveIcon />}
-            disabled={isSubmitting}
-          >
-            Guardar Contacto
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onChange={handleContactChange}
+        onToggleShowPassword={() => setShowCurrentPass(!showCurrentPass)}
+        onSave={handleSaveContact}
+      />
 
-      <Dialog
+      <PasswordDialog
         open={openPasswordDialog}
+        form={passwordForm}
+        errors={errors}
+        isSubmitting={isSubmitting}
+        showCurrentPassword={showCurrentPass}
+        showNewPassword={showNewPass}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Cambiar Contraseña</DialogTitle>
-        <DialogContent dividers>
-          <Box
-            component="form"
-            sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Contraseña Actual"
-              name="currentPassword"
-              type={showCurrentPass ? "text" : "password"}
-              value={passwordForm.currentPassword}
-              onChange={handlePasswordChange}
-              error={!!errors.currentPassword}
-              helperText={errors.currentPassword}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowCurrentPass(!showCurrentPass)}
-                    >
-                      {showCurrentPass ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Divider />
-            <TextField
-              fullWidth
-              required
-              label="Nueva Contraseña"
-              name="newPassword"
-              type={showNewPass ? "text" : "password"}
-              value={passwordForm.newPassword}
-              onChange={handlePasswordChange}
-              error={!!errors.newPassword}
-              helperText={errors.newPassword}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowNewPass(!showNewPass)}>
-                      {showNewPass ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <TextField
-              fullWidth
-              required
-              label="Confirmar Nueva Contraseña"
-              name="confirmNewPassword"
-              type={showNewPass ? "text" : "password"}
-              value={passwordForm.confirmNewPassword}
-              onChange={handlePasswordChange}
-              error={!!errors.confirmNewPassword}
-              helperText={errors.confirmNewPassword}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} color="inherit" disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSavePassword}
-            variant="contained"
-            color="warning"
-            startIcon={<KeyIcon />}
-            disabled={isSubmitting}
-          >
-            Actualizar Contraseña
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onChange={handlePasswordChange}
+        onToggleShowCurrentPassword={() =>
+          setShowCurrentPass(!showCurrentPass)
+        }
+        onToggleShowNewPassword={() => setShowNewPass(!showNewPass)}
+        onSave={handleSavePassword}
+      />
 
       <Snackbar
         open={snackbar.open}

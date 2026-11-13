@@ -1,91 +1,20 @@
 import * as React from "react";
-import { useTheme } from "@mui/material/styles";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import TablePagination from "@mui/material/TablePagination";
-import TableSortLabel from "@mui/material/TableSortLabel";
+import Box from "@mui/material/Box";
+import { Grid } from "@mui/material";
+import Typography from "@mui/material/Typography";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import api from "../../api";
 import { exportarAExcel } from "../../utils/excel";
 import { descargarPDF } from "../../utils/pdf";
 import { getErrorDetail } from "../../utils/error";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from "@mui/icons-material/Search";
-import Box from "@mui/material/Box";
-import { Grid } from "@mui/material";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select, { type SelectChangeEvent } from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import { visuallyHidden } from "@mui/utils";
-import { displayedRowsLabel, usePagination } from "../../utils/pagination";
-import IconButton from "@mui/material/IconButton";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import BlockIcon from "@mui/icons-material/Block";
-import Chip from "@mui/material/Chip";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-
-interface Column {
-  id:
-    | "id"
-    | "nombre_completo"
-    | "rut"
-    | "numero_socio"
-    | "tipo_solicitud"
-    | "fecha_solicitud_formato"
-    | "estado"
-    | "visibilidad"
-    | "acciones";
-  label: string;
-  minWidth?: number;
-  align?: "center" | "right" | "left";
-  sortable?: boolean;
-}
-
-const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 50, sortable: true },
-  { id: "nombre_completo", label: "Vecino", minWidth: 180, sortable: true },
-  { id: "rut", label: "RUT", minWidth: 110, sortable: true },
-  { id: "numero_socio", label: "N° Socio", minWidth: 85, align: "center", sortable: true },
-  { id: "tipo_solicitud", label: "Tipo", minWidth: 140 },
-  {
-    id: "fecha_solicitud_formato",
-    label: "Fecha",
-    minWidth: 130,
-    align: "right",
-    sortable: true,
-  },
-  { id: "estado", label: "Estado", minWidth: 110, align: "center", sortable: true },
-  { id: "visibilidad", label: "Visibilidad", minWidth: 120, align: "center" },
-  { id: "acciones", label: "Acciones", minWidth: 100, align: "center" },
-];
-
-interface Data {
-  id: number;
-  nombre_completo: string;
-  rut: string;
-  numero_socio: number;
-  tipo_solicitud: string;
-  fecha_solicitud: string;
-  fecha_solicitud_formato: string;
-  estado: string;
-  visibilidad: string;
-  vecino_id: number;
-}
-
-type Order = "asc" | "desc";
+import { usePagination } from "../../utils/pagination";
+import SolicitudesStats from "./solicitudes/SolicitudesStats";
+import SolicitudesFilters from "./solicitudes/SolicitudesFilters";
+import SolicitudesTable from "./solicitudes/SolicitudesTable";
+import type { Data, Order } from "./solicitudes/types";
 
 export default function ListaSolicitudes() {
-  const theme = useTheme();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(25);
   const [rows, setRows] = React.useState<Data[]>([]);
@@ -289,24 +218,6 @@ export default function ListaSolicitudes() {
     await exportarAExcel(dataToExport, "Solicitudes", "Solicitudes_Certificados");
   };
 
-  const commonFilterStyle = {
-    backgroundColor: "background.paper",
-    color: "text.primary",
-    borderRadius: "4px",
-    border: `1px solid ${theme.palette.divider}`,
-    "&:hover": {
-      backgroundColor:
-        theme.palette.mode === "dark"
-          ? "rgba(255, 255, 255, 0.05)"
-          : "rgba(0, 0, 0, 0.04)",
-      borderColor: "text.primary",
-    },
-    minHeight: "56px",
-    display: "flex",
-    alignItems: "center",
-    "& .MuiSelect-icon": { color: "text.primary" },
-  };
-
   return (
     <Paper
       sx={{
@@ -324,145 +235,23 @@ export default function ListaSolicitudes() {
     >
       <Box sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          {/* BUSCADOR */}
-          <Grid size={{ xs: 12, md: 2.5 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Buscar solicitudes..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  color: "text.primary",
-                  backgroundColor: "transparent",
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: "4px",
-                  "& fieldset": { border: "none" },
-                  "&:hover": {
-                    borderColor: "text.primary",
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.05)"
-                        : "rgba(0,0,0,0.05)",
-                  },
-                  "&.Mui-focused": {
-                    borderColor: "#3b82f6",
-                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)",
-                  },
-                },
-                "& .MuiSvgIcon-root": { color: "text.secondary" },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                sx: { height: "56px" },
-              }}
-            />
-          </Grid>
-
-          {/* FILTRO COLUMNA */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: "text.secondary" }}>
-                Buscar en
-              </InputLabel>
-              <Select
-                value={filterColumn}
-                label="Buscar en"
-                onChange={handleFilterChange}
-                sx={{
-                  ...commonFilterStyle,
-                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      backgroundImage: "none",
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="all">Todo</MenuItem>
-                <MenuItem value="nombre_completo">Vecino</MenuItem>
-                <MenuItem value="rut">RUT</MenuItem>
-                <MenuItem value="tipo_solicitud">Tipo</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* FILTRO ESTADO */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: "text.secondary" }}>Estado</InputLabel>
-              <Select
-                value={estadoFiltro}
-                label="Estado"
-                onChange={handleEstadoFiltroChange}
-                sx={{
-                  ...commonFilterStyle,
-                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      backgroundImage: "none",
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="todos">Todos</MenuItem>
-                <MenuItem value="pendiente">Pendientes</MenuItem>
-                <MenuItem value="realizado">Realizadas</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* BOTÓN EXCEL */}
-          <Grid size={{ xs: 6, md: 1.5 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
-              onClick={handleExportToExcel}
-              sx={{
-                height: "56px",
-                background: "linear-gradient(to right, #059669, #10b981)",
-                color: "white",
-                fontWeight: "bold",
-                boxShadow: "0 4px 6px -1px rgba(5, 150, 105, 0.3)",
-                "&:hover": {
-                  background: "linear-gradient(to right, #047857, #059669)",
-                },
-              }}
-            >
-              Excel
-            </Button>
-          </Grid>
+          <SolicitudesFilters
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            filterColumn={filterColumn}
+            onFilterColumnChange={handleFilterChange}
+            estadoFiltro={estadoFiltro}
+            onEstadoFiltroChange={handleEstadoFiltroChange}
+            onExport={handleExportToExcel}
+          />
 
           {/* ESTADÍSTICAS */}
-          {[
-            ["Total", estadisticas.total, "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"],
-            ["Pendientes", estadisticas.pendientes, "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"],
-            ["Realizadas", estadisticas.realizadas, "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"],
-            ["Rechazadas", estadisticas.rechazadas, "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"],
-          ].map(([label, value, gradient]) => (
-            <Card key={label as string} sx={{ height: "56px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "white", background: gradient as string }}>
-              <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2" fontWeight="600">{label as string}:</Typography>
-                  <Typography variant="h6" fontWeight="bold">{value as number}</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
+          <SolicitudesStats
+            total={estadisticas.total}
+            pendientes={estadisticas.pendientes}
+            realizadas={estadisticas.realizadas}
+            rechazadas={estadisticas.rechazadas}
+          />
         </Grid>
 
         {/* Resumen de búsqueda */}
@@ -476,242 +265,18 @@ export default function ListaSolicitudes() {
       </Box>
 
       {/* TABLA */}
-      <TableContainer sx={{ flex: 1, backgroundColor: "transparent" }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  align={column.align}
-                  style={{ minWidth: column.minWidth }}
-                  sx={{
-                    backgroundColor: "background.paper",
-                    color: "text.primary",
-                    fontWeight: "bold",
-                    borderBottom: `2px solid ${theme.palette.divider}`,
-                  }}
-                >
-                  {column.sortable ? (
-                    <TableSortLabel
-                      active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : "asc"}
-                      onClick={() => handleRequestSort(column.id as keyof Data)}
-                      sx={{
-                        color: "text.primary !important",
-                        "&.Mui-active": {
-                          color: "text.primary !important",
-                        },
-                        "& .MuiTableSortLabel-icon": {
-                          color: "text.primary !important",
-                        },
-                      }}
-                    >
-                      {column.label}
-                      {orderBy === column.id ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === "desc"
-                            ? "sorted descending"
-                            : "sorted ascending"}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  ) : (
-                    column.label
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={9}
-                  align="center"
-                  sx={{ color: "text.primary", py: 4 }}
-                >
-                  Cargando solicitudes...
-                </TableCell>
-              </TableRow>
-            ) : sortedRows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={9}
-                  align="center"
-                  sx={{ color: "text.secondary", py: 4 }}
-                >
-                  No hay solicitudes registradas.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sortedRows
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((row) => {
-                  const cellStyle = {
-                    color: "text.primary",
-                    borderBottom: `1px solid ${theme.palette.divider}`,
-                  };
-
-                  // Determinar si los botones deben estar deshabilitados
-                  const isDisabled =
-                    row.estado === "realizado" || row.estado === "rechazado";
-
-                  return (
-                    <TableRow
-                      hover
-                      key={row.id}
-                      sx={{
-                        backgroundColor: "transparent",
-                        "&:hover": {
-                          backgroundColor:
-                            theme.palette.mode === "dark"
-                              ? "rgba(255,255,255,0.05) !important"
-                              : "rgba(0,0,0,0.04) !important",
-                        },
-                      }}
-                    >
-                      <TableCell sx={cellStyle}>
-                        <Typography variant="body2" fontWeight="bold">
-                          {row.id}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {row.nombre_completo}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>{row.rut}</TableCell>
-                      <TableCell align="center" sx={cellStyle}>
-                        {row.numero_socio}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>{row.tipo_solicitud}</TableCell>
-                      <TableCell align="right" sx={cellStyle}>
-                        {row.fecha_solicitud_formato}
-                      </TableCell>
-                      <TableCell align="center" sx={cellStyle}>
-                        <Chip
-                          label={
-                            row.estado === "pendiente"
-                              ? "Pendiente"
-                              : row.estado === "realizado"
-                              ? "Realizado"
-                              : "Rechazado"
-                          }
-                          color={
-                            row.estado === "pendiente"
-                              ? "warning"
-                              : row.estado === "realizado"
-                              ? "success"
-                              : "error"
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="center" sx={cellStyle}>
-                        <Chip
-                          label={
-                            row.visibilidad === "mostrar"
-                              ? "Mostrar"
-                              : "No Mostrar"
-                          }
-                          color={
-                            row.visibilidad === "mostrar" ? "info" : "default"
-                          }
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="center" sx={cellStyle}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            gap: 1,
-                            justifyContent: "center",
-                          }}
-                        >
-                          {/* BOTÓN GENERAR CERTIFICADO */}
-                          <IconButton
-                            onClick={() =>
-                              handleGenerarCertificado(
-                                row.vecino_id,
-                                row.id,
-                                row.nombre_completo
-                              )
-                            }
-                            size="small"
-                            title={
-                              isDisabled
-                                ? "No disponible para solicitudes realizadas o rechazadas"
-                                : "Generar Certificado PDF"
-                            }
-                            disabled={isDisabled}
-                            sx={{
-                              color: isDisabled ? "text.disabled" : "#ef4444",
-                              "&:hover": {
-                                backgroundColor: isDisabled
-                                  ? "transparent"
-                                  : "rgba(239, 68, 68, 0.1)",
-                              },
-                            }}
-                          >
-                            <PictureAsPdfIcon />
-                          </IconButton>
-
-                          {/* BOTÓN RECHAZAR */}
-                          <IconButton
-                            onClick={() =>
-                              handleRechazarSolicitud(
-                                row.id,
-                                row.nombre_completo
-                              )
-                            }
-                            size="small"
-                            title={
-                              isDisabled
-                                ? "No disponible para solicitudes realizadas o rechazadas"
-                                : "Rechazar Solicitud"
-                            }
-                            disabled={isDisabled}
-                            sx={{
-                              color: isDisabled ? "text.disabled" : "#f59e0b",
-                              "&:hover": {
-                                backgroundColor: isDisabled
-                                  ? "transparent"
-                                  : "rgba(245, 158, 11, 0.1)",
-                              },
-                            }}
-                          >
-                            <BlockIcon />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
-        component="div"
-        count={filteredRows.length}
-        rowsPerPage={rowsPerPage}
+      <SolicitudesTable
+        rows={sortedRows}
+        loading={loading}
+        order={order}
+        orderBy={orderBy}
+        onRequestSort={handleRequestSort}
         page={page}
+        rowsPerPage={rowsPerPage}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={displayedRowsLabel}
-        sx={{
-          backgroundColor: "background.default",
-          color: "text.primary",
-          borderTop: `1px solid ${theme.palette.divider}`,
-          ".MuiTablePagination-selectIcon": { color: "text.primary" },
-          ".MuiIconButton-root": {
-            color: "text.primary",
-            "&.Mui-disabled": { color: "text.disabled" },
-          },
-        }}
+        onGenerarCertificado={handleGenerarCertificado}
+        onRechazarSolicitud={handleRechazarSolicitud}
       />
     </Paper>
   );
